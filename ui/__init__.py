@@ -52,6 +52,7 @@ class MainFrame(sc.SizedFrame):
         self.snippet_list.SetSizerProps(expand=True, proportion=1) # type: ignore
         self.search_button = wx.Button(self.pane, label="&Search... (F3)")
         self.search_button.Bind(wx.EVT_BUTTON, self.on_search)
+        self._last_focused_control: wx.Window | None = None
         self._search_command_id = wx.NewIdRef()
         self._settings_command_id = wx.NewIdRef()
         self.SetAcceleratorTable(
@@ -229,15 +230,36 @@ class MainFrame(sc.SizedFrame):
     def on_global_hotkey(self, event):
         """Toggle window visibility when the global hotkey is pressed."""
         if self.IsShown():
+            self._remember_focused_control()
             self.Hide()
         else:
             self._remember_foreground_window()
-            self.Show()
-            self.Iconize(False)
+            self.show_and_focus()
+
+    def show_and_focus(self):
+        """Show BTText and focus its last active primary control."""
+        self.Show()
+        self.Iconize(False)
+        self.Raise()
+        target = self._last_focused_control or self.category_list
+        target.SetFocus()
+        # Repeat after the show/activate transition has completed. This uses only
+        # wxPython focus handling and remains portable across supported platforms.
+        wx.CallAfter(target.SetFocus)
+
+    def _remember_focused_control(self):
+        focused_control = wx.Window.FindFocus()
+        if focused_control in (
+            self.category_list,
+            self.snippet_list,
+            self.search_button,
+        ):
+            self._last_focused_control = focused_control
 
     def on_activate(self, event: wx.ActivateEvent):
         event.Skip()
         if not event.GetActive():
+            self._remember_focused_control()
             # At deactivation, Windows may not have completed its foreground
             # transition yet. Remember it on the next UI-loop iteration.
             wx.CallAfter(self._remember_foreground_window)
@@ -262,6 +284,7 @@ class MainFrame(sc.SizedFrame):
             wx.MessageBox(str(error), "Error", wx.OK | wx.ICON_ERROR, self)
             return
 
+        self._remember_focused_control()
         self.Hide()
         # Let Windows finish hiding BTText before changing focus and sending Ctrl+V.
         wx.CallLater(50, self._paste_after_hide, snippet.content)
@@ -745,8 +768,7 @@ class TrayIcon(wx.adv.TaskBarIcon):
         self.on_restore(event)
 
     def on_restore(self, event: wx.Event):
-        self._frame.Show()
-        self._frame.Iconize(False)
+        self._frame.show_and_focus()
 
     def on_exit(self, event):
         self._frame.allow_close = True

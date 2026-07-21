@@ -21,7 +21,6 @@ def main():
             settings = AppSettings()
             settings_error = error
         frame = ui.MainFrame(ee, model, settings_store, settings)
-        frame.Show()
         if settings_error is not None:
             wx.MessageBox(
                 str(settings_error),

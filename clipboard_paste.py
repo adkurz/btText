@@ -210,6 +210,14 @@ def is_external_window(handle: int | None) -> bool:
     return process_id.value != os.getpid()
 
 
+def activate_window(handle: int) -> bool:
+    """Restore a valid window and make it the foreground window."""
+    if not handle or not user32.IsWindow(handle):
+        return False
+    user32.ShowWindow(handle, SW_RESTORE)
+    return bool(user32.SetForegroundWindow(handle))
+
+
 def _open_clipboard(attempts: int = 6, delay: float = 0.01) -> None:
     for attempt in range(attempts):
         if user32.OpenClipboard(None):
@@ -348,8 +356,7 @@ def paste_text(target_window: int, text: str) -> PendingPaste:
 
     marker = uuid.uuid4().bytes
     pending = PendingPaste(_replace_clipboard(text, marker), marker)
-    user32.ShowWindow(target_window, SW_RESTORE)
-    if not user32.SetForegroundWindow(target_window):
+    if not activate_window(target_window):
         pending.restore_clipboard()
         raise PasteError("The previously active window could not be activated.")
     try:
