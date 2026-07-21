@@ -208,7 +208,7 @@ class DataModel:
 
     def search_snippets(self, term: str):
         if not term:
-            return None  # Find nothing for no therm!
+            return # Find nothing for no therm!
         sql = "SELECT s.id, s.category_id, c.name AS category_name, s.name, s.weight, s.content FROM snippet s INNER JOIN category c ON s.category_id = c.id WHERE s.name LIKE :term ESCAPE '\\' OR s.content LIKE :term ESCAPE '\\' ORDER BY category_name, s.weight DESC, s.name COLLATE NOCASE"
         for snippet in self._connection.execute(
             sql, {"term": "%" + self._escape_like(term) + "%"}
