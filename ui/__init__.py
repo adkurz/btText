@@ -63,11 +63,6 @@ class MainFrame(sc.SizedFrame):
                         wx.WXK_F3,
                         int(self._search_command_id),
                     ),
-                    (
-                        wx.ACCEL_CTRL,
-                        ord(","),
-                        int(self._settings_command_id),
-                    ),
                 ]
             )
         )
