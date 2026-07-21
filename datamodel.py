@@ -259,8 +259,8 @@ class DataModel:
                 "INSERT INTO category (name) VALUES (?)", (category.name,)
             )
             category.id = result.lastrowid
-            self.ee.emit("category.added", category)
-            return category
+        self.ee.emit("category.added", category)
+        return category
 
     def edit_category(self, category: Category) -> Category:
         # Check that category exists:
@@ -282,8 +282,8 @@ class DataModel:
                     category.id
                 ),
             )
-            self.ee.emit("category.edited", category)
-            return category
+        self.ee.emit("category.edited", category)
+        return category
 
     def delete_category(self, id: int) -> Category:
         category = self.get_category(id)
@@ -353,15 +353,15 @@ class DataModel:
                     snippet.id
                 )
             )
-            self.ee.emit("snippet.edited", snippet)
+        self.ee.emit("snippet.edited", snippet)
         return snippet
 
-    def delete_snippet(self, id: int) -> dict:
+    def delete_snippet(self, id: int) -> Snippet:
         snippet = self.get_snippet(id)
         with self._connection as c:
             c.execute("DELETE FROM snippet WHERE id = ?", (id,))
-            self.ee.emit("snippet.deleted", snippet)
-            return snippet
+        self.ee.emit("snippet.deleted", snippet)
+        return snippet
 
     def _has_table_column(self, table: str, column: str) -> bool:
         result = self._connection.execute(
