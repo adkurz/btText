@@ -242,7 +242,8 @@ class DataModel:
     def category_exist(self, name_or_id: str | int) -> int | None:
         if isinstance(name_or_id, str):
             result = self._connection.execute(
-                "SELECT id FROM category WHERE name = ?", (name_or_id,)
+                "SELECT id FROM category WHERE name = ? COLLATE NOCASE",
+                (name_or_id,),
             )
         else:
             result = self._connection.execute(
@@ -256,7 +257,8 @@ class DataModel:
     ) -> int | None:
         if category_id is not None:
             result = self._connection.execute(
-                "SELECT id FROM snippet WHERE name = ? AND category_id = ?",
+                "SELECT id FROM snippet "
+                "WHERE name = ? COLLATE NOCASE AND category_id = ?",
                 (
                     name_or_id,
                     category_id,
@@ -270,7 +272,7 @@ class DataModel:
         return result["id"] if result is not None else None
 
     def add_category(self, category: Category) -> Category:
-        # Check that name doesn't exist
+        self.validate_category(category)
         if self.category_exist(category.name):
             raise CategoryValidationError(
                 "A category with this name already exists"
@@ -287,11 +289,10 @@ class DataModel:
         # Check that category exists:
         if category.id is None:
             raise CategoryValidationError("The category has no ID")
-        old_category = self.get_category(category.id)
-        # Check that new name doesn't exist:
-        if old_category.name != category.name and self.category_exist(
-            category.name
-        ):
+        self.get_category(category.id)
+        self.validate_category(category)
+        existing_id = self.category_exist(category.name)
+        if existing_id is not None and existing_id != category.id:
             raise CategoryValidationError(
                 "A category with this name already exists"
             )
@@ -306,6 +307,12 @@ class DataModel:
         self.ee.emit("category.edited", category)
         return category
 
+    def validate_category(self, category: Category) -> None:
+        category.name = self._normalize_name(
+            category.name,
+            CategoryValidationError,
+        )
+
     def delete_category(self, id: int) -> Category:
         category = self.get_category(id)
         with self._connection as c:
@@ -317,9 +324,10 @@ class DataModel:
         return category
 
     def validate_snippet(self, snippet: Snippet) -> None:
-        # Check  that the name isn't empty:
-        if snippet.name == "":
-            raise SnippetValidationError("The name must not be empty")
+        snippet.name = self._normalize_name(
+            snippet.name,
+            SnippetValidationError,
+        )
         # Check  that the content isn't empty:
         if snippet.content == "":
             raise SnippetValidationError(
@@ -397,6 +405,16 @@ class DataModel:
             "WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
         )
         return {row["name"] for row in rows}
+
+    @staticmethod
+    def _normalize_name(
+        name: str,
+        error_type: type[DataModelError],
+    ) -> str:
+        normalized_name = name.strip()
+        if not normalized_name:
+            raise error_type("The name must not be empty")
+        return normalized_name
 
     def _escape_like(self, string: str) -> str:
         return string.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

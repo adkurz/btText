@@ -109,20 +109,57 @@ class DataModelTestCase(unittest.TestCase):
     def test_duplicate_names_are_rejected(self):
         category = self.model.add_category(Category("Unique category"))
         with self.assertRaises(CategoryValidationError):
-            self.model.add_category(Category("Unique category"))
+            self.model.add_category(Category("unique CATEGORY"))
 
         self.model.add_snippet(
             Snippet("Unique snippet", "First", category.id)
         )
         with self.assertRaises(SnippetValidationError):
             self.model.add_snippet(
-                Snippet("Unique snippet", "Second", category.id)
+                Snippet("unique SNIPPET", "Second", category.id)
             )
 
         other_category = self.model.add_category(Category("Other category"))
         self.model.add_snippet(
             Snippet("Unique snippet", "Allowed here", other_category.id)
         )
+
+    def test_names_are_trimmed_and_whitespace_only_names_are_rejected(self):
+        category = self.model.add_category(Category("  Trimmed category  "))
+        snippet = self.model.add_snippet(
+            Snippet("  Trimmed snippet  ", "Content", category.id)
+        )
+
+        self.assertEqual(category.name, "Trimmed category")
+        self.assertEqual(snippet.name, "Trimmed snippet")
+        self.assertEqual(
+            self.model.get_category(category.id).name,
+            "Trimmed category",
+        )
+        self.assertEqual(
+            self.model.get_snippet(snippet.id).name,
+            "Trimmed snippet",
+        )
+
+        with self.assertRaises(CategoryValidationError):
+            self.model.add_category(Category("   "))
+        with self.assertRaises(SnippetValidationError):
+            self.model.add_snippet(Snippet("   ", "Content", category.id))
+
+    def test_existing_names_can_change_case(self):
+        category = self.model.add_category(Category("Category"))
+        snippet = self.model.add_snippet(
+            Snippet("Snippet", "Content", category.id)
+        )
+
+        category.name = "CATEGORY"
+        snippet.name = "SNIPPET"
+
+        self.model.edit_category(category)
+        self.model.edit_snippet(snippet)
+
+        self.assertEqual(self.model.get_category(category.id).name, "CATEGORY")
+        self.assertEqual(self.model.get_snippet(snippet.id).name, "SNIPPET")
 
     def test_deleting_category_cascades_when_id_is_reused(self):
         category = self.model.add_category(Category("Old category"))
