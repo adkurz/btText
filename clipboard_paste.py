@@ -348,6 +348,10 @@ class PendingPaste:
             # Respect a newer clipboard change and release the retained object.
             self._snapshot.close()
 
+    def discard_snapshot(self) -> None:
+        """Release the saved clipboard data without attempting another restore."""
+        self._snapshot.close()
+
 
 def paste_text(target_window: int, text: str) -> PendingPaste:
     """Activate target_window, put text on the clipboard and send Ctrl+V."""

@@ -292,7 +292,7 @@ class MainFrame(sc.SizedFrame):
     ):
         try:
             pending.restore_clipboard()
-        except clipboard_paste.PasteError:
+        except clipboard_paste.PasteError as error:
             if attempts_remaining > 1:
                 wx.CallLater(
                     100,
@@ -300,6 +300,17 @@ class MainFrame(sc.SizedFrame):
                     pending,
                     attempts_remaining - 1,
                 )
+                return
+
+            pending.discard_snapshot()
+            wx.MessageBox(
+                "The previous clipboard contents could not be restored after "
+                "multiple attempts. The clipboard may still contain the inserted "
+                "snippet.\n\n{}".format(error),
+                "Clipboard restore error",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
 
     def _create_menubar(self):
         menubar = wx.MenuBar()
