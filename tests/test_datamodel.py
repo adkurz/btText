@@ -202,6 +202,23 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             ):
                 DataModel(RecordingEventEmitter(), database_file)
 
+    def test_newer_database_schema_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_file = Path(temporary_directory) / "newer.db"
+            model = DataModel(RecordingEventEmitter(), database_file)
+            model.close()
+
+            newer_version = DataModel.SCHEMA_VERSION + 1
+            connection = sqlite3.connect(database_file)
+            connection.execute("PRAGMA user_version = {}".format(newer_version))
+            connection.close()
+
+            with self.assertRaisesRegex(
+                DataModelError,
+                r"newer version.*schema version: 2.*supported version: 1",
+            ):
+                DataModel(RecordingEventEmitter(), database_file)
+
     def test_legacy_database_is_migrated_with_data_and_constraints(self):
         with ExitStack() as resources:
             temporary_directory = resources.enter_context(

@@ -93,13 +93,21 @@ class DataModel:
             c.execute("PRAGMA user_version = 1")
 
     def _updateDatabase(self):
+        database_version = self._get_database_version()
+        if database_version > self.SCHEMA_VERSION:
+            raise DataModelError(
+                "The database was created by a newer version of the application "
+                "and cannot be opened (database schema version: {}; supported "
+                "version: {}).".format(database_version, self.SCHEMA_VERSION)
+            )
+
         # Check for column weight in table snippet:
         if not self._has_table_column("snippet", "weight"):
             with self._connection as c:
                 c.execute(
                     "ALTER TABLE snippet ADD COLUMN weight INTEGER DEFAULT 1"
                 )
-        if self._get_database_version() < self.SCHEMA_VERSION:
+        if database_version < self.SCHEMA_VERSION:
             self._migrate_to_schema_version_1()
 
     def _get_database_version(self) -> int:
