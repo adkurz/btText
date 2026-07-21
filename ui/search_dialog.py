@@ -1,0 +1,169 @@
+import wx
+
+import datamodel
+from ui import utils
+
+
+SEARCH_DELAY_MS = 300
+CONTENT_PREVIEW_LENGTH = 60
+
+
+class SearchDialog(wx.Dialog):
+    def __init__(self, parent, model: datamodel.DataModel):
+        super().__init__(
+            parent,
+            title="Search snippets",
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
+        self._model = model
+        self._selected_snippet_id = None
+        self._search_timer = wx.Timer(self)
+
+        pane = wx.Panel(self)
+        search_label = wx.StaticText(pane, label="&Search")
+        self.search_input = wx.TextCtrl(pane)
+        result_label = wx.StaticText(pane, label="Search &results")
+        self.result_list = wx.ListView(
+            pane,
+            style=wx.LC_REPORT | wx.LC_SINGLE_SEL,
+        )
+        self.result_list.AppendColumn("Name", width=180)
+        self.result_list.AppendColumn("Category", width=140)
+        self.result_list.AppendColumn("Weight", width=80)
+        self.result_list.AppendColumn("Content preview", width=280)
+
+        self.open_button = wx.Button(pane, wx.ID_OK, "&Show snippet")
+        self.open_button.Enable(False)
+        cancel_button = wx.Button(pane, wx.ID_CANCEL, "&Cancel")
+
+        button_sizer = wx.StdDialogButtonSizer()
+        button_sizer.AddButton(self.open_button)
+        button_sizer.AddButton(cancel_button)
+        button_sizer.Realize()
+
+        pane_sizer = wx.BoxSizer(wx.VERTICAL)
+        pane_sizer.Add(search_label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)
+        pane_sizer.Add(
+            self.search_input,
+            0,
+            wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            10,
+        )
+        pane_sizer.Add(
+            result_label,
+            0,
+            wx.LEFT | wx.RIGHT,
+            10,
+        )
+        pane_sizer.Add(
+            self.result_list,
+            1,
+            wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            10,
+        )
+        pane_sizer.Add(
+            button_sizer,
+            0,
+            wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            10,
+        )
+        pane.SetSizer(pane_sizer)
+
+        dialog_sizer = wx.BoxSizer(wx.VERTICAL)
+        dialog_sizer.Add(pane, 1, wx.EXPAND)
+        self.SetSizer(dialog_sizer)
+        self.SetMinSize((650, 400))
+        self.SetSize((800, 500))
+
+        self.Bind(wx.EVT_TIMER, self._on_search_timer, self._search_timer)
+        self.search_input.Bind(wx.EVT_TEXT, self._on_search_text_changed)
+        self.result_list.Bind(
+            wx.EVT_LIST_ITEM_FOCUSED,
+            self._on_result_focused,
+        )
+        self.result_list.Bind(
+            wx.EVT_LIST_ITEM_SELECTED,
+            self._on_result_focused,
+        )
+        self.result_list.Bind(
+            wx.EVT_LIST_ITEM_ACTIVATED,
+            self._on_result_activated,
+        )
+        self.open_button.Bind(wx.EVT_BUTTON, self._on_open)
+
+        self.search_input.SetFocus()
+
+    def _on_search_text_changed(self, event: wx.CommandEvent):
+        self._search_timer.Stop()
+        self._selected_snippet_id = None
+        self.open_button.Enable(False)
+        if not self.search_input.GetValue():
+            self.result_list.DeleteAllItems()
+            return
+        self._search_timer.StartOnce(SEARCH_DELAY_MS)
+
+    def _on_search_timer(self, event: wx.TimerEvent):
+        self._run_search()
+
+    def _run_search(self):
+        term = self.search_input.GetValue()
+        self.result_list.Freeze()
+        try:
+            self.result_list.DeleteAllItems()
+            self._selected_snippet_id = None
+            self.open_button.Enable(False)
+            if not term:
+                return
+
+            category_names = {}
+            for snippet in self._model.search_snippets(term):
+                if snippet.category_id not in category_names:
+                    category = self._model.get_category(snippet.category_id)
+                    category_names[snippet.category_id] = category.name
+                index = self.result_list.Append(
+                    (
+                        snippet.name,
+                        category_names[snippet.category_id],
+                        utils.get_weight_string(snippet.weight),
+                        utils.reduce_string(
+                            snippet.content,
+                            CONTENT_PREVIEW_LENGTH,
+                        ),
+                    )
+                )
+                self.result_list.SetItemData(index, snippet.id or 0)
+        except datamodel.DataModelError as error:
+            wx.MessageBox(
+                str(error),
+                "Search error",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+        finally:
+            self.result_list.Thaw()
+
+    def _on_result_focused(self, event: wx.ListEvent):
+        self._selected_snippet_id = self.result_list.GetItemData(
+            event.GetIndex()
+        )
+        self.open_button.Enable(True)
+
+    def _on_result_activated(self, event: wx.ListEvent):
+        self._on_result_focused(event)
+        self._accept_selection()
+
+    def _on_open(self, event: wx.CommandEvent):
+        self._accept_selection()
+
+    def _accept_selection(self):
+        if self._selected_snippet_id is not None:
+            self.EndModal(wx.ID_OK)
+
+    def get_selected_snippet(self) -> datamodel.Snippet | None:
+        if self._selected_snippet_id is None:
+            return None
+        return self._model.get_snippet(self._selected_snippet_id)
+
+    def Destroy(self):
+        self._search_timer.Stop()
+        return super().Destroy()

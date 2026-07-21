@@ -1,0 +1,84 @@
+# btText – Installation Guide
+
+## Requirements
+
+- **Python 3.12 or higher** (required for the `sqlite3` `autocommit` parameter)
+- A 64-bit Python installation is recommended
+
+---
+
+## Step-by-step Installation
+
+### 1. Install Python
+
+Download and install Python from [python.org](https://www.python.org/downloads/).  
+During installation, check **"Add Python to PATH"**.
+
+Verify the installation:
+
+```bash
+python --version
+```
+
+### 2. Create a virtual environment (recommended)
+
+Open a terminal in the project folder (`btText`) and run:
+
+```bash
+python -m venv .venv
+```
+
+Activate it:
+
+- **Windows (Command Prompt):**
+  ```cmd
+  .venv\Scripts\activate.bat
+  ```
+- **Windows (PowerShell):**
+  ```powershell
+  .venv\Scripts\Activate.ps1
+  ```
+
+### 3. Install dependencies
+
+```bash
+pip install -r requirements.txt
+```
+
+If no `requirements.txt` exists, install the required packages manually:
+
+```bash
+pip install wxPython pymitter
+```
+
+### 4. Launch the application
+
+With the virtual environment activated, run:
+
+```bash
+python btText.py
+```
+
+---
+
+## First-run behaviour
+
+On first launch, the program automatically creates a `data.db` SQLite database file next to `btText.py` or the packaged executable. This keeps the application portable. No further configuration is required.
+
+---
+
+## Uninstall
+
+To remove the application:
+
+1. Deactivate and delete the virtual environment:
+   ```bash
+   deactivate
+   rmdir /s .venv          # Windows
+   rm -rf .venv            # Linux/macOS
+   ```
+2. Remove installed packages (optional):
+   ```bash
+   pip uninstall wx pymitter
+   ```
+3. Delete the project folder, including `data.db`.
