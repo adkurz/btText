@@ -32,6 +32,7 @@ class Snippet:
 class Category:
     name: str
     id: int|None = None
+    number_of_snippets: int = 0
 
 
 class DataModel:
@@ -95,32 +96,34 @@ class DataModel:
         invalid_category_names = self._connection.execute(
             "SELECT COUNT(*) FROM category WHERE name IS NULL"
         ).fetchone()[0]
+        if invalid_category_names:
+            raise DataModelError(
+                "The database contains categories without a name"
+            )
+
         invalid_weights = self._connection.execute(
             "SELECT COUNT(*) FROM snippet "
             "WHERE weight IS NULL OR weight NOT IN (1, 2, 3)"
         ).fetchone()[0]
+        if invalid_weights:
+            raise DataModelError(
+                "The database contains snippets with an invalid weight"
+            )
+
         duplicate_snippet_names = self._connection.execute(
             "SELECT COUNT(*) FROM ("
             "SELECT 1 FROM snippet GROUP BY category_id, name HAVING COUNT(*) > 1"
             ")"
         ).fetchone()[0]
-        orphaned_snippets = self._connection.execute(
-            "SELECT COUNT(*) FROM snippet s "
-            "LEFT JOIN category c ON c.id = s.category_id WHERE c.id IS NULL"
-        ).fetchone()[0]
-
-        if invalid_category_names:
-            raise DataModelError(
-                "The database contains categories without a name"
-            )
-        if invalid_weights:
-            raise DataModelError(
-                "The database contains snippets with an invalid weight"
-            )
         if duplicate_snippet_names:
             raise DataModelError(
                 "The database contains duplicate snippet names in a category"
             )
+
+        orphaned_snippets = self._connection.execute(
+            "SELECT COUNT(*) FROM snippet s "
+            "LEFT JOIN category c ON c.id = s.category_id WHERE c.id IS NULL"
+        ).fetchone()[0]
         if orphaned_snippets:
             raise DataModelError(
                 "The database contains snippets without a category"
@@ -163,7 +166,11 @@ class DataModel:
         if order:
             sql += " ORDER BY name COLLATE NOCASE"
         for category in self._connection.execute(sql):
-            yield Category(id=category['id'], name=category['name'])
+            yield Category(
+                id=category['id'],
+                name=category['name'],
+                number_of_snippets=category['number_of_snippets'],
+            )
 
     def get_snippets(self, category_id: int, order_by_name: bool = False):
         sql = "SELECT id, category_id, name, weight, content FROM snippet WHERE category_id = ? ORDER BY weight DESC"

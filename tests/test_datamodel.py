@@ -75,6 +75,20 @@ class DataModelTestCase(unittest.TestCase):
         with self.assertRaises(EntityNotFoundError):
             self.model.get_category(category.id)
 
+    def test_categories_include_number_of_snippets(self):
+        empty_category = self.model.add_category(Category("Empty"))
+        filled_category = self.model.add_category(Category("Filled"))
+        self.model.add_snippet(Snippet("First", "Content", filled_category.id))
+        self.model.add_snippet(Snippet("Second", "Content", filled_category.id))
+
+        categories = {
+            category.name: category
+            for category in self.model.get_categories()
+        }
+
+        self.assertEqual(categories[empty_category.name].number_of_snippets, 0)
+        self.assertEqual(categories[filled_category.name].number_of_snippets, 2)
+
     def test_weight_is_preserved_by_all_read_methods(self):
         category = self.model.add_category(Category("Weights"))
         snippet = self.model.add_snippet(

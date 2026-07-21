@@ -396,6 +396,7 @@ class _CategoryList(BaseList):
     def __init__(self, parent, ee: pymitter.EventEmitter, model: datamodel.DataModel):
         super().__init__(parent, ee, model)
         self.AppendColumn("Name")
+        self.AppendColumn("Snippets")
         # Bind wx events:
         self.Bind(wx.EVT_CONTEXT_MENU, self.context_menu)
         self.Bind(wx.EVT_CHAR, self.key_handler)
@@ -404,6 +405,9 @@ class _CategoryList(BaseList):
         ee.on("category.added", self.add_category_in_list)
         ee.on("category.edited", self.edit_category_in_list)
         ee.on("category.deleted", self.delete_category_from_list)
+        ee.on("snippet.added", self.snippet_count_changed)
+        ee.on("snippet.edited", self.snippet_count_changed)
+        ee.on("snippet.deleted", self.snippet_count_changed)
         # Fill list with categories
         self.update()
 
@@ -412,7 +416,7 @@ class _CategoryList(BaseList):
         self.Freeze()
         self.DeleteAllItems()
         for c in self._model.get_categories(True):
-            index = self.Append((c.name,))
+            index = self.Append((c.name, str(c.number_of_snippets)))
             self.SetItemData(index, c.id or 0)
         self.sort()
         if selected_index is not None:
@@ -476,6 +480,7 @@ class _CategoryList(BaseList):
         category_index = self.Append(
             (
                 category.name,
+                str(category.number_of_snippets),
             )
         )
         self.SetItemData(category_index, category.id or 0)
@@ -556,6 +561,9 @@ class _CategoryList(BaseList):
     def delete_category_from_list(self, id):
         category_index = self.FindItem(-1, id)
         self.DeleteItem(category_index)
+
+    def snippet_count_changed(self, snippet: datamodel.Snippet):
+        self.update()
 
 
 class _SnippetList(BaseList):
