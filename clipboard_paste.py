@@ -4,13 +4,13 @@ from __future__ import annotations
 
 import ctypes
 from ctypes import wintypes
-from dataclasses import dataclass
 import os
 import time
 import uuid
 
 
 CF_UNICODETEXT = 13
+CF_HDROP = 15
 GMEM_MOVEABLE = 0x0002
 INPUT_KEYBOARD = 1
 KEYEVENTF_KEYUP = 0x0002
@@ -25,6 +25,7 @@ class PasteError(RuntimeError):
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+ole32 = ctypes.WinDLL("ole32")
 
 user32.GetForegroundWindow.restype = wintypes.HWND
 user32.GetWindowThreadProcessId.argtypes = (
@@ -42,6 +43,8 @@ user32.OpenClipboard.argtypes = (wintypes.HWND,)
 user32.OpenClipboard.restype = wintypes.BOOL
 user32.CloseClipboard.restype = wintypes.BOOL
 user32.EmptyClipboard.restype = wintypes.BOOL
+user32.EnumClipboardFormats.argtypes = (wintypes.UINT,)
+user32.EnumClipboardFormats.restype = wintypes.UINT
 user32.IsClipboardFormatAvailable.argtypes = (wintypes.UINT,)
 user32.GetClipboardData.argtypes = (wintypes.UINT,)
 user32.GetClipboardData.restype = wintypes.HANDLE
@@ -56,6 +59,14 @@ kernel32.GlobalLock.restype = wintypes.LPVOID
 kernel32.GlobalUnlock.argtypes = (wintypes.HGLOBAL,)
 kernel32.GlobalSize.argtypes = (wintypes.HGLOBAL,)
 kernel32.GlobalSize.restype = ctypes.c_size_t
+
+ole32.OleInitialize.argtypes = (wintypes.LPVOID,)
+ole32.OleInitialize.restype = ctypes.c_long
+ole32.OleUninitialize.restype = None
+ole32.OleGetClipboard.argtypes = (ctypes.POINTER(ctypes.c_void_p),)
+ole32.OleGetClipboard.restype = ctypes.c_long
+ole32.OleSetClipboard.argtypes = (ctypes.c_void_p,)
+ole32.OleSetClipboard.restype = ctypes.c_long
 
 
 class KEYBDINPUT(ctypes.Structure):
@@ -105,10 +116,83 @@ if not _MARKER_FORMAT:
     raise ctypes.WinError(ctypes.get_last_error())
 
 
-@dataclass(frozen=True)
 class _ClipboardSnapshot:
-    had_text: bool
-    text: str
+    """A retained OLE IDataObject containing every clipboard format."""
+
+    def __init__(
+        self,
+        data_object: ctypes.c_void_p,
+        copied_formats: list[tuple[int, bytes]],
+    ):
+        self._data_object = data_object
+        self._copied_formats = copied_formats
+        self._contains_file_drop = any(
+            format_id == CF_HDROP for format_id, _ in copied_formats
+        )
+        self._closed = False
+
+    @classmethod
+    def capture(cls) -> _ClipboardSnapshot:
+        # OleInitialize returns S_OK or S_FALSE on success. Both calls must be
+        # balanced by OleUninitialize after the retained IDataObject is released.
+        result = ole32.OleInitialize(None)
+        if result < 0:
+            raise PasteError(
+                "The clipboard could not be initialized for a complete backup."
+            )
+        data_object = ctypes.c_void_p()
+        result = ole32.OleGetClipboard(ctypes.byref(data_object))
+        if result < 0 or not data_object:
+            ole32.OleUninitialize()
+            raise PasteError("The complete clipboard contents could not be saved.")
+        snapshot = cls(data_object, [])
+        try:
+            snapshot._copied_formats = _copy_hglobal_clipboard_formats()
+            snapshot._contains_file_drop = any(
+                format_id == CF_HDROP
+                for format_id, _ in snapshot._copied_formats
+            )
+        except Exception:
+            snapshot.close()
+            raise
+        return snapshot
+
+    def restore(self) -> None:
+        if self._closed:
+            return
+        if self._contains_file_drop:
+            # Explorer's IDataObject may stop serving CF_HDROP after clipboard
+            # ownership changes. Restore the independent HGLOBAL copies instead.
+            _restore_copied_formats(self._copied_formats)
+        else:
+            result = ole32.OleSetClipboard(self._data_object)
+            if result < 0:
+                raise PasteError(
+                    "The complete clipboard contents could not be restored."
+                )
+        self.close()
+
+    def close(self) -> None:
+        if self._closed:
+            return
+        # IDataObject inherits IUnknown; Release is the third vtable entry.
+        vtable = ctypes.cast(
+            self._data_object,
+            ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p)),
+        ).contents
+        release = ctypes.WINFUNCTYPE(wintypes.ULONG, ctypes.c_void_p)(vtable[2])
+        release(self._data_object)
+        self._closed = True
+        ole32.OleUninitialize()
+
+    def __del__(self):
+        # Normally restore_clipboard closes the snapshot. This is a safety net
+        # for application shutdown while a delayed restore is pending.
+        if not self._closed:
+            try:
+                self.close()
+            except Exception:
+                pass
 
 
 def get_foreground_window() -> int | None:
@@ -150,19 +234,34 @@ def _read_clipboard_bytes(format_id: int) -> bytes | None:
         kernel32.GlobalUnlock(handle)
 
 
-def _read_clipboard_text() -> _ClipboardSnapshot:
-    if not user32.IsClipboardFormatAvailable(CF_UNICODETEXT):
-        return _ClipboardSnapshot(False, "")
-    handle = user32.GetClipboardData(CF_UNICODETEXT)
-    if not handle:
-        return _ClipboardSnapshot(False, "")
-    pointer = kernel32.GlobalLock(handle)
-    if not pointer:
-        raise PasteError("The text in the clipboard could not be read.")
+def _copy_hglobal_clipboard_formats() -> list[tuple[int, bytes]]:
+    """Deep-copy all clipboard formats backed by movable global memory."""
+    copied_formats: list[tuple[int, bytes]] = []
+    _open_clipboard()
     try:
-        return _ClipboardSnapshot(True, ctypes.wstring_at(pointer))
+        format_id = 0
+        while True:
+            format_id = user32.EnumClipboardFormats(format_id)
+            if not format_id:
+                break
+            data = _read_clipboard_bytes(format_id)
+            if data is not None:
+                copied_formats.append((format_id, data))
     finally:
-        kernel32.GlobalUnlock(handle)
+        user32.CloseClipboard()
+    return copied_formats
+
+
+def _restore_copied_formats(copied_formats: list[tuple[int, bytes]]) -> None:
+    """Restore a deep-copied collection of HGLOBAL clipboard formats."""
+    _open_clipboard()
+    try:
+        if not user32.EmptyClipboard():
+            raise PasteError("The clipboard could not be restored.")
+        for format_id, data in copied_formats:
+            _set_clipboard_data(format_id, data)
+    finally:
+        user32.CloseClipboard()
 
 
 def _set_clipboard_data(format_id: int, data: bytes) -> None:
@@ -187,16 +286,21 @@ def _set_clipboard_text(text: str) -> None:
 
 
 def _replace_clipboard(text: str, marker: bytes) -> _ClipboardSnapshot:
-    _open_clipboard()
+    snapshot = _ClipboardSnapshot.capture()
     try:
-        snapshot = _read_clipboard_text()
-        if not user32.EmptyClipboard():
-            raise PasteError("The clipboard could not be cleared.")
-        _set_clipboard_text(text)
-        _set_clipboard_data(_MARKER_FORMAT, marker)
+        _open_clipboard()
+        try:
+            if not user32.EmptyClipboard():
+                raise PasteError("The clipboard could not be cleared.")
+            _set_clipboard_text(text)
+            _set_clipboard_data(_MARKER_FORMAT, marker)
+        finally:
+            user32.CloseClipboard()
         return snapshot
-    finally:
-        user32.CloseClipboard()
+    except Exception:
+        # EmptyClipboard may already have discarded the original contents.
+        snapshot.restore()
+        raise
 
 
 def _send_ctrl_v() -> None:
@@ -217,24 +321,24 @@ def _send_ctrl_v() -> None:
 
 
 class PendingPaste:
-    """A paste whose previous clipboard text can be restored later."""
+    """A paste whose complete previous clipboard can be restored later."""
 
     def __init__(self, snapshot: _ClipboardSnapshot, marker: bytes):
         self._snapshot = snapshot
         self._marker = marker
 
     def restore_clipboard(self) -> None:
-        """Restore old text unless another application changed the clipboard."""
+        """Restore every old format unless another app changed the clipboard."""
         _open_clipboard()
         try:
-            if _read_clipboard_bytes(_MARKER_FORMAT) != self._marker:
-                return
-            if not user32.EmptyClipboard():
-                raise PasteError("The clipboard could not be restored.")
-            if self._snapshot.had_text:
-                _set_clipboard_text(self._snapshot.text)
+            marker_matches = _read_clipboard_bytes(_MARKER_FORMAT) == self._marker
         finally:
             user32.CloseClipboard()
+        if marker_matches:
+            self._snapshot.restore()
+        else:
+            # Respect a newer clipboard change and release the retained object.
+            self._snapshot.close()
 
 
 def paste_text(target_window: int, text: str) -> PendingPaste:
