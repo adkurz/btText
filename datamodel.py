@@ -46,6 +46,7 @@ class DataModel:
 
     WEIGHTS = (1, 2, 3)
     SCHEMA_VERSION = 1
+    MIGRATIONS = ("_migrate_from_0_to_1",)
 
     def __init__(self, ee: pymitter.EventEmitter, db_file: str | Path):
         self.ee = ee
@@ -76,7 +77,7 @@ class DataModel:
                             ", ".join(sorted(missing_tables))
                         )
                     )
-                self._updateDatabase()
+                self._migrate_database()
         except Exception:
             self._connection.close()
             self._closed = True
@@ -92,7 +93,7 @@ class DataModel:
             )
             c.execute("PRAGMA user_version = 1")
 
-    def _updateDatabase(self):
+    def _migrate_database(self) -> None:
         database_version = self._get_database_version()
         if database_version > self.SCHEMA_VERSION:
             raise DataModelError(
@@ -101,19 +102,39 @@ class DataModel:
                 "version: {}).".format(database_version, self.SCHEMA_VERSION)
             )
 
-        # Check for column weight in table snippet:
-        if not self._has_table_column("snippet", "weight"):
-            with self._connection as c:
-                c.execute(
-                    "ALTER TABLE snippet ADD COLUMN weight INTEGER DEFAULT 1"
+        while database_version < self.SCHEMA_VERSION:
+            try:
+                migration_name = self.MIGRATIONS[database_version]
+            except IndexError as error:
+                raise DataModelError(
+                    "No database migration is available from schema version {}.".format(
+                        database_version
+                    )
+                ) from error
+
+            migration = getattr(self, migration_name)
+            migration()
+            migrated_version = self._get_database_version()
+            if migrated_version != database_version + 1:
+                raise DataModelError(
+                    "Database migration {} did not advance the schema from "
+                    "version {} to version {}.".format(
+                        migration_name,
+                        database_version,
+                        database_version + 1,
+                    )
                 )
-        if database_version < self.SCHEMA_VERSION:
-            self._migrate_to_schema_version_1()
+            database_version = migrated_version
 
     def _get_database_version(self) -> int:
         return self._connection.execute("PRAGMA user_version").fetchone()[0]
 
-    def _migrate_to_schema_version_1(self) -> None:
+    def _migrate_from_0_to_1(self) -> None:
+        if not self._has_table_column("snippet", "weight"):
+            self._connection.execute(
+                "ALTER TABLE snippet ADD COLUMN weight INTEGER DEFAULT 1"
+            )
+
         invalid_category_names = self._connection.execute(
             "SELECT COUNT(*) FROM category WHERE name IS NULL"
         ).fetchone()[0]

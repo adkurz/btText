@@ -310,6 +310,41 @@ class DatabaseMigrationTestCase(unittest.TestCase):
                 )
             model._connection.rollback()
 
+    def test_migration_from_version_zero_adds_missing_weight_column(self):
+        with ExitStack() as resources:
+            temporary_directory = resources.enter_context(
+                tempfile.TemporaryDirectory()
+            )
+            database_file = Path(temporary_directory) / "legacy-without-weight.db"
+            connection = sqlite3.connect(database_file)
+            connection.execute(
+                "CREATE TABLE category "
+                "(id INTEGER NOT NULL PRIMARY KEY, name TEXT UNIQUE)"
+            )
+            connection.execute(
+                "CREATE TABLE snippet "
+                "(id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, "
+                "name TEXT NOT NULL, content TEXT NOT NULL)"
+            )
+            connection.execute(
+                "INSERT INTO category (id, name) VALUES (1, 'Legacy')"
+            )
+            connection.execute(
+                "INSERT INTO snippet (id, category_id, name, content) "
+                "VALUES (2, 1, 'Without weight', 'Legacy content')"
+            )
+            connection.commit()
+            connection.close()
+
+            model = DataModel(RecordingEventEmitter(), database_file)
+            resources.callback(model.close)
+
+            self.assertEqual(model.get_snippet(2).weight, 1)
+            self.assertEqual(
+                model._connection.execute("PRAGMA user_version").fetchone()[0],
+                1,
+            )
+
 
 if __name__ == "__main__":
     unittest.main()
