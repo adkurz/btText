@@ -63,7 +63,7 @@ python btText.py
 
 ## First-run behaviour
 
-On first launch, the program automatically creates a `data.db` SQLite database file next to `btText.py` or the packaged executable. This keeps the application portable. No further configuration is required.
+On first launch, the program automatically creates a `data.db` SQLite database file next to `btText.py` or the packaged executable. Configurable settings are stored in `settings.ini` in the same directory. This keeps the application portable. No further configuration is required.
 
 ---
 

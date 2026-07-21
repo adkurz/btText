@@ -4,20 +4,34 @@ import wx.adv
 import pymitter
 
 import app_paths
+from app_settings import AppSettings, Hotkey, SettingsError, SettingsStore
 import datamodel
 import info
 from ui.snippet_editor import SnippetEditor
 from ui.search_dialog import SearchDialog
+from ui.settings_dialog import SettingsDialog
 from ui import utils
 
 CONTENT_PREVIEW_LENGTH = 40
 
 
 class MainFrame(sc.SizedFrame):
-    def __init__(self, ee: pymitter.EventEmitter, model: datamodel.DataModel):
+    def __init__(
+        self,
+        ee: pymitter.EventEmitter,
+        model: datamodel.DataModel,
+        settings_store: SettingsStore,
+        settings: AppSettings,
+    ):
         super().__init__(None, title=wx.GetApp().GetAppName())
         self._ee = ee
         self._model = model
+        self._settings_store = settings_store
+        self._settings = settings
+        self._hotkey_id = 1
+        self._registered_hotkey = None
+        self._hotkey_suspended = False
+        self.Bind(wx.EVT_HOTKEY, self.on_global_hotkey, id=self._hotkey_id)
         self.pane = self.GetContentsPane()
         self.pane.SetSizerType("horizontal")
         self.category_list_label = wx.StaticText(self.pane, label="&Categories")
@@ -29,6 +43,7 @@ class MainFrame(sc.SizedFrame):
         self.search_button = wx.Button(self.pane, label="&Search... (F3)")
         self.search_button.Bind(wx.EVT_BUTTON, self.on_search)
         self._search_command_id = wx.NewIdRef()
+        self._settings_command_id = wx.NewIdRef()
         self.SetAcceleratorTable(
             wx.AcceleratorTable(
                 [
@@ -36,7 +51,12 @@ class MainFrame(sc.SizedFrame):
                         wx.ACCEL_NORMAL,
                         wx.WXK_F3,
                         int(self._search_command_id),
-                    )
+                    ),
+                    (
+                        wx.ACCEL_CTRL,
+                        ord(","),
+                        int(self._settings_command_id),
+                    ),
                 ]
             )
         )
@@ -45,10 +65,15 @@ class MainFrame(sc.SizedFrame):
             self.on_search,
             id=int(self._search_command_id),
         )
+        self.Bind(
+            wx.EVT_MENU,
+            self.on_settings,
+            id=int(self._settings_command_id),
+        )
         self._create_menubar()
         self._create_statusbar()
         self._create_tray_icon()
-        self._register_hotkey()
+        self._register_hotkey(self._settings.toggle_window_hotkey)
 
     def on_search(self, event: wx.CommandEvent):
         selected_snippet = None
@@ -91,22 +116,105 @@ class MainFrame(sc.SizedFrame):
             return
         self.snippet_list.SetFocus()
 
-    def _register_hotkey(self):
-        """Register Ctrl+Shift+Alt+T as a global hotkey to toggle window visibility."""
-        self._hotkey_id = 1
+    def _register_hotkey(self, hotkey: Hotkey, show_error: bool = True) -> bool:
         success = self.RegisterHotKey(
             self._hotkey_id,
-            wx.MOD_CONTROL | wx.MOD_SHIFT | wx.MOD_ALT,
-            ord('T')
+            self._get_hotkey_modifiers(hotkey),
+            self._get_hotkey_key_code(hotkey),
         )
         if not success:
-            wx.MessageBox(
-                "The global hotkey Ctrl+Shift+Alt+T is already in use by another application and could not be registered.",
-                "Hotkey Error",
-                wx.OK | wx.ICON_ERROR,
-            )
+            if show_error:
+                wx.MessageBox(
+                    "The global hotkey {} is already in use and could not be registered.".format(
+                        hotkey.to_display_string()
+                    ),
+                    "Hotkey error",
+                    wx.OK | wx.ICON_ERROR,
+                    self,
+                )
+            return False
+        self._registered_hotkey = hotkey
+        return True
+
+    @staticmethod
+    def _get_hotkey_modifiers(hotkey: Hotkey) -> int:
+        modifiers = 0
+        if hotkey.control:
+            modifiers |= wx.MOD_CONTROL
+        if hotkey.shift:
+            modifiers |= wx.MOD_SHIFT
+        if hotkey.alt:
+            modifiers |= wx.MOD_ALT
+        if hotkey.windows:
+            modifiers |= wx.MOD_WIN
+        return modifiers
+
+    @staticmethod
+    def _get_hotkey_key_code(hotkey: Hotkey) -> int:
+        return hotkey.key_code
+
+    def _unregister_hotkey(self):
+        if self._registered_hotkey is None:
             return
-        self.Bind(wx.EVT_HOTKEY, self.on_global_hotkey, id=self._hotkey_id)
+        self.UnregisterHotKey(self._hotkey_id)
+        self._registered_hotkey = None
+
+    def _suspend_hotkey(self):
+        self._hotkey_suspended = True
+        self._unregister_hotkey()
+
+    def _resume_hotkey(self):
+        if not self._hotkey_suspended:
+            return
+        self._hotkey_suspended = False
+        if self._registered_hotkey is None:
+            self._register_hotkey(self._settings.toggle_window_hotkey)
+
+    def _change_hotkey(self, hotkey: Hotkey) -> bool:
+        old_hotkey = self._settings.toggle_window_hotkey
+        self._unregister_hotkey()
+        if not self._register_hotkey(hotkey, show_error=False):
+            restored = self._register_hotkey(old_hotkey, show_error=False)
+            if restored:
+                message = (
+                    "The selected hotkey {} is already in use. "
+                    "The previous hotkey has been restored."
+                ).format(hotkey.to_display_string())
+            else:
+                message = (
+                    "The selected hotkey {} is already in use and the previous "
+                    "hotkey could not be restored. No global hotkey is active."
+                ).format(hotkey.to_display_string())
+            wx.MessageBox(
+                message,
+                "Hotkey error",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return False
+
+        new_settings = AppSettings(toggle_window_hotkey=hotkey)
+        try:
+            self._settings_store.save(new_settings)
+        except SettingsError as error:
+            self._unregister_hotkey()
+            restored = self._register_hotkey(old_hotkey, show_error=False)
+            if not restored:
+                wx.MessageBox(
+                    "The previous hotkey could not be restored. No global hotkey is active.",
+                    "Hotkey error",
+                    wx.OK | wx.ICON_ERROR,
+                    self,
+                )
+            wx.MessageBox(
+                str(error),
+                "Settings error",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return False
+        self._settings = new_settings
+        return True
 
     def on_global_hotkey(self, event):
         """Toggle window visibility when the global hotkey is pressed."""
@@ -118,11 +226,29 @@ class MainFrame(sc.SizedFrame):
 
     def _create_menubar(self):
         menubar = wx.MenuBar()
+        edit_menu = wx.Menu()
+        edit_menu.Append(
+            int(self._settings_command_id),
+            "&Settings...\tCtrl+,",
+        )
+        menubar.Append(edit_menu, "&Edit")
         help_menu = wx.Menu()
         about_item = help_menu.Append(wx.ID_ABOUT, "About")
         self.Bind(wx.EVT_MENU, self.on_about, about_item)
         menubar.Append(help_menu, "&Help")
         self.SetMenuBar(menubar)
+
+    def on_settings(self, event: wx.CommandEvent):
+        with utils.managed_dialog(
+            SettingsDialog(
+                self,
+                self._settings.toggle_window_hotkey,
+                self._change_hotkey,
+                self._suspend_hotkey,
+                self._resume_hotkey,
+            )
+        ) as dialog:
+            dialog.ShowModal()
 
     def _create_statusbar(self):
         self.status_bar = self.CreateStatusBar()
@@ -141,7 +267,7 @@ class MainFrame(sc.SizedFrame):
 
     def on_close(self, event: wx.CloseEvent):
         if self.allow_close:
-            self.UnregisterHotKey(self._hotkey_id)
+            self._unregister_hotkey()
             self.tray_icon.RemoveIcon()
             self.tray_icon.Destroy()
             event.Skip()
