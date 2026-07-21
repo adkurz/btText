@@ -50,22 +50,9 @@ class MainFrame(sc.SizedFrame):
         self.snippet_list_label = wx.StaticText(self.pane, label="&Snippets")
         self.snippet_list = _SnippetList(self.pane, ee, model)
         self.snippet_list.SetSizerProps(expand=True, proportion=1) # type: ignore
-        self.search_button = wx.Button(self.pane, label="&Search... (F3)")
-        self.search_button.Bind(wx.EVT_BUTTON, self.on_search)
         self._last_focused_control: wx.Window | None = None
         self._search_command_id = wx.NewIdRef()
         self._settings_command_id = wx.NewIdRef()
-        self.SetAcceleratorTable(
-            wx.AcceleratorTable(
-                [
-                    (
-                        wx.ACCEL_NORMAL,
-                        wx.WXK_F3,
-                        int(self._search_command_id),
-                    ),
-                ]
-            )
-        )
         self.Bind(
             wx.EVT_MENU,
             self.on_search,
@@ -247,7 +234,6 @@ class MainFrame(sc.SizedFrame):
         if focused_control in (
             self.category_list,
             self.snippet_list,
-            self.search_button,
         ):
             self._last_focused_control = focused_control
 
@@ -318,6 +304,11 @@ class MainFrame(sc.SizedFrame):
     def _create_menubar(self):
         menubar = wx.MenuBar()
         edit_menu = wx.Menu()
+        edit_menu.Append(
+            int(self._search_command_id),
+            "&Search...\tF3",
+        )
+        edit_menu.AppendSeparator()
         edit_menu.Append(
             int(self._settings_command_id),
             "&Settings...\tCtrl+,",
