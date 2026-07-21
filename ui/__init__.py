@@ -4,6 +4,7 @@ import wx.adv
 import pymitter
 
 import app_paths
+import clipboard_paste
 from app_settings import AppSettings, Hotkey, SettingsError, SettingsStore
 import datamodel
 import info
@@ -13,6 +14,7 @@ from ui.settings_dialog import SettingsDialog
 from ui import utils
 
 CONTENT_PREVIEW_LENGTH = 40
+CLIPBOARD_RESTORE_DELAY_MS = 500
 
 
 class MainFrame(sc.SizedFrame):
@@ -31,6 +33,14 @@ class MainFrame(sc.SizedFrame):
         self._hotkey_id = 1
         self._registered_hotkey = None
         self._hotkey_suspended = False
+        foreground_window = clipboard_paste.get_foreground_window()
+        self._paste_target_window = (
+            foreground_window
+            if clipboard_paste.is_external_window(foreground_window)
+            else None
+        )
+        self._ee.on("snippet.insert_requested", self.insert_snippet)
+        self.Bind(wx.EVT_ACTIVATE, self.on_activate)
         self.Bind(wx.EVT_HOTKEY, self.on_global_hotkey, id=self._hotkey_id)
         self.pane = self.GetContentsPane()
         self.pane.SetSizerType("horizontal")
@@ -221,8 +231,71 @@ class MainFrame(sc.SizedFrame):
         if self.IsShown():
             self.Hide()
         else:
+            self._remember_foreground_window()
             self.Show()
             self.Iconize(False)
+
+    def on_activate(self, event: wx.ActivateEvent):
+        event.Skip()
+        if not event.GetActive():
+            # At deactivation, Windows may not have completed its foreground
+            # transition yet. Remember it on the next UI-loop iteration.
+            wx.CallAfter(self._remember_foreground_window)
+
+    def _remember_foreground_window(self):
+        foreground_window = clipboard_paste.get_foreground_window()
+        if clipboard_paste.is_external_window(foreground_window):
+            self._paste_target_window = foreground_window
+
+    def insert_snippet(self, snippet_id: int):
+        if self._paste_target_window is None:
+            wx.MessageBox(
+                "There is no previous window to insert the snippet into.",
+                "Paste error",
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return
+        try:
+            snippet = self._model.get_snippet(snippet_id)
+        except datamodel.DataModelError as error:
+            wx.MessageBox(str(error), "Error", wx.OK | wx.ICON_ERROR, self)
+            return
+
+        self.Hide()
+        # Let Windows finish hiding BTText before changing focus and sending Ctrl+V.
+        wx.CallLater(50, self._paste_after_hide, snippet.content)
+
+    def _paste_after_hide(self, text: str):
+        try:
+            pending = clipboard_paste.paste_text(self._paste_target_window, text)
+        except clipboard_paste.PasteError as error:
+            self.Show()
+            self.Iconize(False)
+            wx.MessageBox(str(error), "Paste error", wx.OK | wx.ICON_ERROR, self)
+            return
+        wx.CallLater(
+            CLIPBOARD_RESTORE_DELAY_MS,
+            self._restore_clipboard,
+            pending,
+            3,
+        )
+
+    def _restore_clipboard(
+        self,
+        pending: clipboard_paste.PendingPaste,
+        attempts_remaining: int,
+    ):
+        try:
+            pending.restore_clipboard()
+        except clipboard_paste.PasteError:
+            if attempts_remaining > 1:
+                wx.CallLater(
+                    100,
+                    self._restore_clipboard,
+                    pending,
+                    attempts_remaining - 1,
+                )
 
     def _create_menubar(self):
         menubar = wx.MenuBar()
@@ -519,6 +592,8 @@ class _SnippetList(BaseList):
         new_snippet = menu.Append(wx.ID_ANY, "New Snippet")
         menu.Bind(wx.EVT_MENU, self.add_snippet, new_snippet)
         if self.get_selected_id() is not None:
+            insert_snippet = menu.Append(wx.ID_ANY, "Insert Snippet")
+            menu.Bind(wx.EVT_MENU, self.insert_snippet, insert_snippet)
             edit_snippet = menu.Append(wx.ID_ANY, "Edit Snippet")
             menu.Bind(wx.EVT_MENU, self.edit_snippet, edit_snippet)
         self.PopupMenu(menu)
@@ -527,12 +602,19 @@ class _SnippetList(BaseList):
         key = event.GetKeyCode()
         if key == wx.WXK_CONTROL_N:
             self.add_snippet(event)
+        elif key in (wx.WXK_RETURN, wx.WXK_NUMPAD_ENTER):
+            self.insert_snippet(event)
         elif key == wx.WXK_F2:
             self.edit_snippet(event)
         elif key == wx.WXK_DELETE:
             self.delete_snippet(event)
         else:
             event.Skip()
+
+    def insert_snippet(self, event: wx.CommandEvent | wx.KeyEvent):
+        snippet_id = self.get_selected_id()
+        if snippet_id is not None:
+            self._ee.emit("snippet.insert_requested", snippet_id)
 
     def add_snippet(self, event: wx.CommandEvent | wx.KeyEvent):
         if self.selected_category_id is None:
