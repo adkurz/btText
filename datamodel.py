@@ -64,10 +64,23 @@ class DataModel:
             self._connection.close()
             raise DataModelError("Could not enable SQLite foreign-key support")
         self._connection.autocommit = False
-        if not exists:
-            self.create_tables()
-        else:
-            self._updateDatabase()
+        try:
+            tables = self._get_table_names()
+            if not exists or not tables:
+                self.create_tables()
+            else:
+                missing_tables = {"category", "snippet"} - tables
+                if missing_tables:
+                    raise DataModelError(
+                        "The database schema is incomplete. Missing table(s): {}".format(
+                            ", ".join(sorted(missing_tables))
+                        )
+                    )
+                self._updateDatabase()
+        except Exception:
+            self._connection.close()
+            self._closed = True
+            raise
 
     def create_tables(self):
         with self._connection as c:
@@ -369,6 +382,13 @@ class DataModel:
             (table, column),
         )
         return result.fetchone()["CNTREC"] > 0
+
+    def _get_table_names(self) -> set[str]:
+        rows = self._connection.execute(
+            "SELECT name FROM sqlite_master "
+            "WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
+        )
+        return {row["name"] for row in rows}
 
     def _escape_like(self, string: str) -> str:
         return string.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")

@@ -21,6 +21,7 @@ from datamodel import (
     Category,
     CategoryValidationError,
     DataModel,
+    DataModelError,
     EntityNotFoundError,
     Snippet,
     SnippetValidationError,
@@ -165,6 +166,42 @@ class DataModelTestCase(unittest.TestCase):
 
 
 class DatabaseMigrationTestCase(unittest.TestCase):
+    def test_empty_database_file_is_initialized(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_file = Path(temporary_directory) / "empty.db"
+            database_file.touch()
+
+            model = DataModel(RecordingEventEmitter(), database_file)
+            try:
+                tables = {
+                    row[0]
+                    for row in model._connection.execute(
+                        "SELECT name FROM sqlite_master WHERE type = 'table'"
+                    )
+                }
+                self.assertEqual(tables, {"category", "snippet"})
+                self.assertEqual(
+                    model._connection.execute("PRAGMA user_version").fetchone()[0],
+                    DataModel.SCHEMA_VERSION,
+                )
+            finally:
+                model.close()
+
+    def test_incomplete_database_schema_raises_clear_error(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_file = Path(temporary_directory) / "incomplete.db"
+            connection = sqlite3.connect(database_file)
+            connection.execute(
+                "CREATE TABLE category (id INTEGER NOT NULL PRIMARY KEY, name TEXT)"
+            )
+            connection.close()
+
+            with self.assertRaisesRegex(
+                DataModelError,
+                r"schema is incomplete.*snippet",
+            ):
+                DataModel(RecordingEventEmitter(), database_file)
+
     def test_legacy_database_is_migrated_with_data_and_constraints(self):
         with ExitStack() as resources:
             temporary_directory = resources.enter_context(
