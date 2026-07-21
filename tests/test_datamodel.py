@@ -36,6 +36,11 @@ class RecordingEventEmitter:
         self.events.append((name, value))
 
 
+class RaisingEventEmitter:
+    def emit(self, name, value):
+        raise RuntimeError("listener failed")
+
+
 class DataModelTestCase(unittest.TestCase):
     def setUp(self):
         self.temporary_directory = tempfile.TemporaryDirectory()
@@ -75,6 +80,19 @@ class DataModelTestCase(unittest.TestCase):
         self.model.delete_category(category.id)
         with self.assertRaises(EntityNotFoundError):
             self.model.get_category(category.id)
+
+    def test_event_listener_error_does_not_rollback_committed_change(self):
+        self.model.ee = RaisingEventEmitter()
+        category = Category("Committed before event")
+
+        with self.assertRaisesRegex(RuntimeError, "listener failed"):
+            self.model.add_category(category)
+
+        self.assertIsNotNone(category.id)
+        self.assertEqual(
+            self.model.get_category(category.id).name,
+            "Committed before event",
+        )
 
     def test_categories_include_number_of_snippets(self):
         empty_category = self.model.add_category(Category("Empty"))
@@ -237,6 +255,14 @@ class DatabaseMigrationTestCase(unittest.TestCase):
                 DataModelError,
                 r"schema is incomplete.*snippet",
             ):
+                DataModel(RecordingEventEmitter(), database_file)
+
+    def test_corrupt_database_file_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_file = Path(temporary_directory) / "corrupt.db"
+            database_file.write_bytes(b"This is not a SQLite database")
+
+            with self.assertRaises(sqlite3.DatabaseError):
                 DataModel(RecordingEventEmitter(), database_file)
 
     def test_newer_database_schema_is_rejected(self):

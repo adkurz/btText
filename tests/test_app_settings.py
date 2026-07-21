@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from app_settings import (
     AppSettings,
@@ -118,6 +119,30 @@ class SettingsStoreTestCase(unittest.TestCase):
 
             with self.assertRaises(SettingsError):
                 store.load()
+
+    def test_open_error_is_reported_as_settings_error(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            store = SettingsStore(Path(temporary_directory) / "settings.ini")
+
+            with patch.object(Path, "open", side_effect=OSError("access denied")):
+                with self.assertRaisesRegex(SettingsError, "access denied"):
+                    store.save(AppSettings())
+
+    def test_replace_error_removes_temporary_file(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            settings_file = Path(temporary_directory) / "settings.ini"
+            temporary_file = Path(temporary_directory) / "settings.ini.tmp"
+            store = SettingsStore(settings_file)
+
+            with patch.object(
+                Path,
+                "replace",
+                side_effect=OSError("replace failed"),
+            ):
+                with self.assertRaisesRegex(SettingsError, "replace failed"):
+                    store.save(AppSettings())
+
+            self.assertFalse(temporary_file.exists())
 
 
 if __name__ == "__main__":

@@ -126,9 +126,6 @@ class _ClipboardSnapshot:
     ):
         self._data_object = data_object
         self._copied_formats = copied_formats
-        self._contains_file_drop = any(
-            format_id == CF_HDROP for format_id, _ in copied_formats
-        )
         self._closed = False
 
     @classmethod
@@ -148,10 +145,6 @@ class _ClipboardSnapshot:
         snapshot = cls(data_object, [])
         try:
             snapshot._copied_formats = _copy_hglobal_clipboard_formats()
-            snapshot._contains_file_drop = any(
-                format_id == CF_HDROP
-                for format_id, _ in snapshot._copied_formats
-            )
         except Exception:
             snapshot.close()
             raise
@@ -160,9 +153,10 @@ class _ClipboardSnapshot:
     def restore(self) -> None:
         if self._closed:
             return
-        if self._contains_file_drop:
-            # Explorer's IDataObject may stop serving CF_HDROP after clipboard
-            # ownership changes. Restore the independent HGLOBAL copies instead.
+        if self._copied_formats:
+            # The original IDataObject may stop serving any delayed format after
+            # EmptyClipboard changes ownership. Prefer the independent copies for
+            # all HGLOBAL-backed formats, including ordinary Unicode text.
             _restore_copied_formats(self._copied_formats)
         else:
             result = ole32.OleSetClipboard(self._data_object)
@@ -240,6 +234,16 @@ def _read_clipboard_bytes(format_id: int) -> bytes | None:
         return ctypes.string_at(pointer, kernel32.GlobalSize(handle))
     finally:
         kernel32.GlobalUnlock(handle)
+
+
+def _read_clipboard_text() -> str | None:
+    data = _read_clipboard_bytes(CF_UNICODETEXT)
+    if data is None:
+        return None
+    try:
+        return data.decode("utf-16-le").split("\0", 1)[0]
+    except UnicodeDecodeError:
+        return None
 
 
 def _copy_hglobal_clipboard_formats() -> list[tuple[int, bytes]]:
@@ -331,18 +335,25 @@ def _send_ctrl_v() -> None:
 class PendingPaste:
     """A paste whose complete previous clipboard can be restored later."""
 
-    def __init__(self, snapshot: _ClipboardSnapshot, marker: bytes):
+    def __init__(
+        self,
+        snapshot: _ClipboardSnapshot,
+        marker: bytes,
+        pasted_text: str,
+    ):
         self._snapshot = snapshot
         self._marker = marker
+        self._pasted_text = pasted_text
 
     def restore_clipboard(self) -> None:
         """Restore every old format unless another app changed the clipboard."""
         _open_clipboard()
         try:
             marker_matches = _read_clipboard_bytes(_MARKER_FORMAT) == self._marker
+            text_matches = _read_clipboard_text() == self._pasted_text
         finally:
             user32.CloseClipboard()
-        if marker_matches:
+        if marker_matches or text_matches:
             self._snapshot.restore()
         else:
             # Respect a newer clipboard change and release the retained object.
@@ -359,7 +370,7 @@ def paste_text(target_window: int, text: str) -> PendingPaste:
         raise PasteError("The previously active window no longer exists.")
 
     marker = uuid.uuid4().bytes
-    pending = PendingPaste(_replace_clipboard(text, marker), marker)
+    pending = PendingPaste(_replace_clipboard(text, marker), marker, text)
     if not activate_window(target_window):
         pending.restore_clipboard()
         raise PasteError("The previously active window could not be activated.")
