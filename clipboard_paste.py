@@ -4,14 +4,23 @@ from __future__ import annotations
 
 import ctypes
 from ctypes import wintypes
+from dataclasses import dataclass
 import os
 import time
 import uuid
 
 
 CF_UNICODETEXT = 13
-CF_HDROP = 15
+CF_BITMAP = 2
+CF_METAFILEPICT = 3
+CF_PALETTE = 9
+CF_ENHMETAFILE = 14
+CF_OWNERDISPLAY = 0x0080
+CF_DSPBITMAP = 0x0082
+CF_DSPMETAFILEPICT = 0x0083
+CF_DSPENHMETAFILE = 0x008E
 GMEM_MOVEABLE = 0x0002
+IMAGE_BITMAP = 0
 INPUT_KEYBOARD = 1
 KEYEVENTF_KEYUP = 0x0002
 SW_RESTORE = 9
@@ -25,7 +34,6 @@ class PasteError(RuntimeError):
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
-ole32 = ctypes.WinDLL("ole32")
 
 user32.GetForegroundWindow.restype = wintypes.HWND
 user32.GetWindowThreadProcessId.argtypes = (
@@ -60,13 +68,31 @@ kernel32.GlobalUnlock.argtypes = (wintypes.HGLOBAL,)
 kernel32.GlobalSize.argtypes = (wintypes.HGLOBAL,)
 kernel32.GlobalSize.restype = ctypes.c_size_t
 
-ole32.OleInitialize.argtypes = (wintypes.LPVOID,)
-ole32.OleInitialize.restype = ctypes.c_long
-ole32.OleUninitialize.restype = None
-ole32.OleGetClipboard.argtypes = (ctypes.POINTER(ctypes.c_void_p),)
-ole32.OleGetClipboard.restype = ctypes.c_long
-ole32.OleSetClipboard.argtypes = (ctypes.c_void_p,)
-ole32.OleSetClipboard.restype = ctypes.c_long
+gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+user32.CopyImage.argtypes = (
+    wintypes.HANDLE,
+    wintypes.UINT,
+    ctypes.c_int,
+    ctypes.c_int,
+    wintypes.UINT,
+)
+user32.CopyImage.restype = wintypes.HANDLE
+gdi32.GetPaletteEntries.argtypes = (
+    wintypes.HANDLE,
+    wintypes.UINT,
+    wintypes.UINT,
+    wintypes.LPVOID,
+)
+gdi32.GetPaletteEntries.restype = wintypes.UINT
+gdi32.CreatePalette.argtypes = (wintypes.LPVOID,)
+gdi32.CreatePalette.restype = wintypes.HANDLE
+gdi32.CopyMetaFileW.argtypes = (wintypes.HANDLE, wintypes.LPCWSTR)
+gdi32.CopyMetaFileW.restype = wintypes.HANDLE
+gdi32.CopyEnhMetaFileW.argtypes = (wintypes.HANDLE, wintypes.LPCWSTR)
+gdi32.CopyEnhMetaFileW.restype = wintypes.HANDLE
+gdi32.DeleteObject.argtypes = (wintypes.HANDLE,)
+gdi32.DeleteMetaFile.argtypes = (wintypes.HANDLE,)
+gdi32.DeleteEnhMetaFile.argtypes = (wintypes.HANDLE,)
 
 
 class KEYBDINPUT(ctypes.Structure):
@@ -116,68 +142,77 @@ if not _MARKER_FORMAT:
     raise ctypes.WinError(ctypes.get_last_error())
 
 
+class METAFILEPICT(ctypes.Structure):
+    _fields_ = (
+        ("mm", wintypes.LONG),
+        ("xExt", wintypes.LONG),
+        ("yExt", wintypes.LONG),
+        ("hMF", wintypes.HANDLE),
+    )
+
+
+def _copy_palette(handle: int) -> int:
+    entry_count = gdi32.GetPaletteEntries(handle, 0, 0, None)
+    if not entry_count:
+        raise PasteError("A palette on the clipboard could not be read.")
+    # LOGPALETTE is two WORDs followed by PALETTEENTRY[palNumEntries].
+    buffer = ctypes.create_string_buffer(4 + entry_count * 4)
+    header = ctypes.cast(buffer, ctypes.POINTER(wintypes.WORD))
+    header[0] = 0x0300
+    header[1] = entry_count
+    entries = ctypes.byref(buffer, 4)
+    if gdi32.GetPaletteEntries(handle, 0, entry_count, entries) != entry_count:
+        raise PasteError("A palette on the clipboard could not be copied.")
+    copy = gdi32.CreatePalette(buffer)
+    if not copy:
+        raise PasteError("A palette on the clipboard could not be copied.")
+    return int(copy)
+
+
+@dataclass
+class _ClipboardFormatCopy:
+    format_id: int
+    kind: str
+    value: bytes | int | tuple[int, int, int, int]
+
+    def release(self) -> None:
+        if not isinstance(self.value, int):
+            if self.kind == "metafile" and isinstance(self.value, tuple):
+                gdi32.DeleteMetaFile(self.value[3])
+            return
+        if self.kind in ("bitmap", "palette"):
+            gdi32.DeleteObject(self.value)
+        elif self.kind == "enhmetafile":
+            gdi32.DeleteEnhMetaFile(self.value)
+
+
 class _ClipboardSnapshot:
-    """A retained OLE IDataObject containing every clipboard format."""
+    """Independent copies of all materialized Windows clipboard formats."""
 
     def __init__(
         self,
-        data_object: ctypes.c_void_p,
-        copied_formats: list[tuple[int, bytes]],
+        copied_formats: list[_ClipboardFormatCopy],
     ):
-        self._data_object = data_object
         self._copied_formats = copied_formats
         self._closed = False
 
     @classmethod
     def capture(cls) -> _ClipboardSnapshot:
-        # OleInitialize returns S_OK or S_FALSE on success. Both calls must be
-        # balanced by OleUninitialize after the retained IDataObject is released.
-        result = ole32.OleInitialize(None)
-        if result < 0:
-            raise PasteError(
-                "The clipboard could not be initialized for a complete backup."
-            )
-        data_object = ctypes.c_void_p()
-        result = ole32.OleGetClipboard(ctypes.byref(data_object))
-        if result < 0 or not data_object:
-            ole32.OleUninitialize()
-            raise PasteError("The complete clipboard contents could not be saved.")
-        snapshot = cls(data_object, [])
-        try:
-            snapshot._copied_formats = _copy_hglobal_clipboard_formats()
-        except Exception:
-            snapshot.close()
-            raise
-        return snapshot
+        return cls(_copy_clipboard_formats())
 
     def restore(self) -> None:
         if self._closed:
             return
-        if self._copied_formats:
-            # The original IDataObject may stop serving any delayed format after
-            # EmptyClipboard changes ownership. Prefer the independent copies for
-            # all HGLOBAL-backed formats, including ordinary Unicode text.
-            _restore_copied_formats(self._copied_formats)
-        else:
-            result = ole32.OleSetClipboard(self._data_object)
-            if result < 0:
-                raise PasteError(
-                    "The complete clipboard contents could not be restored."
-                )
+        _restore_copied_formats(self._copied_formats)
         self.close()
 
     def close(self) -> None:
         if self._closed:
             return
-        # IDataObject inherits IUnknown; Release is the third vtable entry.
-        vtable = ctypes.cast(
-            self._data_object,
-            ctypes.POINTER(ctypes.POINTER(ctypes.c_void_p)),
-        ).contents
-        release = ctypes.WINFUNCTYPE(wintypes.ULONG, ctypes.c_void_p)(vtable[2])
-        release(self._data_object)
+        for copied_format in self._copied_formats:
+            copied_format.release()
+        self._copied_formats.clear()
         self._closed = True
-        ole32.OleUninitialize()
 
     def __del__(self):
         # Normally restore_clipboard closes the snapshot. This is a safety net
@@ -246,9 +281,61 @@ def _read_clipboard_text() -> str | None:
         return None
 
 
-def _copy_hglobal_clipboard_formats() -> list[tuple[int, bytes]]:
-    """Deep-copy all clipboard formats backed by movable global memory."""
-    copied_formats: list[tuple[int, bytes]] = []
+def _copy_clipboard_format(format_id: int) -> _ClipboardFormatCopy | None:
+    handle = user32.GetClipboardData(format_id)
+    if not handle:
+        # CF_OWNERDISPLAY deliberately has no transferable data handle.
+        if format_id == CF_OWNERDISPLAY:
+            return None
+        raise PasteError("A clipboard format could not be read.")
+
+    if format_id in (CF_BITMAP, CF_DSPBITMAP):
+        copy = user32.CopyImage(handle, IMAGE_BITMAP, 0, 0, 0)
+        kind = "bitmap"
+    elif format_id == CF_PALETTE:
+        copy = _copy_palette(handle)
+        kind = "palette"
+    elif format_id in (CF_ENHMETAFILE, CF_DSPENHMETAFILE):
+        copy = gdi32.CopyEnhMetaFileW(handle, None)
+        kind = "enhmetafile"
+    elif format_id in (CF_METAFILEPICT, CF_DSPMETAFILEPICT):
+        pointer = kernel32.GlobalLock(handle)
+        if not pointer:
+            raise PasteError("A metafile on the clipboard could not be accessed.")
+        try:
+            source = ctypes.cast(pointer, ctypes.POINTER(METAFILEPICT)).contents
+            metafile = gdi32.CopyMetaFileW(source.hMF, None)
+            if not metafile:
+                raise PasteError("A metafile on the clipboard could not be copied.")
+            return _ClipboardFormatCopy(
+                format_id,
+                "metafile",
+                (source.mm, source.xExt, source.yExt, int(metafile)),
+            )
+        finally:
+            kernel32.GlobalUnlock(handle)
+    else:
+        size = kernel32.GlobalSize(handle)
+        if not size:
+            raise PasteError("A clipboard memory block could not be measured.")
+        pointer = kernel32.GlobalLock(handle)
+        if not pointer:
+            raise PasteError("A clipboard memory block could not be accessed.")
+        try:
+            return _ClipboardFormatCopy(
+                format_id, "hglobal", ctypes.string_at(pointer, size)
+            )
+        finally:
+            kernel32.GlobalUnlock(handle)
+
+    if not copy:
+        raise PasteError("A clipboard object could not be copied.")
+    return _ClipboardFormatCopy(format_id, kind, int(copy))
+
+
+def _copy_clipboard_formats() -> list[_ClipboardFormatCopy]:
+    """Deep-copy every transferable clipboard format by its storage type."""
+    copied_formats: list[_ClipboardFormatCopy] = []
     _open_clipboard()
     try:
         format_id = 0
@@ -256,22 +343,61 @@ def _copy_hglobal_clipboard_formats() -> list[tuple[int, bytes]]:
             format_id = user32.EnumClipboardFormats(format_id)
             if not format_id:
                 break
-            data = _read_clipboard_bytes(format_id)
-            if data is not None:
-                copied_formats.append((format_id, data))
+            copied_format = _copy_clipboard_format(format_id)
+            if copied_format is not None:
+                copied_formats.append(copied_format)
+    except Exception:
+        for copied_format in copied_formats:
+            copied_format.release()
+        raise
     finally:
         user32.CloseClipboard()
     return copied_formats
 
 
-def _restore_copied_formats(copied_formats: list[tuple[int, bytes]]) -> None:
-    """Restore a deep-copied collection of HGLOBAL clipboard formats."""
+def _set_metafile_picture(value: tuple[int, int, int, int]) -> wintypes.HGLOBAL:
+    handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, ctypes.sizeof(METAFILEPICT))
+    if not handle:
+        raise PasteError("Not enough memory is available for the clipboard.")
+    pointer = kernel32.GlobalLock(handle)
+    if not pointer:
+        kernel32.GlobalFree(handle)
+        raise PasteError("The clipboard memory could not be accessed.")
+    try:
+        ctypes.cast(pointer, ctypes.POINTER(METAFILEPICT)).contents = METAFILEPICT(
+            *value
+        )
+    finally:
+        kernel32.GlobalUnlock(handle)
+    return handle
+
+
+def _restore_copied_formats(
+    copied_formats: list[_ClipboardFormatCopy],
+) -> None:
+    """Restore format copies and transfer their native handles to Windows."""
     _open_clipboard()
     try:
         if not user32.EmptyClipboard():
             raise PasteError("The clipboard could not be restored.")
-        for format_id, data in copied_formats:
-            _set_clipboard_data(format_id, data)
+        for copied_format in copied_formats:
+            if copied_format.kind == "hglobal":
+                assert isinstance(copied_format.value, bytes)
+                _set_clipboard_data(copied_format.format_id, copied_format.value)
+                continue
+
+            if copied_format.kind == "metafile":
+                assert isinstance(copied_format.value, tuple)
+                handle = _set_metafile_picture(copied_format.value)
+            else:
+                assert isinstance(copied_format.value, int)
+                handle = copied_format.value
+            if not user32.SetClipboardData(copied_format.format_id, handle):
+                if copied_format.kind == "metafile":
+                    kernel32.GlobalFree(handle)
+                raise PasteError("A clipboard object could not be restored.")
+            # Windows owns both the outer handle and any contained GDI object now.
+            copied_format.value = b""
     finally:
         user32.CloseClipboard()
 
