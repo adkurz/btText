@@ -29,7 +29,7 @@ class _CategoryDropTarget(wx.TextDropTarget):
         return self._tree.transfer_to(kind, entity_id, category_id, copy=False)
 
 
-class CategoryList(wx.TreeCtrl):
+class CategoryTree(wx.TreeCtrl):
     """Accessible category tree.
 
     Ctrl+C/Ctrl+X copy or cut the selected category. Ctrl+V pastes the
@@ -146,7 +146,7 @@ class CategoryList(wx.TreeCtrl):
 
     def selection_changed(self, event):
         """Publish the selected category for dependent views."""
-        self._ee.emit("category_list.changed", self.get_selected_id())
+        self._ee.emit("category_tree.changed", self.get_selected_id())
         event.Skip()
 
     def context_menu(self, event):

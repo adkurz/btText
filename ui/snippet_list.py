@@ -38,7 +38,7 @@ class SnippetList(wx.ListView):
         self.Bind(wx.EVT_CONTEXT_MENU, self.context_menu)
         self.Bind(wx.EVT_CHAR, self.key_handler)
         self.Bind(wx.EVT_LIST_BEGIN_DRAG, self.begin_drag)
-        ee.on("category_list.changed", self.update)
+        ee.on("category_tree.changed", self.update)
         ee.on("category.deleted", self.category_deleted)
         ee.on("snippet.added", self.add_snippet_in_list)
         ee.on("snippet.edited", self.edit_snippet_in_list)

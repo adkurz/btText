@@ -10,7 +10,7 @@ import datamodel
 import info
 from app_settings import AppSettings, Hotkey, SettingsError, SettingsStore
 from ui import utils
-from ui.category_list import CategoryList
+from ui.category_tree import CategoryTree
 from ui.search_dialog import SearchDialog
 from ui.settings_dialog import SettingsDialog
 from ui.snippet_list import SnippetList
@@ -51,14 +51,14 @@ class MainFrame(sc.SizedFrame):
         self.pane = self.GetContentsPane()
         self.pane.SetSizerType("horizontal")
         self.transfer_buffer = TransferBuffer()
-        self.category_list_label = wx.StaticText(self.pane, label="&Categories")
-        self.category_list = CategoryList(
+        self.category_tree_label = wx.StaticText(self.pane, label="&Categories")
+        self.category_tree = CategoryTree(
             self.pane,
             ee,
             model,
             self.transfer_buffer,
         )
-        self.category_list.SetSizerProps(expand=True, proportion=1)  # type: ignore
+        self.category_tree.SetSizerProps(expand=True, proportion=1)  # type: ignore
         self.snippet_list_label = wx.StaticText(self.pane, label="&Snippets")
         self.snippet_list = SnippetList(
             self.pane,
@@ -109,7 +109,7 @@ class MainFrame(sc.SizedFrame):
         """Select a snippet and its category in the main views."""
         if snippet.id is None:
             return
-        if not self.category_list.focus_id(snippet.category_id):
+        if not self.category_tree.focus_id(snippet.category_id):
             wx.MessageBox(
                 "The category of the selected snippet no longer exists.",
                 "Error",
@@ -251,7 +251,7 @@ class MainFrame(sc.SizedFrame):
         self.Show()
         self.Iconize(False)
         self.Raise()
-        target = self._last_focused_control or self.category_list
+        target = self._last_focused_control or self.category_tree
         target.SetFocus()
         # Repeat after pending native events when restoring a hidden frame.
         wx.CallAfter(target.SetFocus)
@@ -259,7 +259,7 @@ class MainFrame(sc.SizedFrame):
     def _remember_focused_control(self):
         """Remember which primary list should regain keyboard focus."""
         focused_control = wx.Window.FindFocus()
-        if focused_control in (self.category_list, self.snippet_list):
+        if focused_control in (self.category_tree, self.snippet_list):
             self._last_focused_control = focused_control
 
     def on_activate(self, event: wx.ActivateEvent):
