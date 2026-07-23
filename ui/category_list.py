@@ -147,6 +147,7 @@ class CategoryList(wx.TreeCtrl):
             wx.ID_ANY,
             "Paste as top-level\tCtrl+Shift+V",
         )
+        paste_root.Enable(self._transfer_buffer.value is not None)
         menu.Bind(wx.EVT_MENU, lambda evt: self.paste(evt, None), paste_root)
         category_id = self.get_selected_id()
         if category_id is not None:
@@ -163,6 +164,7 @@ class CategoryList(wx.TreeCtrl):
             copy_item = menu.Append(wx.ID_COPY, "Copy\tCtrl+C")
             cut_item = menu.Append(wx.ID_CUT, "Cut\tCtrl+X")
             paste_item = menu.Append(wx.ID_PASTE, "Paste into\tCtrl+V")
+            paste_item.Enable(self._transfer_buffer.value is not None)
             menu.Bind(wx.EVT_MENU, lambda evt: self.copy_or_cut(True), copy_item)
             menu.Bind(wx.EVT_MENU, lambda evt: self.copy_or_cut(False), cut_item)
             menu.Bind(
@@ -172,7 +174,7 @@ class CategoryList(wx.TreeCtrl):
             )
             menu.AppendSeparator()
             edit_item = menu.Append(wx.ID_ANY, "Rename\tF2")
-            delete_item = menu.Append(wx.ID_DELETE, "Delete subtree\tDelete")
+            delete_item = menu.Append(wx.ID_DELETE, "Delete\tDelete")
             menu.Bind(wx.EVT_MENU, self.edit_category, edit_item)
             menu.Bind(wx.EVT_MENU, self.delete_category, delete_item)
         self.PopupMenu(menu)

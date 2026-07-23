@@ -73,11 +73,13 @@ class SnippetList(BaseList):
                 wx.ID_PASTE,
                 "Paste into category\tCtrl+V",
             )
+            paste_item.Enable(self._transfer_buffer.value is not None)
             menu.Bind(wx.EVT_MENU, self.paste, paste_item)
             paste_root_item = menu.Append(
                 wx.ID_ANY,
                 "Paste category as top-level\tCtrl+Shift+V",
             )
+            paste_root_item.Enable(self._transfer_buffer.value is not None)
             menu.Bind(
                 wx.EVT_MENU,
                 lambda evt: self.paste(evt, as_top_level=True),
