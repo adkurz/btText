@@ -33,6 +33,7 @@ class Category:
     name: str
     id: int|None = None
     number_of_snippets: int = 0
+    parent_id: int|None = None
 
 
 class DataModel:
@@ -45,8 +46,8 @@ class DataModel:
     """
 
     WEIGHTS = (1, 2, 3)
-    SCHEMA_VERSION = 1
-    MIGRATIONS = ("_migrate_from_0_to_1",)
+    SCHEMA_VERSION = 2
+    MIGRATIONS = ("_migrate_from_0_to_1", "_migrate_from_1_to_2")
 
     def __init__(self, ee: pymitter.EventEmitter, db_file: str | Path):
         self.ee = ee
@@ -86,12 +87,13 @@ class DataModel:
     def create_tables(self):
         with self._connection as c:
             c.execute(
-                "CREATE TABLE category (id INTEGER NOT NULL PRIMARY KEY, name TEXT NOT NULL UNIQUE)"
+                "CREATE TABLE category (id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, name TEXT NOT NULL, FOREIGN KEY (parent_id) REFERENCES category (id) ON DELETE CASCADE)"
             )
             c.execute(
                 "CREATE TABLE snippet (id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, name TEXT NOT NULL, content TEXT NOT NULL, weight INTEGER NOT NULL DEFAULT 1 CHECK (weight IN (1, 2, 3)), UNIQUE (category_id, name), FOREIGN KEY (category_id) REFERENCES category (id) ON DELETE CASCADE)"
             )
-            c.execute("PRAGMA user_version = 1")
+            self._create_category_indexes(c)
+            c.execute("PRAGMA user_version = 2")
 
     def _migrate_database(self) -> None:
         database_version = self._get_database_version()
@@ -191,9 +193,51 @@ class DataModel:
             c.execute("ALTER TABLE snippet_new RENAME TO snippet")
             c.execute("PRAGMA user_version = 1")
 
+    def _migrate_from_1_to_2(self) -> None:
+        with self._connection as c:
+            c.execute(
+                "CREATE TABLE category_new (id INTEGER NOT NULL PRIMARY KEY, "
+                "parent_id INTEGER, name TEXT NOT NULL, "
+                "FOREIGN KEY (parent_id) REFERENCES category_new (id) ON DELETE CASCADE)"
+            )
+            c.execute(
+                "INSERT INTO category_new (id, parent_id, name) "
+                "SELECT id, NULL, name FROM category"
+            )
+            c.execute(
+                "CREATE TABLE snippet_new (id INTEGER NOT NULL PRIMARY KEY, "
+                "category_id INTEGER NOT NULL, name TEXT NOT NULL, "
+                "content TEXT NOT NULL, weight INTEGER NOT NULL DEFAULT 1 "
+                "CHECK (weight IN (1, 2, 3)), UNIQUE (category_id, name), "
+                "FOREIGN KEY (category_id) REFERENCES category_new (id) "
+                "ON DELETE CASCADE)"
+            )
+            c.execute(
+                "INSERT INTO snippet_new (id, category_id, name, content, weight) "
+                "SELECT id, category_id, name, content, weight FROM snippet"
+            )
+            c.execute("DROP TABLE snippet")
+            c.execute("DROP TABLE category")
+            c.execute("ALTER TABLE category_new RENAME TO category")
+            c.execute("ALTER TABLE snippet_new RENAME TO snippet")
+            self._create_category_indexes(c)
+            c.execute("PRAGMA user_version = 2")
+
+    @staticmethod
+    def _create_category_indexes(connection) -> None:
+        connection.execute(
+            "CREATE UNIQUE INDEX category_root_name_unique "
+            "ON category(name COLLATE NOCASE) WHERE parent_id IS NULL"
+        )
+        connection.execute(
+            "CREATE UNIQUE INDEX category_child_name_unique "
+            "ON category(parent_id, name COLLATE NOCASE) "
+            "WHERE parent_id IS NOT NULL"
+        )
+
     def get_category(self, id: int) -> Category:
         result = self._connection.execute(
-            "SELECT id, name  FROM category WHERE id = :id",
+            "SELECT id, parent_id, name FROM category WHERE id = :id",
             {"id": id},
         )
         category = result.fetchone()
@@ -201,18 +245,75 @@ class DataModel:
             raise EntityNotFoundError(
                 "Category with ID {} does not exist".format(id)
             )
-        return Category(id=category['id'], name=category['name'])
+        return Category(
+            id=category["id"],
+            parent_id=category["parent_id"],
+            name=category["name"],
+        )
 
-    def get_categories(self, order: bool = False):
-        sql = "SELECT id, name, (SELECT COUNT(*) FROM snippet WHERE category_id = category.id) AS number_of_snippets FROM category"
+    def get_categories(
+        self,
+        order: bool = False,
+        parent_id: int | None = None,
+        all_categories: bool = True,
+    ):
+        sql = (
+            "SELECT id, parent_id, name, "
+            "(SELECT COUNT(*) FROM snippet "
+            "WHERE category_id = category.id) AS number_of_snippets "
+            "FROM category"
+        )
+        parameters = ()
+        if not all_categories:
+            if parent_id is None:
+                sql += " WHERE parent_id IS NULL"
+            else:
+                sql += " WHERE parent_id = ?"
+                parameters = (parent_id,)
         if order:
             sql += " ORDER BY name COLLATE NOCASE"
-        for category in self._connection.execute(sql):
+        for category in self._connection.execute(sql, parameters):
             yield Category(
                 id=category['id'],
+                parent_id=category["parent_id"],
                 name=category['name'],
                 number_of_snippets=category['number_of_snippets'],
             )
+
+    def get_category_children(self, parent_id: int | None):
+        return self.get_categories(
+            order=True,
+            parent_id=parent_id,
+            all_categories=False,
+        )
+
+    def get_category_path(self, id: int) -> str:
+        self.get_category(id)
+        row = self._connection.execute(
+            "WITH RECURSIVE ancestors(id, parent_id, name, depth) AS ("
+            "SELECT id, parent_id, name, 0 FROM category WHERE id = ? "
+            "UNION ALL "
+            "SELECT c.id, c.parent_id, c.name, ancestors.depth + 1 "
+            "FROM category c JOIN ancestors ON c.id = ancestors.parent_id"
+            ") SELECT GROUP_CONCAT(name, ' / ') AS path FROM ("
+            "SELECT name FROM ancestors ORDER BY depth DESC)",
+            (id,),
+        ).fetchone()
+        return row["path"]
+
+    def get_category_subtree_stats(self, id: int) -> tuple[int, int]:
+        self.get_category(id)
+        row = self._connection.execute(
+            "WITH RECURSIVE subtree(id) AS ("
+            "SELECT id FROM category WHERE id = ? "
+            "UNION ALL SELECT c.id FROM category c "
+            "JOIN subtree ON c.parent_id = subtree.id"
+            ") SELECT COUNT(*) - 1 AS descendants, "
+            "(SELECT COUNT(*) FROM snippet WHERE category_id IN "
+            "(SELECT id FROM subtree)) AS snippets FROM subtree",
+            (id,),
+        ).fetchone()
+        return row["descendants"], row["snippets"]
 
     def get_snippets(self, category_id: int, order_by_name: bool = False):
         sql = "SELECT id, category_id, name, weight, content FROM snippet WHERE category_id = ? ORDER BY weight DESC"
@@ -260,12 +361,24 @@ class DataModel:
             weight=snippet["weight"],
         )
 
-    def category_exist(self, name_or_id: str | int) -> int | None:
+    def category_exist(
+        self,
+        name_or_id: str | int,
+        parent_id: int | None = None,
+    ) -> int | None:
         if isinstance(name_or_id, str):
-            result = self._connection.execute(
-                "SELECT id FROM category WHERE name = ? COLLATE NOCASE",
-                (name_or_id,),
-            )
+            if parent_id is None:
+                result = self._connection.execute(
+                    "SELECT id FROM category WHERE name = ? COLLATE NOCASE "
+                    "AND parent_id IS NULL",
+                    (name_or_id,),
+                )
+            else:
+                result = self._connection.execute(
+                    "SELECT id FROM category WHERE name = ? COLLATE NOCASE "
+                    "AND parent_id = ?",
+                    (name_or_id, parent_id),
+                )
         else:
             result = self._connection.execute(
                 "SELECT id FROM category WHERE id = ?", (name_or_id,)
@@ -294,13 +407,14 @@ class DataModel:
 
     def add_category(self, category: Category) -> Category:
         self.validate_category(category)
-        if self.category_exist(category.name):
+        if self.category_exist(category.name, category.parent_id):
             raise CategoryValidationError(
-                "A category with this name already exists"
+                "A category with this name already exists at this level"
             )
         with self._connection as c:
             result = c.execute(
-                "INSERT INTO category (name) VALUES (?)", (category.name,)
+                "INSERT INTO category (parent_id, name) VALUES (?, ?)",
+                (category.parent_id, category.name),
             )
             category.id = result.lastrowid
         self.ee.emit("category.added", category)
@@ -312,15 +426,16 @@ class DataModel:
             raise CategoryValidationError("The category has no ID")
         self.get_category(category.id)
         self.validate_category(category)
-        existing_id = self.category_exist(category.name)
+        existing_id = self.category_exist(category.name, category.parent_id)
         if existing_id is not None and existing_id != category.id:
             raise CategoryValidationError(
-                "A category with this name already exists"
+                "A category with this name already exists at this level"
             )
         with self._connection as c:
             c.execute(
-                "UPDATE category SET name = ? WHERE id = ?",
+                "UPDATE category SET parent_id = ?, name = ? WHERE id = ?",
                 (
+                    category.parent_id,
                     category.name,
                     category.id
                 ),
@@ -333,6 +448,75 @@ class DataModel:
             category.name,
             CategoryValidationError,
         )
+        if category.parent_id is not None:
+            if not self.category_exist(category.parent_id):
+                raise CategoryValidationError("The parent category does not exist")
+            if category.id == category.parent_id:
+                raise CategoryValidationError(
+                    "A category cannot be its own parent"
+                )
+            if category.id is not None and self._is_category_descendant(
+                category.parent_id,
+                category.id,
+            ):
+                raise CategoryValidationError(
+                    "A category cannot be moved below one of its descendants"
+                )
+
+    def _is_category_descendant(self, id: int, possible_ancestor_id: int) -> bool:
+        row = self._connection.execute(
+            "WITH RECURSIVE ancestors(id, parent_id) AS ("
+            "SELECT id, parent_id FROM category WHERE id = ? "
+            "UNION ALL SELECT c.id, c.parent_id FROM category c "
+            "JOIN ancestors ON c.id = ancestors.parent_id"
+            ") SELECT 1 FROM ancestors WHERE id = ?",
+            (id, possible_ancestor_id),
+        ).fetchone()
+        return row is not None
+
+    def move_category(self, id: int, parent_id: int | None) -> Category:
+        category = self.get_category(id)
+        category.parent_id = parent_id
+        return self.edit_category(category)
+
+    def copy_category(self, id: int, parent_id: int | None) -> Category:
+        source = self.get_category(id)
+        if parent_id is not None and self._is_category_descendant(parent_id, id):
+            raise CategoryValidationError(
+                "A category cannot be copied into itself or one of its descendants"
+            )
+        copied = Category(name=source.name, parent_id=parent_id)
+        with self._connection as c:
+            self.validate_category(copied)
+            if self.category_exist(copied.name, copied.parent_id):
+                raise CategoryValidationError(
+                    "A category with this name already exists at this level"
+                )
+            copied.id = c.execute(
+                "INSERT INTO category (parent_id, name) VALUES (?, ?)",
+                (copied.parent_id, copied.name),
+            ).lastrowid
+            self._copy_category_contents(c, source.id, copied.id)
+        self.ee.emit("category.added", copied)
+        return copied
+
+    def _copy_category_contents(
+        self,
+        connection,
+        source_id: int,
+        target_id: int,
+    ) -> None:
+        connection.execute(
+            "INSERT INTO snippet (category_id, name, content, weight) "
+            "SELECT ?, name, content, weight FROM snippet WHERE category_id = ?",
+            (target_id, source_id),
+        )
+        for child in self.get_category_children(source_id):
+            new_child_id = connection.execute(
+                "INSERT INTO category (parent_id, name) VALUES (?, ?)",
+                (target_id, child.name),
+            ).lastrowid
+            self._copy_category_contents(connection, child.id, new_child_id)
 
     def delete_category(self, id: int) -> Category:
         category = self.get_category(id)
@@ -343,6 +527,22 @@ class DataModel:
             c.execute("DELETE FROM category WHERE id = ?", (id,))
         self.ee.emit("category.deleted", id)
         return category
+
+    def move_snippet(self, id: int, category_id: int) -> Snippet:
+        snippet = self.get_snippet(id)
+        snippet.category_id = category_id
+        return self.edit_snippet(snippet)
+
+    def copy_snippet(self, id: int, category_id: int) -> Snippet:
+        source = self.get_snippet(id)
+        return self.add_snippet(
+            Snippet(
+                name=source.name,
+                content=source.content,
+                category_id=category_id,
+                weight=source.weight,
+            )
+        )
 
     def validate_snippet(self, snippet: Snippet) -> None:
         snippet.name = self._normalize_name(

@@ -27,17 +27,26 @@ class SnippetEditor(sc.SizedDialog):
         self.name_input = wx.TextCtrl(self.pane, validator=validators.NonEmptyValidator())
         self.name_input.SetSizerProps(expand=True, proportion=1) # type: ignore
         self.category_label = wx.StaticText(self.pane, label="&Category")
+        categories_with_paths = [
+            (self._model.get_category_path(category.id), category)
+            for category in self._model.get_categories()
+            if category.id is not None
+        ]
+        categories_with_paths.sort(key=lambda item: item[0].casefold())
+        self._categories = [
+            category for _path, category in categories_with_paths
+        ]
         self.category_input = wx.Choice(
             self.pane,
-            choices=[c.name for c in self._model.get_categories(True)]
+            choices=[path for path, _category in categories_with_paths],
         )
         self.category_input.SetSizerProps(expand=True, proportion=1) # type: ignore
         # Preselect current category:
         if category_id is not None:
-            category = self._model.get_category(category_id)
-            index = self.category_input.FindString(category.name, True)
-            if index != -1:
-                self.category_input.SetSelection(index)
+            for index, category in enumerate(self._categories):
+                if category.id == category_id:
+                    self.category_input.SetSelection(index)
+                    break
         else:
             self.category_input.SetSelection(0)
         self.weight_input = wx.RadioBox(self.pane, label='Weight', choices=[utils.get_weight_string(w) for w in self._model.WEIGHTS])
@@ -73,8 +82,10 @@ class SnippetEditor(sc.SizedDialog):
         if not self.Validate():
             return
         snippet_name = self.name_input.GetValue()
-        category_name = self.category_input.GetString(self.category_input.GetSelection())
-        snippet_category_id = self._model.category_exist(category_name)
+        category_index = self.category_input.GetSelection()
+        if category_index == wx.NOT_FOUND:
+            return
+        snippet_category_id = self._categories[category_index].id
         if snippet_category_id is None:
             return
         snippet_weight = self.weight_input.GetSelection() + 1

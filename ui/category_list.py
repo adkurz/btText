@@ -3,59 +3,182 @@ import wx
 
 import datamodel
 from ui import utils
-from ui.base_list import BaseList
+from ui.transfer import TransferBuffer
 
 
-class CategoryList(BaseList):
-    def __init__(self, parent, ee: pymitter.EventEmitter, model: datamodel.DataModel):
-        super().__init__(parent, ee, model)
-        self.AppendColumn("Name")
-        self.AppendColumn("Snippets")
+class _CategoryDropTarget(wx.TextDropTarget):
+    def __init__(self, tree):
+        super().__init__()
+        self._tree = tree
+
+    def OnDropText(self, x, y, data):
+        item, _flags = self._tree.HitTest((x, y))
+        if not item.IsOk():
+            return False
+        category_id = self._tree.GetItemData(item)
+        try:
+            kind, value = data.split(":", 1)
+            entity_id = int(value)
+        except (ValueError, TypeError):
+            return False
+        return self._tree.transfer_to(kind, entity_id, category_id, copy=False)
+
+
+class CategoryList(wx.TreeCtrl):
+    """Accessible category tree.
+
+    Ctrl+C/Ctrl+X copy or cut the selected category. Ctrl+V pastes the
+    application-local item (category or snippet) below the selected category.
+    """
+
+    def __init__(
+        self,
+        parent,
+        ee: pymitter.EventEmitter,
+        model: datamodel.DataModel,
+        transfer_buffer: TransferBuffer,
+    ):
+        super().__init__(
+            parent,
+            style=wx.TR_HAS_BUTTONS
+            | wx.TR_LINES_AT_ROOT
+            | wx.TR_SINGLE
+            | wx.TR_HIDE_ROOT,
+        )
+        self._ee = ee
+        self._model = model
+        self._transfer_buffer = transfer_buffer
+        self._items = {}
+        self._images = wx.ImageList(16, 16)
+        self._images.Add(
+            wx.ArtProvider.GetBitmap(wx.ART_FOLDER, wx.ART_OTHER, (16, 16))
+        )
+        self.AssignImageList(self._images)
+        self._root = self.AddRoot("Categories")
+        self.SetDropTarget(_CategoryDropTarget(self))
+        self.Bind(wx.EVT_TREE_SEL_CHANGED, self.selection_changed)
+        self.Bind(wx.EVT_TREE_BEGIN_DRAG, self.begin_drag)
         self.Bind(wx.EVT_CONTEXT_MENU, self.context_menu)
-        self.Bind(wx.EVT_CHAR, self.key_handler)
-        self.Bind(wx.EVT_LIST_ITEM_SELECTED, self.selection_changed)
-        ee.on("category.added", self.add_category_in_list)
-        ee.on("category.edited", self.edit_category_in_list)
-        ee.on("category.deleted", self.delete_category_from_list)
-        ee.on("snippet.added", self.snippet_count_changed)
-        ee.on("snippet.edited", self.snippet_count_changed)
-        ee.on("snippet.deleted", self.snippet_count_changed)
+        self.Bind(wx.EVT_CHAR_HOOK, self.key_handler)
+        for event_name in (
+            "category.added",
+            "category.edited",
+            "category.deleted",
+            "snippet.added",
+            "snippet.edited",
+            "snippet.deleted",
+        ):
+            ee.on(event_name, self._on_model_changed)
         self.update()
 
-    def update(self):
-        selected_index = self.get_selected_id()
+    def _label(self, category: datamodel.Category) -> str:
+        return "{} ({})".format(category.name, category.number_of_snippets)
+
+    def update(self, *args):
+        selected_id = self.get_selected_id()
+        expanded_ids = {
+            category_id
+            for category_id, item in self._items.items()
+            if self.IsExpanded(item)
+        }
         self.Freeze()
-        self.DeleteAllItems()
-        for category in self._model.get_categories(True):
-            index = self.Append(
-                (category.name, str(category.number_of_snippets))
-            )
-            self.SetItemData(index, category.id or 0)
-        self.sort()
-        if selected_index is not None:
-            self.focus_id(selected_index)
+        self.DeleteChildren(self._root)
+        self._items.clear()
+        self._append_children(self._root, None)
+        for category_id in expanded_ids:
+            item = self._items.get(category_id)
+            if item is not None:
+                self.Expand(item)
+        if selected_id is not None:
+            self.focus_id(selected_id)
         self.Thaw()
 
-    def selection_changed(self, event: wx.ListEvent):
-        category_id = self.get_selected_id()
-        self._ee.emit("category_list.changed", category_id)
+    def _append_children(self, parent_item, parent_id):
+        for category in self._model.get_category_children(parent_id):
+            item = self.AppendItem(
+                parent_item,
+                self._label(category),
+                image=0,
+            )
+            self.SetItemData(item, category.id)
+            self._items[category.id] = item
+            self._append_children(item, category.id)
 
-    def context_menu(self, event: wx.ContextMenuEvent):
+    def get_selected_id(self):
+        item = self.GetSelection()
+        if not item.IsOk() or item == self._root:
+            return None
+        return self.GetItemData(item)
+
+    def focus_id(self, category_id: int, select: bool = True):
+        item = self._items.get(category_id)
+        if item is None:
+            return False
+        parent = self.GetItemParent(item)
+        while parent.IsOk() and parent != self._root:
+            self.Expand(parent)
+            parent = self.GetItemParent(parent)
+        if select:
+            self.SelectItem(item)
+        self.EnsureVisible(item)
+        return True
+
+    def selection_changed(self, event):
+        self._ee.emit("category_list.changed", self.get_selected_id())
+        event.Skip()
+
+    def context_menu(self, event):
         menu = wx.Menu()
-        new_category = menu.Append(wx.ID_ANY, "New Category")
-        menu.Bind(wx.EVT_MENU, self.add_category, new_category)
+        new_root = menu.Append(
+            wx.ID_ANY,
+            "New top-level category\tCtrl+N",
+        )
+        menu.Bind(wx.EVT_MENU, lambda evt: self.add_category(None), new_root)
+        paste_root = menu.Append(
+            wx.ID_ANY,
+            "Paste as top-level\tCtrl+Shift+V",
+        )
+        menu.Bind(wx.EVT_MENU, lambda evt: self.paste(evt, None), paste_root)
         category_id = self.get_selected_id()
         if category_id is not None:
-            edit_category = menu.Append(wx.ID_ANY, "Edit")
-            menu.Bind(wx.EVT_MENU, self.edit_category, edit_category)
-            delete_category = menu.Append(wx.ID_ANY, "Delete")
-            menu.Bind(wx.EVT_MENU, self.delete_category, delete_category)
+            new_child = menu.Append(
+                wx.ID_ANY,
+                "New subcategory\tCtrl+Shift+N",
+            )
+            menu.Bind(
+                wx.EVT_MENU,
+                lambda evt: self.add_category(category_id),
+                new_child,
+            )
+            menu.AppendSeparator()
+            copy_item = menu.Append(wx.ID_COPY, "Copy\tCtrl+C")
+            cut_item = menu.Append(wx.ID_CUT, "Cut\tCtrl+X")
+            paste_item = menu.Append(wx.ID_PASTE, "Paste into\tCtrl+V")
+            menu.Bind(wx.EVT_MENU, lambda evt: self.copy_or_cut(True), copy_item)
+            menu.Bind(wx.EVT_MENU, lambda evt: self.copy_or_cut(False), cut_item)
+            menu.Bind(
+                wx.EVT_MENU,
+                lambda evt: self.paste(evt, category_id),
+                paste_item,
+            )
+            menu.AppendSeparator()
+            edit_item = menu.Append(wx.ID_ANY, "Rename\tF2")
+            delete_item = menu.Append(wx.ID_DELETE, "Delete subtree\tDelete")
+            menu.Bind(wx.EVT_MENU, self.edit_category, edit_item)
+            menu.Bind(wx.EVT_MENU, self.delete_category, delete_item)
         self.PopupMenu(menu)
+        menu.Destroy()
 
-    def key_handler(self, event: wx.KeyEvent):
+    def key_handler(self, event):
         key = event.GetKeyCode()
-        if key == wx.WXK_CONTROL_N:
-            self.add_category(event)
+        if event.ControlDown() and key in (ord("C"), 3, ord("X"), 24):
+            self.copy_or_cut(key in (ord("C"), 3))
+        elif event.ControlDown() and key in (ord("V"), 22):
+            destination_id = None if event.ShiftDown() else self.get_selected_id()
+            self.paste(event, destination_id)
+        elif event.ControlDown() and key in (ord("N"), 14):
+            parent_id = self.get_selected_id() if event.ShiftDown() else None
+            self.add_category(parent_id)
         elif key == wx.WXK_F2:
             self.edit_category(event)
         elif key == wx.WXK_DELETE:
@@ -63,96 +186,74 @@ class CategoryList(BaseList):
         else:
             event.Skip()
 
-    def add_category(self, event: wx.CommandEvent | wx.KeyEvent):
+    def add_category(self, parent_id):
         with utils.managed_dialog(
             wx.TextEntryDialog(
                 self,
                 "Enter the name of the new category",
-                "Add Category",
+                "Add category",
             )
         ) as dialog:
             if dialog.ShowModal() != wx.ID_OK:
                 return
-            value = dialog.GetValue()
-        if not value:
-            wx.MessageBox(
-                "The name of the category must not be empty.",
-                "Error",
-                style=wx.OK | wx.ICON_ERROR,
-            )
-            return
-
+            name = dialog.GetValue()
         try:
-            self._model.add_category(datamodel.Category(name=value))
-        except datamodel.CategoryValidationError as error:
-            wx.MessageBox(str(error), "Error", style=wx.OK | wx.ICON_ERROR)
+            category = self._model.add_category(
+                datamodel.Category(name=name, parent_id=parent_id)
+            )
+            self.update()
+            self.focus_id(category.id)
+        except datamodel.DataModelError as error:
+            self._show_error(error)
 
-    def add_category_in_list(self, category: datamodel.Category):
-        self.Freeze()
-        category_index = self.Append(
-            (category.name, str(category.number_of_snippets))
-        )
-        self.SetItemData(category_index, category.id or 0)
-        self.Focus(category_index)
-        self.sort()
-        self.Thaw()
-
-    def edit_category(self, event: wx.CommandEvent | wx.KeyEvent):
+    def edit_category(self, event):
         category_id = self.get_selected_id()
         if category_id is None:
             return
         try:
             category = self._model.get_category(category_id)
-        except datamodel.EntityNotFoundError as error:
-            wx.MessageBox(str(error), "Error", style=wx.OK | wx.ICON_ERROR)
+        except datamodel.DataModelError as error:
+            self._show_error(error)
             self.update()
             return
         with utils.managed_dialog(
             wx.TextEntryDialog(
                 self,
                 "Enter the new name of the category",
-                "Edit Category",
+                "Rename category",
                 value=category.name,
             )
         ) as dialog:
             if dialog.ShowModal() != wx.ID_OK:
                 return
             category.name = dialog.GetValue()
-        if not category.name:
-            wx.MessageBox(
-                "The name of the category must not be empty.",
-                "Error",
-                style=wx.OK | wx.ICON_ERROR,
-            )
-            return
         try:
             self._model.edit_category(category)
         except datamodel.DataModelError as error:
-            wx.MessageBox(str(error), "Error", style=wx.OK | wx.ICON_ERROR)
+            self._show_error(error)
 
-    def edit_category_in_list(self, category: datamodel.Category):
-        self.Freeze()
-        category_index = self.FindItem(-1, category.id)
-        self.SetItem(category_index, 0, category.name)
-        self.sort()
-        self.Thaw()
-
-    def delete_category(self, event: wx.CommandEvent | wx.KeyEvent):
+    def delete_category(self, event):
         category_id = self.get_selected_id()
         if category_id is None:
             return
         try:
             category = self._model.get_category(category_id)
-        except datamodel.EntityNotFoundError as error:
-            wx.MessageBox(str(error), "Error", style=wx.OK | wx.ICON_ERROR)
+            descendants, snippets = self._model.get_category_subtree_stats(
+                category_id
+            )
+        except datamodel.DataModelError as error:
+            self._show_error(error)
             self.update()
             return
+        message = (
+            "Delete category '{}', {} subcategories and {} snippets?"
+        ).format(category.name, descendants, snippets)
         with utils.managed_dialog(
             wx.MessageDialog(
                 self,
-                "Do you want to delete the category {}".format(category.name),
-                "Delete category?",
-                style=wx.YES_NO | wx.ICON_QUESTION,
+                message,
+                "Delete category subtree?",
+                style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
             )
         ) as dialog:
             if dialog.ShowModal() != wx.ID_YES:
@@ -160,12 +261,87 @@ class CategoryList(BaseList):
         try:
             self._model.delete_category(category_id)
         except datamodel.DataModelError as error:
-            wx.MessageBox(str(error), "Error", style=wx.OK | wx.ICON_ERROR)
-            self.update()
+            self._show_error(error)
 
-    def delete_category_from_list(self, category_id):
-        category_index = self.FindItem(-1, category_id)
-        self.DeleteItem(category_index)
+    def copy_or_cut(self, copy):
+        category_id = self.get_selected_id()
+        if category_id is None:
+            return
+        self._transfer_buffer.set("category", category_id, copy)
+        action = "Copied" if copy else "Cut"
+        self._ee.emit(
+            "status.changed",
+            "{} category. Select a destination and press Ctrl+V.".format(action),
+        )
 
-    def snippet_count_changed(self, snippet: datamodel.Snippet):
+    def paste(self, event, destination_id):
+        transfer = self._transfer_buffer.value
+        if transfer is None:
+            wx.Bell()
+            return
+        if destination_id is None and transfer.kind == "snippet":
+            wx.MessageBox(
+                "A snippet must be pasted into a category.",
+                "Paste snippet",
+                wx.OK | wx.ICON_INFORMATION,
+                self,
+            )
+            return
+        if self.transfer_to(
+            transfer.kind,
+            transfer.entity_id,
+            destination_id,
+            transfer.copy,
+        ) and not transfer.copy:
+            self._transfer_buffer.clear()
+
+    def transfer_to(self, kind, entity_id, destination_id, copy):
+        try:
+            if kind == "category":
+                if copy:
+                    result = self._model.copy_category(
+                        entity_id,
+                        destination_id,
+                    )
+                else:
+                    result = self._model.move_category(
+                        entity_id,
+                        destination_id,
+                    )
+                self.update()
+                self.focus_id(result.id)
+            elif kind == "snippet":
+                if copy:
+                    self._model.copy_snippet(entity_id, destination_id)
+                else:
+                    self._model.move_snippet(entity_id, destination_id)
+                self.focus_id(destination_id)
+            else:
+                return False
+        except datamodel.DataModelError as error:
+            self._show_error(error)
+            return False
+        self._ee.emit("status.changed", "Transfer completed.")
+        return True
+
+    def begin_drag(self, event):
+        category_id = self.GetItemData(event.GetItem())
+        event.Veto()
+        wx.CallAfter(self._start_drag, category_id)
+
+    def _start_drag(self, category_id):
+        data = wx.TextDataObject("category:{}".format(category_id))
+        source = wx.DropSource(self)
+        source.SetData(data)
+        source.DoDragDrop(wx.Drag_AllowMove)
+
+    def _on_model_changed(self, value):
         self.update()
+
+    def _show_error(self, error):
+        wx.MessageBox(
+            str(error),
+            "Category error",
+            wx.OK | wx.ICON_ERROR,
+            self,
+        )

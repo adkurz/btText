@@ -13,6 +13,7 @@ from ui.search_dialog import SearchDialog
 from ui.settings_dialog import SettingsDialog
 from ui.snippet_list import SnippetList
 from ui.tray_icon import TrayIcon
+from ui.transfer import TransferBuffer
 
 CLIPBOARD_RESTORE_DELAY_MS = 500
 
@@ -40,15 +41,27 @@ class MainFrame(sc.SizedFrame):
             else None
         )
         self._ee.on("snippet.insert_requested", self.insert_snippet)
+        self._ee.on("status.changed", self.set_status_text)
         self.Bind(wx.EVT_ACTIVATE, self.on_activate)
         self.Bind(wx.EVT_HOTKEY, self.on_global_hotkey, id=self._hotkey_id)
         self.pane = self.GetContentsPane()
         self.pane.SetSizerType("horizontal")
+        self.transfer_buffer = TransferBuffer()
         self.category_list_label = wx.StaticText(self.pane, label="&Categories")
-        self.category_list = CategoryList(self.pane, ee, model)
+        self.category_list = CategoryList(
+            self.pane,
+            ee,
+            model,
+            self.transfer_buffer,
+        )
         self.category_list.SetSizerProps(expand=True, proportion=1)  # type: ignore
         self.snippet_list_label = wx.StaticText(self.pane, label="&Snippets")
-        self.snippet_list = SnippetList(self.pane, ee, model)
+        self.snippet_list = SnippetList(
+            self.pane,
+            ee,
+            model,
+            self.transfer_buffer,
+        )
         self.snippet_list.SetSizerProps(expand=True, proportion=1)  # type: ignore
         self._last_focused_control: wx.Window | None = None
         self._search_command_id = wx.NewIdRef()
@@ -328,6 +341,9 @@ class MainFrame(sc.SizedFrame):
 
     def _create_statusbar(self):
         self.status_bar = self.CreateStatusBar()
+
+    def set_status_text(self, message: str):
+        self.status_bar.SetStatusText(message)
 
     def on_about(self, event: wx.CommandEvent):
         about_info = wx.adv.AboutDialogInfo()

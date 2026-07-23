@@ -118,8 +118,9 @@ class SearchDialog(wx.Dialog):
             category_names = {}
             for snippet in self._model.search_snippets(term):
                 if snippet.category_id not in category_names:
-                    category = self._model.get_category(snippet.category_id)
-                    category_names[snippet.category_id] = category.name
+                    category_names[snippet.category_id] = (
+                        self._model.get_category_path(snippet.category_id)
+                    )
                 index = self.result_list.Append(
                     (
                         snippet.name,

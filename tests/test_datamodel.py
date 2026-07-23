@@ -142,6 +142,115 @@ class DataModelTestCase(unittest.TestCase):
             Snippet("Unique snippet", "Allowed here", other_category.id)
         )
 
+    def test_category_names_are_unique_only_among_siblings(self):
+        first_parent = self.model.add_category(Category("First"))
+        second_parent = self.model.add_category(Category("Second"))
+        first_child = self.model.add_category(
+            Category("Templates", parent_id=first_parent.id)
+        )
+        second_child = self.model.add_category(
+            Category("Templates", parent_id=second_parent.id)
+        )
+
+        self.assertNotEqual(first_child.id, second_child.id)
+        with self.assertRaises(CategoryValidationError):
+            self.model.add_category(
+                Category("TEMPLATES", parent_id=first_parent.id)
+            )
+
+    def test_category_path_and_direct_children(self):
+        root = self.model.add_category(Category("Root"))
+        child = self.model.add_category(
+            Category("Child", parent_id=root.id)
+        )
+        grandchild = self.model.add_category(
+            Category("Grandchild", parent_id=child.id)
+        )
+
+        self.assertEqual(
+            self.model.get_category_path(grandchild.id),
+            "Root / Child / Grandchild",
+        )
+        self.assertEqual(
+            [category.id for category in self.model.get_category_children(root.id)],
+            [child.id],
+        )
+
+    def test_category_cannot_be_moved_below_itself_or_a_descendant(self):
+        root = self.model.add_category(Category("Root"))
+        child = self.model.add_category(
+            Category("Child", parent_id=root.id)
+        )
+
+        with self.assertRaises(CategoryValidationError):
+            self.model.move_category(root.id, root.id)
+        with self.assertRaises(CategoryValidationError):
+            self.model.move_category(root.id, child.id)
+
+        self.assertIsNone(self.model.get_category(root.id).parent_id)
+
+    def test_category_subtree_can_be_moved_and_copied(self):
+        source = self.model.add_category(Category("Source"))
+        child = self.model.add_category(
+            Category("Child", parent_id=source.id)
+        )
+        self.model.add_snippet(Snippet("Nested", "Content", child.id))
+        destination = self.model.add_category(Category("Destination"))
+
+        self.model.move_category(source.id, destination.id)
+        self.assertEqual(
+            self.model.get_category(source.id).parent_id,
+            destination.id,
+        )
+
+        copied = self.model.copy_category(source.id, None)
+        copied_child = list(self.model.get_category_children(copied.id))[0]
+        copied_snippet = list(self.model.get_snippets(copied_child.id))[0]
+        self.assertEqual(copied.name, "Source")
+        self.assertEqual(copied_child.name, "Child")
+        self.assertEqual(copied_snippet.content, "Content")
+
+        with self.assertRaises(CategoryValidationError):
+            self.model.copy_category(source.id, source.id)
+        with self.assertRaises(CategoryValidationError):
+            self.model.copy_category(source.id, child.id)
+
+    def test_snippet_can_be_moved_and_copied_by_id(self):
+        source = self.model.add_category(Category("Source"))
+        destination = self.model.add_category(Category("Destination"))
+        snippet = self.model.add_snippet(
+            Snippet("Snippet", "Content", source.id, 3)
+        )
+
+        self.model.move_snippet(snippet.id, destination.id)
+        self.assertEqual(
+            self.model.get_snippet(snippet.id).category_id,
+            destination.id,
+        )
+        copied = self.model.copy_snippet(snippet.id, source.id)
+        self.assertEqual(copied.category_id, source.id)
+        self.assertEqual(copied.weight, 3)
+
+    def test_deleting_category_deletes_entire_subtree(self):
+        root = self.model.add_category(Category("Root"))
+        child = self.model.add_category(
+            Category("Child", parent_id=root.id)
+        )
+        snippet = self.model.add_snippet(
+            Snippet("Nested", "Content", child.id)
+        )
+
+        self.assertEqual(
+            self.model.get_category_subtree_stats(root.id),
+            (1, 1),
+        )
+        self.model.delete_category(root.id)
+
+        with self.assertRaises(EntityNotFoundError):
+            self.model.get_category(child.id)
+        with self.assertRaises(EntityNotFoundError):
+            self.model.get_snippet(snippet.id)
+
     def test_names_are_trimmed_and_whitespace_only_names_are_rejected(self):
         category = self.model.add_category(Category("  Trimmed category  "))
         snippet = self.model.add_snippet(
@@ -278,7 +387,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
 
             with self.assertRaisesRegex(
                 DataModelError,
-                r"newer version.*schema version: 2.*supported version: 1",
+                r"newer version.*schema version: 3.*supported version: 2",
             ):
                 DataModel(RecordingEventEmitter(), database_file)
 
@@ -368,8 +477,47 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             self.assertEqual(model.get_snippet(2).weight, 1)
             self.assertEqual(
                 model._connection.execute("PRAGMA user_version").fetchone()[0],
-                1,
+                2,
             )
+
+    def test_version_one_database_is_migrated_to_category_tree(self):
+        with ExitStack() as resources:
+            temporary_directory = resources.enter_context(
+                tempfile.TemporaryDirectory()
+            )
+            database_file = Path(temporary_directory) / "version-one.db"
+            connection = sqlite3.connect(database_file)
+            connection.execute(
+                "CREATE TABLE category "
+                "(id INTEGER NOT NULL PRIMARY KEY, name TEXT NOT NULL UNIQUE)"
+            )
+            connection.execute(
+                "CREATE TABLE snippet "
+                "(id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, "
+                "name TEXT NOT NULL, content TEXT NOT NULL, weight INTEGER NOT NULL "
+                "DEFAULT 1 CHECK (weight IN (1, 2, 3)), "
+                "UNIQUE (category_id, name), FOREIGN KEY (category_id) "
+                "REFERENCES category (id) ON DELETE CASCADE)"
+            )
+            connection.execute(
+                "INSERT INTO category (id, name) VALUES (7, 'Legacy')"
+            )
+            connection.execute(
+                "INSERT INTO snippet "
+                "(id, category_id, name, content, weight) "
+                "VALUES (9, 7, 'Snippet', 'Content', 2)"
+            )
+            connection.execute("PRAGMA user_version = 1")
+            connection.commit()
+            connection.close()
+
+            model = DataModel(RecordingEventEmitter(), database_file)
+            resources.callback(model.close)
+
+            category = model.get_category(7)
+            self.assertIsNone(category.parent_id)
+            self.assertEqual(model.get_snippet(9).category_id, 7)
+            self.assertEqual(model._get_database_version(), 2)
 
 
 if __name__ == "__main__":
