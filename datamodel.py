@@ -1,3 +1,5 @@
+"""Persistence and domain operations for categories and text snippets."""
+
 import sqlite3
 import dataclasses 
 from pathlib import Path
@@ -10,18 +12,23 @@ class DataModelError(Exception):
 
 
 class EntityNotFoundError(DataModelError):
-    pass
+    """Raised when an operation refers to an entity that no longer exists."""
 
 
 class CategoryValidationError(DataModelError):
-    pass
+    """Raised when a category violates naming or tree constraints."""
 
 
 class SnippetValidationError(DataModelError):
-    pass
+    """Raised when a snippet violates naming, weight, or category constraints."""
 
 @dataclasses.dataclass
 class Snippet:
+    """A reusable text fragment assigned to one category.
+
+    ``id`` is absent until the snippet is persisted. Higher ``weight`` values
+    sort before lower values.
+    """
     name: str
     content: str
     category_id: int
@@ -30,6 +37,11 @@ class Snippet:
 
 @dataclasses.dataclass
 class Category:
+    """A node in the category tree.
+
+    ``number_of_snippets`` is a query-derived display value rather than a
+    persisted property.
+    """
     name: str
     id: int|None = None
     number_of_snippets: int = 0
@@ -37,12 +49,10 @@ class Category:
 
 
 class DataModel:
-    """
-    Model to manage snippets and categories, stored in a SQLite3 Database
+    """Manage the category tree and snippets stored in a SQLite database.
 
-    Created by Adrian Kurz
-
-    License: GNU GENERAL PUBLIC LICENSE, Version 3.0
+    Mutations commit before publishing model events, allowing listeners to
+    reload entities without observing a partially applied transaction.
     """
 
     WEIGHTS = (1, 2, 3)
@@ -50,9 +60,9 @@ class DataModel:
     MIGRATIONS = ("_migrate_from_0_to_1", "_migrate_from_1_to_2")
 
     def __init__(self, ee: pymitter.EventEmitter, db_file: str | Path):
+        """Open, validate, and if necessary migrate the SQLite database."""
         self.ee = ee
         self._closed = False
-        # Create database:
         db_file = Path(db_file)
         exists = db_file.exists()
         # Foreign-key enforcement must be enabled outside a transaction.
@@ -85,6 +95,7 @@ class DataModel:
             raise
 
     def create_tables(self):
+        """Create the current schema in a new or empty database."""
         with self._connection as c:
             c.execute(
                 "CREATE TABLE category (id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, name TEXT NOT NULL, FOREIGN KEY (parent_id) REFERENCES category (id) ON DELETE CASCADE)"
@@ -96,6 +107,7 @@ class DataModel:
             c.execute("PRAGMA user_version = 2")
 
     def _migrate_database(self) -> None:
+        """Apply each schema migration exactly once and in version order."""
         database_version = self._get_database_version()
         if database_version > self.SCHEMA_VERSION:
             raise DataModelError(
@@ -129,9 +141,13 @@ class DataModel:
             database_version = migrated_version
 
     def _get_database_version(self) -> int:
+        """Return SQLite's application-defined schema version."""
         return self._connection.execute("PRAGMA user_version").fetchone()[0]
 
     def _migrate_from_0_to_1(self) -> None:
+        """Add snippet weights and rebuild legacy tables with constraints."""
+        # Validate legacy data before rebuilding tables with stricter
+        # constraints; otherwise SQLite would report an opaque copy failure.
         if not self._has_table_column("snippet", "weight"):
             self._connection.execute(
                 "ALTER TABLE snippet ADD COLUMN weight INTEGER DEFAULT 1"
@@ -194,6 +210,9 @@ class DataModel:
             c.execute("PRAGMA user_version = 1")
 
     def _migrate_from_1_to_2(self) -> None:
+        """Replace the flat category table with a hierarchical schema."""
+        # SQLite cannot add the self-referencing foreign key in place, so both
+        # related tables are rebuilt within one transaction.
         with self._connection as c:
             c.execute(
                 "CREATE TABLE category_new (id INTEGER NOT NULL PRIMARY KEY, "
@@ -225,6 +244,9 @@ class DataModel:
 
     @staticmethod
     def _create_category_indexes(connection) -> None:
+        """Create indexes that enforce unique category names per tree level."""
+        # Separate partial indexes make names case-insensitively unique among
+        # siblings while still permitting the same name in different branches.
         connection.execute(
             "CREATE UNIQUE INDEX category_root_name_unique "
             "ON category(name COLLATE NOCASE) WHERE parent_id IS NULL"
@@ -236,6 +258,7 @@ class DataModel:
         )
 
     def get_category(self, id: int) -> Category:
+        """Return one category or raise :class:`EntityNotFoundError`."""
         result = self._connection.execute(
             "SELECT id, parent_id, name FROM category WHERE id = :id",
             {"id": id},
@@ -257,6 +280,7 @@ class DataModel:
         parent_id: int | None = None,
         all_categories: bool = True,
     ):
+        """Yield categories, optionally ordered or limited to direct children."""
         sql = (
             "SELECT id, parent_id, name, "
             "(SELECT COUNT(*) FROM snippet "
@@ -281,6 +305,7 @@ class DataModel:
             )
 
     def get_category_children(self, parent_id: int | None):
+        """Yield direct children of a category, ordered by name."""
         return self.get_categories(
             order=True,
             parent_id=parent_id,
@@ -288,6 +313,7 @@ class DataModel:
         )
 
     def get_category_path(self, id: int) -> str:
+        """Return a display path ordered from the root to the category."""
         self.get_category(id)
         row = self._connection.execute(
             "WITH RECURSIVE ancestors(id, parent_id, name, depth) AS ("
@@ -302,6 +328,7 @@ class DataModel:
         return row["path"]
 
     def get_category_subtree_stats(self, id: int) -> tuple[int, int]:
+        """Return descendant-category and snippet counts for a subtree."""
         self.get_category(id)
         row = self._connection.execute(
             "WITH RECURSIVE subtree(id) AS ("
@@ -316,6 +343,7 @@ class DataModel:
         return row["descendants"], row["snippets"]
 
     def get_snippets(self, category_id: int, order_by_name: bool = False):
+        """Yield snippets in a category, with higher weights first."""
         sql = "SELECT id, category_id, name, weight, content FROM snippet WHERE category_id = ? ORDER BY weight DESC"
         if order_by_name:
             sql += ", name COLLATE NOCASE"
@@ -329,8 +357,9 @@ class DataModel:
             )
 
     def search_snippets(self, term: str):
+        """Yield snippets whose name or content contains a literal term."""
         if not term:
-            return # Find nothing for no therm!
+            return  # An empty query deliberately yields no results.
         sql = "SELECT s.id, s.category_id, c.name AS category_name, s.name, s.weight, s.content FROM snippet s INNER JOIN category c ON s.category_id = c.id WHERE s.name LIKE :term ESCAPE '\\' OR s.content LIKE :term ESCAPE '\\' ORDER BY category_name, s.weight DESC, s.name COLLATE NOCASE"
         for snippet in self._connection.execute(
             sql, {"term": "%" + self._escape_like(term) + "%"}
@@ -344,6 +373,7 @@ class DataModel:
             )
 
     def get_snippet(self, id: int) -> Snippet:
+        """Return one snippet or raise :class:`EntityNotFoundError`."""
         result = self._connection.execute(
             "SELECT id, category_id, name, weight, content FROM snippet WHERE id = ?",
             (id,),
@@ -366,6 +396,7 @@ class DataModel:
         name_or_id: str | int,
         parent_id: int | None = None,
     ) -> int | None:
+        """Return the matching category ID, or ``None`` when absent."""
         if isinstance(name_or_id, str):
             if parent_id is None:
                 result = self._connection.execute(
@@ -389,6 +420,7 @@ class DataModel:
     def snippet_exist(
         self, name_or_id: str | int, category_id: int | None = None
     ) -> int | None:
+        """Return the matching snippet ID, or ``None`` when absent."""
         if category_id is not None:
             result = self._connection.execute(
                 "SELECT id FROM snippet "
@@ -406,6 +438,7 @@ class DataModel:
         return result["id"] if result is not None else None
 
     def add_category(self, category: Category) -> Category:
+        """Validate, persist, and publish a new category."""
         self.validate_category(category)
         if self.category_exist(category.name, category.parent_id):
             raise CategoryValidationError(
@@ -421,6 +454,7 @@ class DataModel:
         return category
 
     def edit_category(self, category: Category) -> Category:
+        """Validate and persist changes to an existing category."""
         # Check that category exists:
         if category.id is None:
             raise CategoryValidationError("The category has no ID")
@@ -444,6 +478,7 @@ class DataModel:
         return category
 
     def validate_category(self, category: Category) -> None:
+        """Normalize a category and enforce tree invariants."""
         category.name = self._normalize_name(
             category.name,
             CategoryValidationError,
@@ -464,6 +499,7 @@ class DataModel:
                 )
 
     def _is_category_descendant(self, id: int, possible_ancestor_id: int) -> bool:
+        """Return whether ``id`` is at or below ``possible_ancestor_id``."""
         row = self._connection.execute(
             "WITH RECURSIVE ancestors(id, parent_id) AS ("
             "SELECT id, parent_id FROM category WHERE id = ? "
@@ -475,11 +511,13 @@ class DataModel:
         return row is not None
 
     def move_category(self, id: int, parent_id: int | None) -> Category:
+        """Move a category subtree below a new parent."""
         category = self.get_category(id)
         category.parent_id = parent_id
         return self.edit_category(category)
 
     def copy_category(self, id: int, parent_id: int | None) -> Category:
+        """Deep-copy a category, its descendants, and their snippets."""
         source = self.get_category(id)
         if parent_id is not None and self._is_category_descendant(parent_id, id):
             raise CategoryValidationError(
@@ -506,6 +544,7 @@ class DataModel:
         source_id: int,
         target_id: int,
     ) -> None:
+        """Recursively copy child categories and snippets into a new parent."""
         connection.execute(
             "INSERT INTO snippet (category_id, name, content, weight) "
             "SELECT ?, name, content, weight FROM snippet WHERE category_id = ?",
@@ -519,6 +558,7 @@ class DataModel:
             self._copy_category_contents(connection, child.id, new_child_id)
 
     def delete_category(self, id: int) -> Category:
+        """Delete a category and its complete subtree."""
         category = self.get_category(id)
         with self._connection as c:
             # Keep the operation safe even for databases created while foreign
@@ -529,11 +569,13 @@ class DataModel:
         return category
 
     def move_snippet(self, id: int, category_id: int) -> Snippet:
+        """Move a snippet into another category."""
         snippet = self.get_snippet(id)
         snippet.category_id = category_id
         return self.edit_snippet(snippet)
 
     def copy_snippet(self, id: int, category_id: int) -> Snippet:
+        """Copy a snippet into another category."""
         source = self.get_snippet(id)
         return self.add_snippet(
             Snippet(
@@ -545,6 +587,7 @@ class DataModel:
         )
 
     def validate_snippet(self, snippet: Snippet) -> None:
+        """Normalize a snippet and enforce its domain constraints."""
         snippet.name = self._normalize_name(
             snippet.name,
             SnippetValidationError,
@@ -571,6 +614,7 @@ class DataModel:
             raise SnippetValidationError("The weight isn't in the allowed range.")
 
     def add_snippet(self, snippet: Snippet) -> Snippet:
+        """Validate, persist, and publish a new snippet."""
         self.validate_snippet(snippet)
         with self._connection as c:
             result = c.execute(
@@ -587,6 +631,7 @@ class DataModel:
         return snippet
 
     def edit_snippet(self, snippet: Snippet) -> Snippet:
+        """Validate and persist changes to an existing snippet."""
         # Check that snippet id exists:
         if snippet.id is None:
             raise SnippetValidationError("The snippet has no ID")
@@ -607,6 +652,7 @@ class DataModel:
         return snippet
 
     def delete_snippet(self, id: int) -> Snippet:
+        """Delete and return an existing snippet."""
         snippet = self.get_snippet(id)
         with self._connection as c:
             c.execute("DELETE FROM snippet WHERE id = ?", (id,))
@@ -614,6 +660,7 @@ class DataModel:
         return snippet
 
     def _has_table_column(self, table: str, column: str) -> bool:
+        """Return whether a SQLite table contains a named column."""
         result = self._connection.execute(
             "SELECT COUNT(*) AS CNTREC FROM pragma_table_info(?) WHERE name=?",
             (table, column),
@@ -621,6 +668,7 @@ class DataModel:
         return result.fetchone()["CNTREC"] > 0
 
     def _get_table_names(self) -> set[str]:
+        """Return all user-defined table names in the database."""
         rows = self._connection.execute(
             "SELECT name FROM sqlite_master "
             "WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"
@@ -632,15 +680,19 @@ class DataModel:
         name: str,
         error_type: type[DataModelError],
     ) -> str:
+        """Trim a name and raise the supplied error for empty values."""
         normalized_name = name.strip()
         if not normalized_name:
             raise error_type("The name must not be empty")
         return normalized_name
 
     def _escape_like(self, string: str) -> str:
+        """Escape a literal string for use in a SQLite ``LIKE`` pattern."""
+        # LIKE wildcards are user data here, not search-pattern syntax.
         return string.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
     def close(self) -> None:
+        """Close the database connection; repeated calls are harmless."""
         if self._closed:
             return
         self._connection.close()

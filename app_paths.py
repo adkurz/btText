@@ -1,3 +1,5 @@
+"""Resolve writable data and bundled-resource paths for all launch modes."""
+
 import sys
 from pathlib import Path
 
@@ -18,12 +20,15 @@ def get_resource_directory() -> Path:
 
 
 def get_database_file() -> Path:
+    """Return the application database beside the executable or script."""
     return get_application_directory() / "data.db"
 
 
 def get_icon_file() -> Path:
+    """Return the bundled application icon path."""
     return get_resource_directory() / "assets" / "icon.png"
 
 
 def get_settings_file() -> Path:
+    """Return the INI settings path beside the executable or script."""
     return get_application_directory() / "settings.ini"

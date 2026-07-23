@@ -1,3 +1,5 @@
+"""Application entry point and top-level resource lifetime management."""
+
 import wx
 import pymitter
 
@@ -8,6 +10,7 @@ import ui
 from datamodel import DataModel
 
 def main():
+    """Initialize the wx application and release resources on shutdown."""
     ee = pymitter.EventEmitter()
     model = DataModel(ee, app_paths.get_database_file())
     try:

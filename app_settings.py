@@ -1,3 +1,5 @@
+"""Application settings and portable representations of global hotkeys."""
+
 import dataclasses
 import re
 import sys
@@ -7,7 +9,7 @@ from pathlib import Path
 
 
 class SettingsError(Exception):
-    pass
+    """Raised when application settings cannot be loaded or saved."""
 
 
 SPECIAL_KEY_CODES = {
@@ -57,6 +59,7 @@ MODIFIER_KEY_CODES = {
 
 @dataclasses.dataclass(frozen=True)
 class Hotkey:
+    """A validated global hotkey independent of wxPython key constants."""
     key: str
     control: bool = False
     shift: bool = False
@@ -64,6 +67,7 @@ class Hotkey:
     windows: bool = False
 
     def __post_init__(self):
+        """Normalize the key and reject unsupported modifier combinations."""
         if self.key in LITERAL_KEY_CODES:
             normalized_key = self.key
         else:
@@ -76,6 +80,7 @@ class Hotkey:
 
     @staticmethod
     def _is_supported_key(key: str) -> bool:
+        """Return whether a serialized key name maps to a usable virtual key."""
         if key in LITERAL_KEY_CODES:
             return True
         if key in SPECIAL_KEY_CODES:
@@ -91,6 +96,7 @@ class Hotkey:
 
     @classmethod
     def parse(cls, value: str):
+        """Parse the stable, locale-independent representation used on disk."""
         parts = [part.strip() for part in value.split("+")]
         if not parts or any(not part for part in parts):
             raise ValueError("The hotkey has an invalid format")
@@ -123,6 +129,7 @@ class Hotkey:
 
     @classmethod
     def key_from_code(cls, key_code: int) -> str:
+        """Convert a usable Windows virtual-key code to stored form."""
         if key_code in MODIFIER_KEY_CODES or not 1 <= key_code <= 0xFE:
             raise ValueError("The key cannot be used as a hotkey")
         if ord("A") <= key_code <= ord("Z"):
@@ -137,6 +144,7 @@ class Hotkey:
 
     @property
     def key_code(self) -> int:
+        """Return the Windows virtual-key code for this hotkey."""
         if self.key in LITERAL_KEY_CODES:
             return LITERAL_KEY_CODES[self.key]
         if len(self.key) == 1:
@@ -148,6 +156,7 @@ class Hotkey:
         return int(self.key[3:], 16)
 
     def get_key_label(self) -> str:
+        """Return the localized Windows label used only for presentation."""
         if not self.key.startswith("VK_"):
             return self.key
         if sys.platform == "win32":
@@ -158,6 +167,7 @@ class Hotkey:
         return self.key
 
     def to_display_string(self) -> str:
+        """Return a localized label suitable for the settings UI."""
         parts = []
         if self.control:
             parts.append("CTRL")
@@ -171,6 +181,7 @@ class Hotkey:
         return "+".join(parts)
 
     def __str__(self) -> str:
+        """Return the stable representation written to the settings file."""
         parts = []
         if self.control:
             parts.append("CTRL")
@@ -194,14 +205,18 @@ DEFAULT_TOGGLE_HOTKEY = Hotkey(
 
 @dataclasses.dataclass(frozen=True)
 class AppSettings:
+    """Immutable collection of user-configurable application settings."""
     toggle_window_hotkey: Hotkey = DEFAULT_TOGGLE_HOTKEY
 
 
 class SettingsStore:
+    """Load and atomically replace the application's INI settings file."""
     def __init__(self, settings_file: str | Path):
+        """Store settings in ``settings_file``."""
         self.settings_file = Path(settings_file)
 
     def load(self) -> AppSettings:
+        """Load settings, using defaults when the file or key is absent."""
         parser = ConfigParser()
         try:
             parser.read(self.settings_file, encoding="utf-8")
@@ -217,10 +232,13 @@ class SettingsStore:
             ) from error
 
     def save(self, settings: AppSettings) -> None:
+        """Atomically save a complete settings file."""
         parser = ConfigParser()
         parser["hotkeys"] = {
             "toggle_window": str(settings.toggle_window_hotkey),
         }
+        # Replace a complete temporary file so an interrupted write cannot
+        # leave a truncated settings file behind.
         temporary_file = self.settings_file.with_suffix(
             self.settings_file.suffix + ".tmp"
         )

@@ -1,3 +1,5 @@
+"""Settings dialog with keyboard-accessible global-hotkey recording."""
+
 from collections.abc import Callable
 import sys
 
@@ -7,14 +9,18 @@ from app_settings import DEFAULT_TOGGLE_HOTKEY, Hotkey
 
 
 class FocusableReadOnlyTextCtrl(wx.TextCtrl):
+    """Read-only text that remains reachable during keyboard navigation."""
     def __init__(self, parent, value: str = ""):
+        """Create a read-only control that still participates in tab order."""
         super().__init__(parent, value=value, style=wx.TE_READONLY)
 
     def AcceptsFocusFromKeyboard(self) -> bool:
+        """Keep the hotkey display reachable to keyboard users."""
         return self.IsEnabled() and self.IsShown()
 
 
 class SettingsDialog(wx.Dialog):
+    """Record, validate, and apply the global window-toggle hotkey."""
     def __init__(
         self,
         parent,
@@ -23,6 +29,7 @@ class SettingsDialog(wx.Dialog):
         begin_recording: Callable[[], None],
         end_recording: Callable[[], None],
     ):
+        """Build settings pages and install hotkey-recording callbacks."""
         super().__init__(
             parent,
             title="Settings",
@@ -67,6 +74,7 @@ class SettingsDialog(wx.Dialog):
         self.apply_button.Bind(wx.EVT_BUTTON, self._on_apply)
 
     def _create_hotkey_page(self, notebook: wx.Notebook) -> wx.Panel:
+        """Create controls for displaying and recording the global hotkey."""
         page = wx.Panel(notebook, style=wx.TAB_TRAVERSAL)
         description = wx.StaticText(
             page,
@@ -134,6 +142,8 @@ class SettingsDialog(wx.Dialog):
         return page
 
     def _start_recording(self, event: wx.CommandEvent):
+        """Suspend the global binding and begin capturing key events."""
+        # Release the global registration while the dialog captures its keys.
         if self._recording:
             return
         self._begin_recording()
@@ -150,11 +160,13 @@ class SettingsDialog(wx.Dialog):
         self.record_button.SetFocus()
 
     def _cancel_recording(self, event=None):
+        """Cancel recording and retain the previously selected hotkey."""
         if not self._recording:
             return
         self._finish_recording("Shortcut recording cancelled.")
 
     def _finish_recording(self, status: str):
+        """Leave recording mode, resume the binding, and report status."""
         was_recording = self._recording
         self._recording = False
         self.record_button.SetLabel("&Record new shortcut")
@@ -166,6 +178,7 @@ class SettingsDialog(wx.Dialog):
             self._end_recording()
 
     def _on_character(self, event: wx.KeyEvent):
+        """Interpret one captured key event as navigation or a hotkey."""
         if not self._recording:
             if self._handle_hotkey_display_navigation(event):
                 return
@@ -217,6 +230,7 @@ class SettingsDialog(wx.Dialog):
         )
 
     def _handle_hotkey_display_navigation(self, event: wx.KeyEvent) -> bool:
+        """Provide explicit Tab navigation while the display captures keys."""
         if event.GetKeyCode() != wx.WXK_TAB:
             return False
 
@@ -244,6 +258,7 @@ class SettingsDialog(wx.Dialog):
 
     @staticmethod
     def _get_key_name(key_code: int) -> str | None:
+        """Map common wx key codes to stable serialized names."""
         if ord("A") <= key_code <= ord("Z"):
             return chr(key_code)
         if ord("0") <= key_code <= ord("9"):
@@ -254,6 +269,7 @@ class SettingsDialog(wx.Dialog):
 
     @staticmethod
     def _is_modifier_event(event: wx.KeyEvent) -> bool:
+        """Return whether an event represents only a modifier key."""
         modifier_keys = {
             wx.WXK_CONTROL,
             wx.WXK_SHIFT,
@@ -280,6 +296,7 @@ class SettingsDialog(wx.Dialog):
 
     @classmethod
     def _get_key_name_from_event(cls, event: wx.KeyEvent) -> str | None:
+        """Derive a portable key name from a wx key event."""
         key_code = event.GetKeyCode()
         raw_key_code = event.GetRawKeyCode()
 
@@ -309,6 +326,7 @@ class SettingsDialog(wx.Dialog):
 
     @staticmethod
     def _windows_down(event: wx.KeyEvent) -> bool:
+        """Return whether either Windows key is currently pressed."""
         if event.MetaDown() or bool(event.GetModifiers() & wx.MOD_WIN):
             return True
 
@@ -329,6 +347,7 @@ class SettingsDialog(wx.Dialog):
         return False
 
     def _use_default(self, event: wx.CommandEvent):
+        """Reset the pending hotkey to the application default."""
         self._cancel_recording()
         self._candidate_hotkey = DEFAULT_TOGGLE_HOTKEY
         self.hotkey_display.SetValue(
@@ -342,6 +361,7 @@ class SettingsDialog(wx.Dialog):
         )
 
     def _apply(self) -> bool:
+        """Apply the pending hotkey through the main-frame callback."""
         self._cancel_recording()
         if self._candidate_hotkey == self._current_hotkey:
             return True
@@ -353,12 +373,15 @@ class SettingsDialog(wx.Dialog):
         return True
 
     def _on_apply(self, event: wx.CommandEvent):
+        """Apply settings without closing the dialog."""
         self._apply()
 
     def _on_ok(self, event: wx.CommandEvent):
+        """Apply settings and close only when the change succeeds."""
         if self._apply():
             self.EndModal(wx.ID_OK)
 
     def Destroy(self):
+        """Resume the global hotkey before destroying the dialog."""
         self._cancel_recording()
         return super().Destroy()

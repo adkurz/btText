@@ -1,3 +1,5 @@
+"""Main-window coordination for navigation, hotkeys, and external paste."""
+
 import pymitter
 import wx
 import wx.adv
@@ -19,6 +21,7 @@ CLIPBOARD_RESTORE_DELAY_MS = 500
 
 
 class MainFrame(sc.SizedFrame):
+    """Coordinate the application's views and process-wide integrations."""
     def __init__(
         self,
         ee: pymitter.EventEmitter,
@@ -26,6 +29,7 @@ class MainFrame(sc.SizedFrame):
         settings_store: SettingsStore,
         settings: AppSettings,
     ):
+        """Build the main views and register process-wide event handlers."""
         super().__init__(None, title=wx.GetApp().GetAppName())
         self._ee = ee
         self._model = model
@@ -82,6 +86,7 @@ class MainFrame(sc.SizedFrame):
         self._register_hotkey(self._settings.toggle_window_hotkey)
 
     def on_search(self, event: wx.CommandEvent):
+        """Open search and focus the snippet accepted by the user."""
         selected_snippet = None
         with utils.managed_dialog(SearchDialog(self, self._model)) as dialog:
             if dialog.ShowModal() != wx.ID_OK:
@@ -101,6 +106,7 @@ class MainFrame(sc.SizedFrame):
             self.focus_snippet(selected_snippet)
 
     def focus_snippet(self, snippet: datamodel.Snippet):
+        """Select a snippet and its category in the main views."""
         if snippet.id is None:
             return
         if not self.category_list.focus_id(snippet.category_id):
@@ -123,6 +129,7 @@ class MainFrame(sc.SizedFrame):
         self.snippet_list.SetFocus()
 
     def _register_hotkey(self, hotkey: Hotkey, show_error: bool = True) -> bool:
+        """Register the global toggle hotkey with Windows."""
         success = self.RegisterHotKey(
             self._hotkey_id,
             self._get_hotkey_modifiers(hotkey),
@@ -144,6 +151,7 @@ class MainFrame(sc.SizedFrame):
 
     @staticmethod
     def _get_hotkey_modifiers(hotkey: Hotkey) -> int:
+        """Translate portable modifiers to wxPython flags."""
         modifiers = 0
         if hotkey.control:
             modifiers |= wx.MOD_CONTROL
@@ -157,19 +165,23 @@ class MainFrame(sc.SizedFrame):
 
     @staticmethod
     def _get_hotkey_key_code(hotkey: Hotkey) -> int:
+        """Return the virtual-key code used by wxPython."""
         return hotkey.key_code
 
     def _unregister_hotkey(self):
+        """Release the currently registered global hotkey."""
         if self._registered_hotkey is None:
             return
         self.UnregisterHotKey(self._hotkey_id)
         self._registered_hotkey = None
 
     def _suspend_hotkey(self):
+        """Temporarily release the hotkey while the settings dialog records."""
         self._hotkey_suspended = True
         self._unregister_hotkey()
 
     def _resume_hotkey(self):
+        """Re-register a hotkey after temporary suspension."""
         if not self._hotkey_suspended:
             return
         self._hotkey_suspended = False
@@ -177,6 +189,9 @@ class MainFrame(sc.SizedFrame):
             self._register_hotkey(self._settings.toggle_window_hotkey)
 
     def _change_hotkey(self, hotkey: Hotkey) -> bool:
+        """Register and persist a new hotkey, rolling back on failure."""
+        # Register before saving so an unusable shortcut is never persisted.
+        # Every failure path attempts to restore the previous binding.
         old_hotkey = self._settings.toggle_window_hotkey
         self._unregister_hotkey()
         if not self._register_hotkey(hotkey, show_error=False):
@@ -223,6 +238,7 @@ class MainFrame(sc.SizedFrame):
         return True
 
     def on_global_hotkey(self, event):
+        """Toggle main-window visibility in response to the global shortcut."""
         if self.IsShown():
             self._remember_focused_control()
             self.Hide()
@@ -231,30 +247,36 @@ class MainFrame(sc.SizedFrame):
             self.show_and_focus()
 
     def show_and_focus(self):
+        """Restore the frame and return focus to a useful child control."""
         self.Show()
         self.Iconize(False)
         self.Raise()
         target = self._last_focused_control or self.category_list
         target.SetFocus()
+        # Repeat after pending native events when restoring a hidden frame.
         wx.CallAfter(target.SetFocus)
 
     def _remember_focused_control(self):
+        """Remember which primary list should regain keyboard focus."""
         focused_control = wx.Window.FindFocus()
         if focused_control in (self.category_list, self.snippet_list):
             self._last_focused_control = focused_control
 
     def on_activate(self, event: wx.ActivateEvent):
+        """Track focus and the external paste target when deactivated."""
         event.Skip()
         if not event.GetActive():
             self._remember_focused_control()
             wx.CallAfter(self._remember_foreground_window)
 
     def _remember_foreground_window(self):
+        """Remember a valid external foreground window as the paste target."""
         foreground_window = clipboard_paste.get_foreground_window()
         if clipboard_paste.is_external_window(foreground_window):
             self._paste_target_window = foreground_window
 
     def insert_snippet(self, snippet_id: int):
+        """Hide the frame and schedule insertion into the previous window."""
         if self._paste_target_window is None:
             wx.MessageBox(
                 "There is no previous window to insert the snippet into.",
@@ -270,10 +292,12 @@ class MainFrame(sc.SizedFrame):
             return
 
         self._remember_focused_control()
+        # Hiding lets Windows reactivate the external target before Ctrl+V.
         self.Hide()
         wx.CallLater(50, self._paste_after_hide, snippet.content)
 
     def _paste_after_hide(self, text: str):
+        """Paste after native window activation has settled."""
         try:
             pending = clipboard_paste.paste_text(self._paste_target_window, text)
         except clipboard_paste.PasteError as error:
@@ -293,6 +317,9 @@ class MainFrame(sc.SizedFrame):
         pending: clipboard_paste.PendingPaste,
         attempts_remaining: int,
     ):
+        """Restore the saved clipboard, retrying transient access failures."""
+        # Clipboard access is transiently exclusive, so retry briefly while
+        # retaining ownership of the saved snapshot.
         try:
             pending.restore_clipboard()
         except clipboard_paste.PasteError as error:
@@ -315,6 +342,7 @@ class MainFrame(sc.SizedFrame):
             )
 
     def _create_menubar(self):
+        """Create application menus and bind their commands."""
         menubar = wx.MenuBar()
         edit_menu = wx.Menu()
         edit_menu.Append(int(self._search_command_id), "&Search...\tF3")
@@ -328,6 +356,7 @@ class MainFrame(sc.SizedFrame):
         self.SetMenuBar(menubar)
 
     def on_settings(self, event: wx.CommandEvent):
+        """Open the settings dialog."""
         with utils.managed_dialog(
             SettingsDialog(
                 self,
@@ -340,12 +369,15 @@ class MainFrame(sc.SizedFrame):
             dialog.ShowModal()
 
     def _create_statusbar(self):
+        """Create the status bar used by cross-view notifications."""
         self.status_bar = self.CreateStatusBar()
 
     def set_status_text(self, message: str):
+        """Display a transient application status message."""
         self.status_bar.SetStatusText(message)
 
     def on_about(self, event: wx.CommandEvent):
+        """Show application name, version, and author."""
         about_info = wx.adv.AboutDialogInfo()
         about_info.AddDeveloper(info.author)
         about_info.SetName(info.name)
@@ -353,11 +385,13 @@ class MainFrame(sc.SizedFrame):
         wx.adv.AboutBox(about_info)
 
     def _create_tray_icon(self):
+        """Create the tray icon and convert window close into hiding."""
         self.allow_close = False
         self.Bind(wx.EVT_CLOSE, self.on_close)
         self.tray_icon = TrayIcon(self)
 
     def on_close(self, event: wx.CloseEvent):
+        """Hide normally, or release resources during an explicit exit."""
         if self.allow_close:
             self._unregister_hotkey()
             self.tray_icon.RemoveIcon()

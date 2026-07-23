@@ -1,3 +1,5 @@
+"""Debounced full-text snippet search dialog."""
+
 import wx
 
 import datamodel
@@ -9,7 +11,9 @@ CONTENT_PREVIEW_LENGTH = 60
 
 
 class SearchDialog(wx.Dialog):
+    """Search snippets without querying SQLite on every keystroke."""
     def __init__(self, parent, model: datamodel.DataModel):
+        """Build the search controls and delayed-query timer."""
         super().__init__(
             parent,
             title="Search snippets",
@@ -94,6 +98,8 @@ class SearchDialog(wx.Dialog):
         self.search_input.SetFocus()
 
     def _on_search_text_changed(self, event: wx.CommandEvent):
+        """Restart the debounce interval after the query changes."""
+        # Restarting the one-shot timer coalesces rapid typing into one query.
         self._search_timer.Stop()
         self._selected_snippet_id = None
         self.open_button.Enable(False)
@@ -103,9 +109,11 @@ class SearchDialog(wx.Dialog):
         self._search_timer.StartOnce(SEARCH_DELAY_MS)
 
     def _on_search_timer(self, event: wx.TimerEvent):
+        """Run the pending query after the debounce timer expires."""
         self._run_search()
 
     def _run_search(self):
+        """Populate the result list from the current literal search term."""
         term = self.search_input.GetValue()
         self.result_list.Freeze()
         try:
@@ -144,27 +152,33 @@ class SearchDialog(wx.Dialog):
             self.result_list.Thaw()
 
     def _on_result_focused(self, event: wx.ListEvent):
+        """Remember the model ID associated with the focused result."""
         self._selected_snippet_id = self.result_list.GetItemData(
             event.GetIndex()
         )
         self.open_button.Enable(True)
 
     def _on_result_activated(self, event: wx.ListEvent):
+        """Accept a result activated by keyboard or mouse."""
         self._on_result_focused(event)
         self._accept_selection()
 
     def _on_open(self, event: wx.CommandEvent):
+        """Accept the currently selected search result."""
         self._accept_selection()
 
     def _accept_selection(self):
+        """Close successfully when a valid result is selected."""
         if self._selected_snippet_id is not None:
             self.EndModal(wx.ID_OK)
 
     def get_selected_snippet(self) -> datamodel.Snippet | None:
+        """Return the accepted snippet, or ``None`` if none was selected."""
         if self._selected_snippet_id is None:
             return None
         return self._model.get_snippet(self._selected_snippet_id)
 
     def Destroy(self):
+        """Stop the owned timer before destroying the native dialog."""
         self._search_timer.Stop()
         return super().Destroy()

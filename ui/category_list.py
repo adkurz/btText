@@ -1,3 +1,5 @@
+"""Tree view and transfer commands for hierarchical categories."""
+
 import pymitter
 import wx
 
@@ -7,11 +9,14 @@ from ui.transfer import TransferBuffer
 
 
 class _CategoryDropTarget(wx.TextDropTarget):
+    """Decode internal drag payloads and route them to the category tree."""
     def __init__(self, tree):
+        """Attach the drop target to its owning category tree."""
         super().__init__()
         self._tree = tree
 
     def OnDropText(self, x, y, data):
+        """Move an internal drag payload to the category under the pointer."""
         item, _flags = self._tree.HitTest((x, y))
         if not item.IsOk():
             return False
@@ -38,6 +43,7 @@ class CategoryList(wx.TreeCtrl):
         model: datamodel.DataModel,
         transfer_buffer: TransferBuffer,
     ):
+        """Build the category tree and subscribe it to model changes."""
         super().__init__(
             parent,
             style=wx.TR_HAS_BUTTONS
@@ -73,9 +79,12 @@ class CategoryList(wx.TreeCtrl):
         self.update()
 
     def _label(self, category: datamodel.Category) -> str:
+        """Format a category name with its direct snippet count."""
         return "{} ({})".format(category.name, category.number_of_snippets)
 
     def update(self, *args):
+        """Rebuild the tree while preserving expansion and selection state."""
+        # Rebuild after arbitrary model events, preserving visible tree state.
         selected_id = self.get_selected_id()
         expanded_ids = {
             category_id
@@ -103,6 +112,7 @@ class CategoryList(wx.TreeCtrl):
         self.Thaw()
 
     def _append_children(self, parent_item, parent_id):
+        """Recursively append the model children below a tree item."""
         for category in self._model.get_category_children(parent_id):
             item = self.AppendItem(
                 parent_item,
@@ -114,12 +124,14 @@ class CategoryList(wx.TreeCtrl):
             self._append_children(item, category.id)
 
     def get_selected_id(self):
+        """Return the selected category ID, excluding placeholder items."""
         item = self.GetSelection()
         if not item.IsOk() or item == self._root:
             return None
         return self.GetItemData(item)
 
     def focus_id(self, category_id: int, select: bool = True):
+        """Reveal and optionally select a category by model ID."""
         item = self._items.get(category_id)
         if item is None:
             return False
@@ -133,10 +145,12 @@ class CategoryList(wx.TreeCtrl):
         return True
 
     def selection_changed(self, event):
+        """Publish the selected category for dependent views."""
         self._ee.emit("category_list.changed", self.get_selected_id())
         event.Skip()
 
     def context_menu(self, event):
+        """Show commands valid for the current category and transfer state."""
         menu = wx.Menu()
         new_root = menu.Append(
             wx.ID_ANY,
@@ -181,6 +195,7 @@ class CategoryList(wx.TreeCtrl):
         menu.Destroy()
 
     def key_handler(self, event):
+        """Map accessible keyboard commands to category operations."""
         key = event.GetKeyCode()
         if event.ControlDown() and key in (ord("C"), 3, ord("X"), 24):
             self.copy_or_cut(key in (ord("C"), 3))
@@ -198,6 +213,7 @@ class CategoryList(wx.TreeCtrl):
             event.Skip()
 
     def add_category(self, parent_id):
+        """Prompt for and create a root category or child category."""
         with utils.managed_dialog(
             wx.TextEntryDialog(
                 self,
@@ -218,6 +234,7 @@ class CategoryList(wx.TreeCtrl):
             self._show_error(error)
 
     def edit_category(self, event):
+        """Prompt for a new name and update the selected category."""
         category_id = self.get_selected_id()
         if category_id is None:
             return
@@ -244,6 +261,7 @@ class CategoryList(wx.TreeCtrl):
             self._show_error(error)
 
     def delete_category(self, event):
+        """Confirm and delete the selected category subtree."""
         category_id = self.get_selected_id()
         if category_id is None:
             return
@@ -278,6 +296,8 @@ class CategoryList(wx.TreeCtrl):
         wx.CallAfter(self._focus_after_delete, focus_target_id)
 
     def _get_focus_target_after_delete(self, category_id):
+        """Choose the closest surviving category for post-delete focus."""
+        # Keep keyboard users near the removed subtree: sibling before parent.
         item = self._items.get(category_id)
         if item is None:
             return None
@@ -291,6 +311,7 @@ class CategoryList(wx.TreeCtrl):
         return None
 
     def _focus_after_delete(self, preferred_category_id):
+        """Restore a valid keyboard selection after a tree deletion."""
         if (
             preferred_category_id is not None
             and self.focus_id(preferred_category_id)
@@ -306,6 +327,7 @@ class CategoryList(wx.TreeCtrl):
         self.SetFocus()
 
     def copy_or_cut(self, copy):
+        """Place the selected category in the local transfer buffer."""
         category_id = self.get_selected_id()
         if category_id is None:
             return
@@ -317,6 +339,7 @@ class CategoryList(wx.TreeCtrl):
         )
 
     def paste(self, event, destination_id):
+        """Apply the pending transfer to a category or the tree root."""
         transfer = self._transfer_buffer.value
         if transfer is None:
             wx.Bell()
@@ -338,6 +361,7 @@ class CategoryList(wx.TreeCtrl):
             self._transfer_buffer.clear()
 
     def transfer_to(self, kind, entity_id, destination_id, copy):
+        """Copy or move an entity to a destination category."""
         try:
             if kind == "category":
                 if copy:
@@ -367,20 +391,25 @@ class CategoryList(wx.TreeCtrl):
         return True
 
     def begin_drag(self, event):
+        """Capture the dragged category and defer native drag startup."""
         category_id = self.GetItemData(event.GetItem())
         event.Veto()
+        # Defer until wx has finished processing the begin-drag event.
         wx.CallAfter(self._start_drag, category_id)
 
     def _start_drag(self, category_id):
+        """Start an internal move drag for a category."""
         data = wx.TextDataObject("category:{}".format(category_id))
         source = wx.DropSource(self)
         source.SetData(data)
         source.DoDragDrop(wx.Drag_AllowMove)
 
     def _on_model_changed(self, value):
+        """Refresh the tree after any relevant model event."""
         self.update()
 
     def _show_error(self, error):
+        """Display a category-operation error."""
         wx.MessageBox(
             str(error),
             "Category error",

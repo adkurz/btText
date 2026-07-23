@@ -96,6 +96,7 @@ gdi32.DeleteEnhMetaFile.argtypes = (wintypes.HANDLE,)
 
 
 class KEYBDINPUT(ctypes.Structure):
+    """Windows keyboard-input payload used by ``SendInput``."""
     _fields_ = (
         ("wVk", wintypes.WORD),
         ("wScan", wintypes.WORD),
@@ -106,6 +107,7 @@ class KEYBDINPUT(ctypes.Structure):
 
 
 class MOUSEINPUT(ctypes.Structure):
+    """Windows mouse-input payload required by the ``INPUT`` union."""
     _fields_ = (
         ("dx", wintypes.LONG),
         ("dy", wintypes.LONG),
@@ -117,6 +119,7 @@ class MOUSEINPUT(ctypes.Structure):
 
 
 class HARDWAREINPUT(ctypes.Structure):
+    """Windows hardware-input payload required by the ``INPUT`` union."""
     _fields_ = (
         ("uMsg", wintypes.DWORD),
         ("wParamL", wintypes.WORD),
@@ -125,10 +128,12 @@ class HARDWAREINPUT(ctypes.Structure):
 
 
 class _INPUTUNION(ctypes.Union):
+    """Union of the native input payload variants."""
     _fields_ = (("mi", MOUSEINPUT), ("ki", KEYBDINPUT), ("hi", HARDWAREINPUT))
 
 
 class INPUT(ctypes.Structure):
+    """Native input event passed to the Windows ``SendInput`` API."""
     _anonymous_ = ("data",)
     _fields_ = (("type", wintypes.DWORD), ("data", _INPUTUNION))
 
@@ -143,6 +148,7 @@ if not _MARKER_FORMAT:
 
 
 class METAFILEPICT(ctypes.Structure):
+    """Native clipboard wrapper for a classic Windows metafile."""
     _fields_ = (
         ("mm", wintypes.LONG),
         ("xExt", wintypes.LONG),
@@ -152,6 +158,7 @@ class METAFILEPICT(ctypes.Structure):
 
 
 def _copy_palette(handle: int) -> int:
+    """Duplicate a GDI palette and return the independently owned handle."""
     entry_count = gdi32.GetPaletteEntries(handle, 0, 0, None)
     if not entry_count:
         raise PasteError("A palette on the clipboard could not be read.")
@@ -171,11 +178,13 @@ def _copy_palette(handle: int) -> int:
 
 @dataclass
 class _ClipboardFormatCopy:
+    """One independently owned clipboard-format value and its storage kind."""
     format_id: int
     kind: str
     value: bytes | int | tuple[int, int, int, int]
 
     def release(self) -> None:
+        """Release the retained native object unless ownership was transferred."""
         if not isinstance(self.value, int):
             if self.kind == "metafile" and isinstance(self.value, tuple):
                 gdi32.DeleteMetaFile(self.value[3])
@@ -193,20 +202,24 @@ class _ClipboardSnapshot:
         self,
         copied_formats: list[_ClipboardFormatCopy],
     ):
+        """Own copied formats until they are restored or explicitly discarded."""
         self._copied_formats = copied_formats
         self._closed = False
 
     @classmethod
     def capture(cls) -> _ClipboardSnapshot:
+        """Capture all transferable formats from the current clipboard."""
         return cls(_copy_clipboard_formats())
 
     def restore(self) -> None:
+        """Replace the clipboard with this snapshot and close it."""
         if self._closed:
             return
         _restore_copied_formats(self._copied_formats)
         self.close()
 
     def close(self) -> None:
+        """Release all retained native resources without restoring them."""
         if self._closed:
             return
         for copied_format in self._copied_formats:
@@ -215,6 +228,7 @@ class _ClipboardSnapshot:
         self._closed = True
 
     def __del__(self):
+        """Best-effort fallback for snapshots abandoned during shutdown."""
         # Normally restore_clipboard closes the snapshot. This is a safety net
         # for application shutdown while a delayed restore is pending.
         if not self._closed:
@@ -248,6 +262,7 @@ def activate_window(handle: int) -> bool:
 
 
 def _open_clipboard(attempts: int = 6, delay: float = 0.01) -> None:
+    """Open the process-wide clipboard, retrying short-lived contention."""
     for attempt in range(attempts):
         if user32.OpenClipboard(None):
             return
@@ -257,6 +272,7 @@ def _open_clipboard(attempts: int = 6, delay: float = 0.01) -> None:
 
 
 def _read_clipboard_bytes(format_id: int) -> bytes | None:
+    """Read a global-memory clipboard format while the clipboard is open."""
     if not user32.IsClipboardFormatAvailable(format_id):
         return None
     handle = user32.GetClipboardData(format_id)
@@ -272,6 +288,7 @@ def _read_clipboard_bytes(format_id: int) -> bytes | None:
 
 
 def _read_clipboard_text() -> str | None:
+    """Read Unicode text while the clipboard is open, if decodable."""
     data = _read_clipboard_bytes(CF_UNICODETEXT)
     if data is None:
         return None
@@ -282,6 +299,7 @@ def _read_clipboard_text() -> str | None:
 
 
 def _copy_clipboard_format(format_id: int) -> _ClipboardFormatCopy | None:
+    """Copy one format according to the ownership rules of its storage type."""
     handle = user32.GetClipboardData(format_id)
     if not handle:
         # CF_OWNERDISPLAY deliberately has no transferable data handle.
@@ -356,6 +374,7 @@ def _copy_clipboard_formats() -> list[_ClipboardFormatCopy]:
 
 
 def _set_metafile_picture(value: tuple[int, int, int, int]) -> wintypes.HGLOBAL:
+    """Allocate the outer ``METAFILEPICT`` block required by the clipboard."""
     handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, ctypes.sizeof(METAFILEPICT))
     if not handle:
         raise PasteError("Not enough memory is available for the clipboard.")
@@ -403,6 +422,7 @@ def _restore_copied_formats(
 
 
 def _set_clipboard_data(format_id: int, data: bytes) -> None:
+    """Copy bytes into movable global memory and transfer it to Windows."""
     handle = kernel32.GlobalAlloc(GMEM_MOVEABLE, len(data))
     if not handle:
         raise PasteError("Not enough memory is available for the clipboard.")
@@ -420,10 +440,12 @@ def _set_clipboard_data(format_id: int, data: bytes) -> None:
 
 
 def _set_clipboard_text(text: str) -> None:
+    """Write null-terminated UTF-16 text while the clipboard is open."""
     _set_clipboard_data(CF_UNICODETEXT, (text + "\0").encode("utf-16-le"))
 
 
 def _replace_clipboard(text: str, marker: bytes) -> _ClipboardSnapshot:
+    """Save the clipboard and replace it with marked snippet text."""
     snapshot = _ClipboardSnapshot.capture()
     try:
         _open_clipboard()
@@ -442,7 +464,9 @@ def _replace_clipboard(text: str, marker: bytes) -> _ClipboardSnapshot:
 
 
 def _send_ctrl_v() -> None:
+    """Send one balanced Ctrl+V key sequence to the foreground window."""
     def keyboard_input(key: int, flags: int = 0) -> INPUT:
+        """Build one native keyboard event."""
         value = INPUT()
         value.type = INPUT_KEYBOARD
         value.ki = KEYBDINPUT(key, 0, flags, 0, 0)
@@ -467,6 +491,7 @@ class PendingPaste:
         marker: bytes,
         pasted_text: str,
     ):
+        """Retain the snapshot and markers for one delayed restoration."""
         self._snapshot = snapshot
         self._marker = marker
         self._pasted_text = pasted_text
@@ -480,6 +505,8 @@ class PendingPaste:
         finally:
             user32.CloseClipboard()
         if marker_matches or text_matches:
+            # Some targets preserve the text but strip private formats. The
+            # text comparison still identifies our temporary clipboard value.
             self._snapshot.restore()
         else:
             # Respect a newer clipboard change and release the retained object.

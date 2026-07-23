@@ -1,3 +1,5 @@
+"""List view and editing commands for snippets in the selected category."""
+
 import pymitter
 import wx
 
@@ -11,6 +13,7 @@ CONTENT_PREVIEW_LENGTH = 40
 
 
 class SnippetList(BaseList):
+    """Present snippets and synchronize rows with model events."""
     def __init__(
         self,
         parent,
@@ -18,12 +21,14 @@ class SnippetList(BaseList):
         model: datamodel.DataModel,
         transfer_buffer: TransferBuffer,
     ):
+        """Build columns, commands, and model-event subscriptions."""
         super().__init__(parent, ee, model)
         self._transfer_buffer = transfer_buffer
         self.selected_category_id = None
         self.AppendColumn("Name")
         self.AppendColumn("Weight")
         weight_number = self.AppendColumn("Weight_number")
+        # Sort by the hidden numeric value, not the localized weight label.
         self.SetColumnWidth(weight_number, 0)
         self.AppendColumn("Content preview")
         self.Bind(wx.EVT_CONTEXT_MENU, self.context_menu)
@@ -36,10 +41,12 @@ class SnippetList(BaseList):
         ee.on("snippet.deleted", self.delete_snippet_from_list)
 
     def category_deleted(self, category_id: int):
+        """Clear rows when their selected category was deleted."""
         if category_id == self.selected_category_id:
             self.update(None, force=True)
 
     def update(self, category_id: int | None, force: bool = False):
+        """Reload rows when the selected category changes."""
         if category_id == self.selected_category_id and not force:
             return
         self.selected_category_id = category_id
@@ -65,6 +72,7 @@ class SnippetList(BaseList):
         self.Thaw()
 
     def context_menu(self, event: wx.ContextMenuEvent):
+        """Show commands valid for the current row and transfer state."""
         menu = wx.Menu()
         new_snippet = menu.Append(wx.ID_ANY, "New Snippet")
         menu.Bind(wx.EVT_MENU, self.add_snippet, new_snippet)
@@ -106,6 +114,7 @@ class SnippetList(BaseList):
         self.PopupMenu(menu)
 
     def key_handler(self, event: wx.KeyEvent):
+        """Map keyboard shortcuts to snippet operations."""
         key = event.GetKeyCode()
         if event.ControlDown() and key in (ord("C"), 3, ord("X"), 24):
             self.copy_or_cut(key in (ord("C"), 3))
@@ -123,6 +132,7 @@ class SnippetList(BaseList):
             event.Skip()
 
     def copy_or_cut(self, copy: bool):
+        """Place the selected snippet in the local transfer buffer."""
         snippet_id = self.get_selected_id()
         if snippet_id is None:
             return
@@ -134,6 +144,7 @@ class SnippetList(BaseList):
         )
 
     def paste(self, event, as_top_level: bool = False):
+        """Apply the pending entity transfer at the selected destination."""
         transfer = self._transfer_buffer.value
         category_id = self.selected_category_id
         if transfer is None:
@@ -192,21 +203,25 @@ class SnippetList(BaseList):
         self._ee.emit("status.changed", "Transfer completed.")
 
     def begin_drag(self, event):
+        """Capture the dragged snippet and defer native drag startup."""
         snippet_id = self.GetItemData(event.GetIndex())
         wx.CallAfter(self._start_drag, snippet_id)
 
     def _start_drag(self, snippet_id):
+        """Start an internal move drag for a snippet."""
         data = wx.TextDataObject("snippet:{}".format(snippet_id))
         source = wx.DropSource(self)
         source.SetData(data)
         source.DoDragDrop(wx.Drag_AllowMove)
 
     def insert_snippet(self, event: wx.CommandEvent | wx.KeyEvent):
+        """Request insertion of the selected snippet into another window."""
         snippet_id = self.get_selected_id()
         if snippet_id is not None:
             self._ee.emit("snippet.insert_requested", snippet_id)
 
     def add_snippet(self, event: wx.CommandEvent | wx.KeyEvent):
+        """Open an editor for a new snippet in the selected category."""
         if self.selected_category_id is None:
             return
         with utils.managed_dialog(
@@ -220,6 +235,7 @@ class SnippetList(BaseList):
             editor.ShowModal()
 
     def edit_snippet(self, event: wx.CommandEvent | wx.KeyEvent):
+        """Open an editor for the selected snippet."""
         snippet_id = self.get_selected_id()
         if snippet_id is None or self.selected_category_id is None:
             return
@@ -241,6 +257,7 @@ class SnippetList(BaseList):
             editor.ShowModal()
 
     def delete_snippet(self, event: wx.CommandEvent | wx.KeyEvent):
+        """Confirm and delete the selected snippet."""
         snippet_id = self.get_selected_id()
         if snippet_id is None:
             return
@@ -267,12 +284,14 @@ class SnippetList(BaseList):
             self.update(self.selected_category_id, force=True)
 
     def delete_snippet_from_list(self, snippet: datamodel.Snippet):
+        """Remove a deleted or moved snippet row by model ID."""
         index = self.FindItem(-1, snippet.id)
         if index == wx.NOT_FOUND:
             return
         self.DeleteItem(index)
 
     def add_snippet_in_list(self, snippet: datamodel.Snippet):
+        """Insert and focus a model-created snippet in the active list."""
         if snippet.category_id != self.selected_category_id:
             return
         if snippet.id is not None and self.FindItem(-1, snippet.id) != wx.NOT_FOUND:
@@ -294,6 +313,7 @@ class SnippetList(BaseList):
         self.Thaw()
 
     def edit_snippet_in_list(self, snippet: datamodel.Snippet):
+        """Update, add, or remove a row after a snippet edit."""
         if snippet.category_id != self.selected_category_id:
             self.delete_snippet_from_list(snippet)
             return
@@ -316,6 +336,7 @@ class SnippetList(BaseList):
         self.Thaw()
 
     def _sort_compare(self, item1, item2):
+        """Sort by descending weight and then by name."""
         weight1 = int(self.GetItemText(self.FindItem(-1, item1), 2))
         weight2 = int(self.GetItemText(self.FindItem(-1, item2), 2))
         weight_result = (weight1 < weight2) - (weight1 > weight2)

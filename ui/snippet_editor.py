@@ -1,3 +1,5 @@
+"""Modal editor for creating and updating snippets."""
+
 import wx
 import wx.lib.sized_controls as sc
 import pymitter
@@ -8,7 +10,9 @@ from ui import utils
 
 
 class SnippetEditor(sc.SizedDialog):
+    """Edit one snippet and delegate validation to the data model."""
     def __init__(self, parent, ee: pymitter.EventEmitter, model: datamodel.DataModel, category_id: int, snippet: datamodel.Snippet|None = None):
+        """Build an editor for a new snippet or an existing snippet."""
         super().__init__(parent, style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
         self.SetAutoLayout(True)
         # Set title:
@@ -71,6 +75,7 @@ class SnippetEditor(sc.SizedDialog):
             self.load()
 
     def load(self):
+        """Populate controls from the snippet being edited."""
         s = self._snippet
         if s is None:
             return
@@ -79,6 +84,7 @@ class SnippetEditor(sc.SizedDialog):
         self.content_input.SetValue(s.content)
 
     def save(self, event):
+        """Validate controls and persist the edited snippet."""
         if not self.Validate():
             return
         snippet_name = self.name_input.GetValue()
