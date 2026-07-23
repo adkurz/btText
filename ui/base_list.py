@@ -8,11 +8,18 @@ import datamodel
 
 class BaseList(wx.ListView):
     """List view whose item data stores stable model identifiers."""
-    def __init__(self, parent, ee: pymitter.EventEmitter, model: datamodel.DataModel):
+    def __init__(
+        self,
+        parent,
+        ee: pymitter.EventEmitter,
+        model: datamodel.DataModel,
+        multiple_selection: bool = False,
+    ):
         """Initialize a report-style list backed by the shared model."""
-        super().__init__(
-            parent, style=wx.LC_REPORT | wx.LC_SINGLE_SEL | wx.LC_SORT_ASCENDING
-        )
+        style = wx.LC_REPORT | wx.LC_SORT_ASCENDING
+        if not multiple_selection:
+            style |= wx.LC_SINGLE_SEL
+        super().__init__(parent, style=style)
         self._ee = ee
         self._model = model
 
@@ -20,6 +27,15 @@ class BaseList(wx.ListView):
         """Return the model ID of the selected row, if any."""
         index = self.GetFirstSelected()
         return self.GetItemData(index) if index != wx.NOT_FOUND else None
+
+    def get_selected_ids(self):
+        """Return model IDs for all selected rows in display order."""
+        ids = []
+        index = self.GetFirstSelected()
+        while index != wx.NOT_FOUND:
+            ids.append(self.GetItemData(index))
+            index = self.GetNextSelected(index)
+        return ids
 
     def focus_id(self, id: int, select: bool = True):
         """Focus and optionally select the row carrying a model ID."""

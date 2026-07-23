@@ -231,6 +231,82 @@ class DataModelTestCase(unittest.TestCase):
         self.assertEqual(copied.category_id, source.id)
         self.assertEqual(copied.weight, 3)
 
+    def test_multiple_snippets_can_be_moved_and_copied_atomically(self):
+        source = self.model.add_category(Category("Source"))
+        destination = self.model.add_category(Category("Destination"))
+        snippets = [
+            self.model.add_snippet(Snippet("First", "One", source.id)),
+            self.model.add_snippet(Snippet("Second", "Two", source.id, 3)),
+        ]
+
+        moved = self.model.move_snippets(
+            [snippet.id for snippet in snippets],
+            destination.id,
+        )
+        self.assertEqual(
+            [snippet.category_id for snippet in moved],
+            [destination.id] * 2,
+        )
+
+        copied = self.model.copy_snippets(
+            [snippet.id for snippet in snippets],
+            source.id,
+        )
+        self.assertEqual([snippet.name for snippet in copied], ["First", "Second"])
+        self.assertEqual([snippet.weight for snippet in copied], [1, 3])
+
+    def test_multiple_snippet_copy_rolls_back_on_name_conflict(self):
+        source = self.model.add_category(Category("Source"))
+        destination = self.model.add_category(Category("Destination"))
+        first = self.model.add_snippet(Snippet("First", "One", source.id))
+        second = self.model.add_snippet(Snippet("Second", "Two", source.id))
+        self.model.add_snippet(Snippet("Second", "Existing", destination.id))
+
+        with self.assertRaises(SnippetValidationError):
+            self.model.copy_snippets([first.id, second.id], destination.id)
+
+        self.assertEqual(
+            [snippet.name for snippet in self.model.get_snippets(destination.id)],
+            ["Second"],
+        )
+
+    def test_multiple_snippets_can_be_deleted_atomically(self):
+        category = self.model.add_category(Category("Category"))
+        snippets = [
+            self.model.add_snippet(Snippet("First", "One", category.id)),
+            self.model.add_snippet(Snippet("Second", "Two", category.id)),
+        ]
+        self.events.events.clear()
+
+        deleted = self.model.delete_snippets(
+            [snippet.id for snippet in snippets]
+        )
+
+        self.assertEqual(
+            [snippet.id for snippet in deleted],
+            [snippet.id for snippet in snippets],
+        )
+        self.assertEqual(list(self.model.get_snippets(category.id)), [])
+        self.assertEqual(
+            [
+                snippet.id
+                for event_name, snippet in self.events.events
+                if event_name == "snippet.deleted"
+            ],
+            [snippet.id for snippet in snippets],
+        )
+
+    def test_multiple_snippet_delete_does_nothing_if_one_id_is_missing(self):
+        category = self.model.add_category(Category("Category"))
+        snippet = self.model.add_snippet(
+            Snippet("Snippet", "Content", category.id)
+        )
+
+        with self.assertRaises(EntityNotFoundError):
+            self.model.delete_snippets([snippet.id, 999999])
+
+        self.assertEqual(self.model.get_snippet(snippet.id), snippet)
+
     def test_deleting_category_deletes_entire_subtree(self):
         root = self.model.add_category(Category("Root"))
         child = self.model.add_category(

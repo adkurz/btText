@@ -7,8 +7,15 @@ from dataclasses import dataclass
 class Transfer:
     """Description of an application-local category or snippet transfer."""
     kind: str
-    entity_id: int
+    entity_ids: tuple[int, ...]
     copy: bool
+
+    @property
+    def entity_id(self) -> int:
+        """Return the sole entity ID used by category transfers."""
+        if len(self.entity_ids) != 1:
+            raise ValueError("The transfer contains more than one entity")
+        return self.entity_ids[0]
 
 
 class TransferBuffer:
@@ -18,9 +25,20 @@ class TransferBuffer:
         """Create an empty transfer buffer."""
         self.value: Transfer | None = None
 
-    def set(self, kind: str, entity_id: int, copy: bool) -> None:
-        """Store an entity and whether the pending operation is a copy."""
-        self.value = Transfer(kind, entity_id, copy)
+    def set(
+        self,
+        kind: str,
+        entity_ids: int | list[int] | tuple[int, ...],
+        copy: bool,
+    ) -> None:
+        """Store one or more entities and the pending operation."""
+        if isinstance(entity_ids, int):
+            entity_ids = (entity_ids,)
+        else:
+            entity_ids = tuple(entity_ids)
+        if not entity_ids:
+            raise ValueError("A transfer must contain at least one entity")
+        self.value = Transfer(kind, entity_ids, copy)
 
     def clear(self) -> None:
         """Discard the pending transfer."""

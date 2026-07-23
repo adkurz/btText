@@ -570,21 +570,63 @@ class DataModel:
 
     def move_snippet(self, id: int, category_id: int) -> Snippet:
         """Move a snippet into another category."""
-        snippet = self.get_snippet(id)
-        snippet.category_id = category_id
-        return self.edit_snippet(snippet)
+        return self.move_snippets((id,), category_id)[0]
 
     def copy_snippet(self, id: int, category_id: int) -> Snippet:
         """Copy a snippet into another category."""
-        source = self.get_snippet(id)
-        return self.add_snippet(
-            Snippet(
+        return self.copy_snippets((id,), category_id)[0]
+
+    def move_snippets(
+        self,
+        ids: tuple[int, ...] | list[int],
+        category_id: int,
+    ) -> list[Snippet]:
+        """Atomically move multiple snippets into another category."""
+        snippets = [self.get_snippet(id) for id in ids]
+        for snippet in snippets:
+            snippet.category_id = category_id
+            self.validate_snippet(snippet)
+        with self._connection as c:
+            c.executemany(
+                "UPDATE snippet SET category_id = ? WHERE id = ?",
+                ((category_id, snippet.id) for snippet in snippets),
+            )
+        for snippet in snippets:
+            self.ee.emit("snippet.edited", snippet)
+        return snippets
+
+    def copy_snippets(
+        self,
+        ids: tuple[int, ...] | list[int],
+        category_id: int,
+    ) -> list[Snippet]:
+        """Atomically copy multiple snippets into another category."""
+        snippets = []
+        for id in ids:
+            source = self.get_snippet(id)
+            snippet = Snippet(
                 name=source.name,
                 content=source.content,
                 category_id=category_id,
                 weight=source.weight,
             )
-        )
+            self.validate_snippet(snippet)
+            snippets.append(snippet)
+        with self._connection as c:
+            for snippet in snippets:
+                snippet.id = c.execute(
+                    "INSERT INTO snippet "
+                    "(name, category_id, weight, content) VALUES (?, ?, ?, ?)",
+                    (
+                        snippet.name,
+                        snippet.category_id,
+                        snippet.weight,
+                        snippet.content,
+                    ),
+                ).lastrowid
+        for snippet in snippets:
+            self.ee.emit("snippet.added", snippet)
+        return snippets
 
     def validate_snippet(self, snippet: Snippet) -> None:
         """Normalize a snippet and enforce its domain constraints."""
@@ -653,11 +695,25 @@ class DataModel:
 
     def delete_snippet(self, id: int) -> Snippet:
         """Delete and return an existing snippet."""
-        snippet = self.get_snippet(id)
+        return self.delete_snippets((id,))[0]
+
+    def delete_snippets(
+        self,
+        ids: tuple[int, ...] | list[int],
+    ) -> list[Snippet]:
+        """Atomically delete and return multiple snippets."""
+        snippets = [self.get_snippet(id) for id in ids]
+        if not snippets:
+            return []
+        placeholders = ", ".join("?" for _snippet in snippets)
         with self._connection as c:
-            c.execute("DELETE FROM snippet WHERE id = ?", (id,))
-        self.ee.emit("snippet.deleted", snippet)
-        return snippet
+            c.execute(
+                "DELETE FROM snippet WHERE id IN ({})".format(placeholders),
+                tuple(snippet.id for snippet in snippets),
+            )
+        for snippet in snippets:
+            self.ee.emit("snippet.deleted", snippet)
+        return snippets
 
     def _has_table_column(self, table: str, column: str) -> bool:
         """Return whether a SQLite table contains a named column."""

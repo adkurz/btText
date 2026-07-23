@@ -22,7 +22,7 @@ class SnippetList(BaseList):
         transfer_buffer: TransferBuffer,
     ):
         """Build columns, commands, and model-event subscriptions."""
-        super().__init__(parent, ee, model)
+        super().__init__(parent, ee, model, multiple_selection=True)
         self._transfer_buffer = transfer_buffer
         self.selected_category_id = None
         self.AppendColumn("Name")
@@ -93,14 +93,23 @@ class SnippetList(BaseList):
                 lambda evt: self.paste(evt, as_top_level=True),
                 paste_root_item,
             )
-        if self.get_selected_id() is not None:
-            insert_snippet = menu.Append(wx.ID_ANY, "Insert Snippet")
-            menu.Bind(wx.EVT_MENU, self.insert_snippet, insert_snippet)
-            edit_snippet = menu.Append(wx.ID_ANY, "Edit Snippet")
-            menu.Bind(wx.EVT_MENU, self.edit_snippet, edit_snippet)
+        selected_ids = self.get_selected_ids()
+        if selected_ids:
+            if len(selected_ids) == 1:
+                insert_snippet = menu.Append(wx.ID_ANY, "Insert Snippet")
+                menu.Bind(wx.EVT_MENU, self.insert_snippet, insert_snippet)
+                edit_snippet = menu.Append(wx.ID_ANY, "Edit Snippet")
+                menu.Bind(wx.EVT_MENU, self.edit_snippet, edit_snippet)
             menu.AppendSeparator()
-            copy_snippet = menu.Append(wx.ID_COPY, "Copy\tCtrl+C")
-            cut_snippet = menu.Append(wx.ID_CUT, "Cut\tCtrl+X")
+            label = "snippets" if len(selected_ids) != 1 else "snippet"
+            copy_snippet = menu.Append(
+                wx.ID_COPY,
+                "Copy {}\tCtrl+C".format(label),
+            )
+            cut_snippet = menu.Append(
+                wx.ID_CUT,
+                "Cut {}\tCtrl+X".format(label),
+            )
             menu.Bind(
                 wx.EVT_MENU,
                 lambda evt: self.copy_or_cut(True),
@@ -111,6 +120,11 @@ class SnippetList(BaseList):
                 lambda evt: self.copy_or_cut(False),
                 cut_snippet,
             )
+            delete_snippets = menu.Append(
+                wx.ID_DELETE,
+                "Delete {}\tDelete".format(label),
+            )
+            menu.Bind(wx.EVT_MENU, self.delete_snippet, delete_snippets)
         self.PopupMenu(menu)
 
     def key_handler(self, event: wx.KeyEvent):
@@ -118,6 +132,9 @@ class SnippetList(BaseList):
         key = event.GetKeyCode()
         if event.ControlDown() and key in (ord("C"), 3, ord("X"), 24):
             self.copy_or_cut(key in (ord("C"), 3))
+        elif event.ControlDown() and key in (ord("A"), 1):
+            for index in range(self.GetItemCount()):
+                self.Select(index)
         elif event.ControlDown() and key in (ord("V"), 22):
             self.paste(event, as_top_level=event.ShiftDown())
         elif key == wx.WXK_CONTROL_N:
@@ -132,15 +149,20 @@ class SnippetList(BaseList):
             event.Skip()
 
     def copy_or_cut(self, copy: bool):
-        """Place the selected snippet in the local transfer buffer."""
-        snippet_id = self.get_selected_id()
-        if snippet_id is None:
+        """Place all selected snippets in the local transfer buffer."""
+        snippet_ids = self.get_selected_ids()
+        if not snippet_ids:
             return
-        self._transfer_buffer.set("snippet", snippet_id, copy)
+        self._transfer_buffer.set("snippet", snippet_ids, copy)
         action = "Copied" if copy else "Cut"
+        noun = "snippet" if len(snippet_ids) == 1 else "snippets"
         self._ee.emit(
             "status.changed",
-            "{} snippet. Select a category and press Ctrl+V.".format(action),
+            "{} {} {}. Select a category and press Ctrl+V.".format(
+                action,
+                len(snippet_ids),
+                noun,
+            ),
         )
 
     def paste(self, event, as_top_level: bool = False):
@@ -177,17 +199,18 @@ class SnippetList(BaseList):
                     )
             elif transfer.kind == "snippet":
                 if transfer.copy:
-                    snippet = self._model.copy_snippet(
-                        transfer.entity_id,
+                    snippets = self._model.copy_snippets(
+                        transfer.entity_ids,
                         category_id,
                     )
                 else:
-                    snippet = self._model.move_snippet(
-                        transfer.entity_id,
+                    snippets = self._model.move_snippets(
+                        transfer.entity_ids,
                         category_id,
                     )
-                if snippet.id is not None:
-                    self.focus_id(snippet.id)
+                for snippet in snippets:
+                    if snippet.id is not None:
+                        self.focus_id(snippet.id)
             else:
                 return
         except datamodel.DataModelError as error:
@@ -200,7 +223,13 @@ class SnippetList(BaseList):
             return
         if not transfer.copy:
             self._transfer_buffer.clear()
-        self._ee.emit("status.changed", "Transfer completed.")
+        self._ee.emit(
+            "status.changed",
+            "Transferred {} item{}.".format(
+                len(transfer.entity_ids),
+                "" if len(transfer.entity_ids) == 1 else "s",
+            ),
+        )
 
     def begin_drag(self, event):
         """Capture the dragged snippet and defer native drag startup."""
@@ -257,31 +286,77 @@ class SnippetList(BaseList):
             editor.ShowModal()
 
     def delete_snippet(self, event: wx.CommandEvent | wx.KeyEvent):
-        """Confirm and delete the selected snippet."""
-        snippet_id = self.get_selected_id()
-        if snippet_id is None:
+        """Confirm and delete all selected snippets."""
+        snippet_ids = self.get_selected_ids()
+        if not snippet_ids:
             return
         try:
-            snippet = self._model.get_snippet(snippet_id)
+            snippets = [
+                self._model.get_snippet(snippet_id)
+                for snippet_id in snippet_ids
+            ]
         except datamodel.EntityNotFoundError as error:
             wx.MessageBox(str(error), "Error", style=wx.OK | wx.ICON_ERROR)
             self.update(self.selected_category_id, force=True)
             return
+        if len(snippets) == 1:
+            message = "Do you want to delete the snippet '{}'?"
+            message = message.format(snippets[0].name)
+            title = "Delete snippet?"
+        else:
+            message = "Do you want to delete {} selected snippets?".format(
+                len(snippets)
+            )
+            title = "Delete snippets?"
         with utils.managed_dialog(
             wx.MessageDialog(
                 self,
-                "Do you want to delete the snippet {}".format(snippet.name),
-                "Delete snippet?",
+                message,
+                title,
                 style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
             )
         ) as dialog:
             if dialog.ShowModal() != wx.ID_YES:
                 return
+        focus_id = self._get_focus_target_after_delete(set(snippet_ids))
         try:
-            self._model.delete_snippet(snippet_id)
+            self._model.delete_snippets(snippet_ids)
         except datamodel.DataModelError as error:
             wx.MessageBox(str(error), "Error", style=wx.OK | wx.ICON_ERROR)
             self.update(self.selected_category_id, force=True)
+            return
+        transfer = self._transfer_buffer.value
+        if (
+            transfer is not None
+            and transfer.kind == "snippet"
+            and set(transfer.entity_ids).intersection(snippet_ids)
+        ):
+            self._transfer_buffer.clear()
+        if focus_id is not None:
+            self.focus_id(focus_id)
+        self.SetFocus()
+        self._ee.emit(
+            "status.changed",
+            "Deleted {} snippet{}.".format(
+                len(snippet_ids),
+                "" if len(snippet_ids) == 1 else "s",
+            ),
+        )
+
+    def _get_focus_target_after_delete(self, deleted_ids: set[int]):
+        """Choose the closest surviving row for keyboard focus."""
+        selected_index = self.GetFirstSelected()
+        if selected_index == wx.NOT_FOUND:
+            return None
+        for index in range(selected_index, self.GetItemCount()):
+            candidate_id = self.GetItemData(index)
+            if candidate_id not in deleted_ids:
+                return candidate_id
+        for index in range(selected_index - 1, -1, -1):
+            candidate_id = self.GetItemData(index)
+            if candidate_id not in deleted_ids:
+                return candidate_id
+        return None
 
     def delete_snippet_from_list(self, snippet: datamodel.Snippet):
         """Remove a deleted or moved snippet row by model ID."""

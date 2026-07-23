@@ -33,7 +33,7 @@ class CategoryList(wx.TreeCtrl):
     """Accessible category tree.
 
     Ctrl+C/Ctrl+X copy or cut the selected category. Ctrl+V pastes the
-    application-local item (category or snippet) below the selected category.
+    application-local category or selected snippets below the destination.
     """
 
     def __init__(
@@ -354,16 +354,19 @@ class CategoryList(wx.TreeCtrl):
             return
         if self.transfer_to(
             transfer.kind,
-            transfer.entity_id,
+            transfer.entity_ids,
             destination_id,
             transfer.copy,
         ) and not transfer.copy:
             self._transfer_buffer.clear()
 
-    def transfer_to(self, kind, entity_id, destination_id, copy):
+    def transfer_to(self, kind, entity_ids, destination_id, copy):
         """Copy or move an entity to a destination category."""
+        if isinstance(entity_ids, int):
+            entity_ids = (entity_ids,)
         try:
             if kind == "category":
+                entity_id = entity_ids[0]
                 if copy:
                     result = self._model.copy_category(
                         entity_id,
@@ -378,9 +381,15 @@ class CategoryList(wx.TreeCtrl):
                 self.focus_id(result.id)
             elif kind == "snippet":
                 if copy:
-                    self._model.copy_snippet(entity_id, destination_id)
+                    self._model.copy_snippets(
+                        entity_ids,
+                        destination_id,
+                    )
                 else:
-                    self._model.move_snippet(entity_id, destination_id)
+                    self._model.move_snippets(
+                        entity_ids,
+                        destination_id,
+                    )
                 self.focus_id(destination_id)
             else:
                 return False
