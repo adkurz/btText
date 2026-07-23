@@ -5,14 +5,13 @@ import wx
 
 import datamodel
 from ui import utils
-from ui.base_list import BaseList
 from ui.snippet_editor import SnippetEditor
 from ui.transfer import TransferBuffer
 
 CONTENT_PREVIEW_LENGTH = 40
 
 
-class SnippetList(BaseList):
+class SnippetList(wx.ListView):
     """Present snippets and synchronize rows with model events."""
     def __init__(
         self,
@@ -22,7 +21,12 @@ class SnippetList(BaseList):
         transfer_buffer: TransferBuffer,
     ):
         """Build columns, commands, and model-event subscriptions."""
-        super().__init__(parent, ee, model, multiple_selection=True)
+        super().__init__(
+            parent,
+            style=wx.LC_REPORT | wx.LC_SORT_ASCENDING,
+        )
+        self._ee = ee
+        self._model = model
         self._transfer_buffer = transfer_buffer
         self.selected_category_id = None
         self.AppendColumn("Name")
@@ -39,6 +43,34 @@ class SnippetList(BaseList):
         ee.on("snippet.added", self.add_snippet_in_list)
         ee.on("snippet.edited", self.edit_snippet_in_list)
         ee.on("snippet.deleted", self.delete_snippet_from_list)
+
+    def get_selected_id(self):
+        """Return the model ID of the first selected row, if any."""
+        index = self.GetFirstSelected()
+        return self.GetItemData(index) if index != wx.NOT_FOUND else None
+
+    def get_selected_ids(self):
+        """Return model IDs for all selected rows in display order."""
+        ids = []
+        index = self.GetFirstSelected()
+        while index != wx.NOT_FOUND:
+            ids.append(self.GetItemData(index))
+            index = self.GetNextSelected(index)
+        return ids
+
+    def focus_id(self, snippet_id: int, select: bool = True):
+        """Focus and optionally select a snippet row by model ID."""
+        index = self.FindItem(-1, snippet_id)
+        if index == wx.NOT_FOUND:
+            return False
+        self.Focus(index)
+        if select:
+            self.Select(index)
+        return True
+
+    def sort(self):
+        """Sort rows by weight and name."""
+        self.SortItems(self._sort_compare)
 
     def category_deleted(self, category_id: int):
         """Clear rows when their selected category was deleted."""
@@ -408,6 +440,7 @@ class SnippetList(BaseList):
             utils.reduce_string(snippet.content, CONTENT_PREVIEW_LENGTH),
         )
         self.sort()
+        self.focus_id(snippet.id)
         self.Thaw()
 
     def _sort_compare(self, item1, item2):
@@ -417,4 +450,6 @@ class SnippetList(BaseList):
         weight_result = (weight1 < weight2) - (weight1 > weight2)
         if weight_result != 0:
             return weight_result
-        return super()._sort_compare(item1, item2)
+        name1 = self.GetItemText(self.FindItem(-1, item1)).casefold()
+        name2 = self.GetItemText(self.FindItem(-1, item2)).casefold()
+        return (name1 > name2) - (name1 < name2)
