@@ -273,6 +273,9 @@ class SnippetList(BaseList):
     def add_snippet_in_list(self, snippet: datamodel.Snippet):
         if snippet.category_id != self.selected_category_id:
             return
+        if snippet.id is not None and self.FindItem(-1, snippet.id) != wx.NOT_FOUND:
+            self.focus_id(snippet.id)
+            return
         self.Freeze()
         snippet_index = self.Append(
             (
