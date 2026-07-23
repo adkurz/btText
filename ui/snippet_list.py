@@ -253,7 +253,7 @@ class SnippetList(BaseList):
                 self,
                 "Do you want to delete the snippet {}".format(snippet.name),
                 "Delete snippet?",
-                style=wx.YES_NO | wx.ICON_QUESTION,
+                style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
             )
         ) as dialog:
             if dialog.ShowModal() != wx.ID_YES:

@@ -252,7 +252,7 @@ class CategoryList(wx.TreeCtrl):
             wx.MessageDialog(
                 self,
                 message,
-                "Delete category subtree?",
+                "Delete category",
                 style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
             )
         ) as dialog:
