@@ -49,6 +49,7 @@ class CategoryList(wx.TreeCtrl):
         self._model = model
         self._transfer_buffer = transfer_buffer
         self._items = {}
+        self._empty_item = None
         self._images = wx.ImageList(16, 16)
         self._images.Add(
             wx.ArtProvider.GetBitmap(wx.ART_FOLDER, wx.ART_OTHER, (16, 16))
@@ -84,7 +85,15 @@ class CategoryList(wx.TreeCtrl):
         self.Freeze()
         self.DeleteChildren(self._root)
         self._items.clear()
+        self._empty_item = None
         self._append_children(self._root, None)
+        if not self._items:
+            self._empty_item = self.AppendItem(
+                self._root,
+                "No categories",
+            )
+            self.SetItemData(self._empty_item, None)
+            self.SelectItem(self._empty_item)
         for category_id in expanded_ids:
             item = self._items.get(category_id)
             if item is not None:
@@ -236,6 +245,7 @@ class CategoryList(wx.TreeCtrl):
         category_id = self.get_selected_id()
         if category_id is None:
             return
+        focus_target_id = self._get_focus_target_after_delete(category_id)
         try:
             category = self._model.get_category(category_id)
             descendants, snippets = self._model.get_category_subtree_stats(
@@ -262,6 +272,36 @@ class CategoryList(wx.TreeCtrl):
             self._model.delete_category(category_id)
         except datamodel.DataModelError as error:
             self._show_error(error)
+            return
+        wx.CallAfter(self._focus_after_delete, focus_target_id)
+
+    def _get_focus_target_after_delete(self, category_id):
+        item = self._items.get(category_id)
+        if item is None:
+            return None
+        for candidate in (
+            self.GetNextSibling(item),
+            self.GetPrevSibling(item),
+            self.GetItemParent(item),
+        ):
+            if candidate.IsOk() and candidate != self._root:
+                return self.GetItemData(candidate)
+        return None
+
+    def _focus_after_delete(self, preferred_category_id):
+        if (
+            preferred_category_id is not None
+            and self.focus_id(preferred_category_id)
+        ):
+            self.SetFocus()
+            return
+        root_categories = list(self._model.get_category_children(None))
+        if root_categories:
+            self.focus_id(root_categories[0].id)
+        elif self._empty_item is not None and self._empty_item.IsOk():
+            self.SelectItem(self._empty_item)
+            self.EnsureVisible(self._empty_item)
+        self.SetFocus()
 
     def copy_or_cut(self, copy):
         category_id = self.get_selected_id()
