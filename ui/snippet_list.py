@@ -4,6 +4,8 @@ import pymitter
 import wx
 
 import datamodel
+from error_messages import format_user_error
+from i18n import _, ngettext
 from ui import utils
 from ui.snippet_editor import SnippetEditor
 from ui.transfer import TransferBuffer
@@ -29,12 +31,17 @@ class SnippetList(wx.ListView):
         self._model = model
         self._transfer_buffer = transfer_buffer
         self.selected_category_id = None
-        self.AppendColumn("Name", width=self.FromDIP(220))
-        self.AppendColumn("Weight", width=self.FromDIP(100))
-        weight_number = self.AppendColumn("Weight_number")
+        # Translators: Snippet-list column containing each snippet's name.
+        self.AppendColumn(_("Name"), width=self.FromDIP(220))
+        # Translators: Snippet-list column containing the localized search rank.
+        self.AppendColumn(_("Weight"), width=self.FromDIP(100))
+        # Translators: Accessible name for a hidden numeric sort column that
+        # corresponds to the visible snippet weight.
+        weight_number = self.AppendColumn(_("Weight number"))
         # Sort by the hidden numeric value, not the localized weight label.
         self.SetColumnWidth(weight_number, 0)
-        self.AppendColumn("Content preview", width=self.FromDIP(420))
+        # Translators: Snippet-list column showing the beginning of its content.
+        self.AppendColumn(_("Content preview"), width=self.FromDIP(420))
         self.Bind(wx.EVT_CONTEXT_MENU, self.context_menu)
         self.Bind(wx.EVT_CHAR, self.key_handler)
         self.Bind(wx.EVT_LIST_BEGIN_DRAG, self.begin_drag)
@@ -106,18 +113,24 @@ class SnippetList(wx.ListView):
     def context_menu(self, event: wx.ContextMenuEvent):
         """Show commands valid for the current row and transfer state."""
         menu = wx.Menu()
-        new_snippet = menu.Append(wx.ID_ANY, "New Snippet")
+        # Translators: Snippet-list menu command that opens the editor to create
+        # a snippet in the selected category.
+        new_snippet = menu.Append(wx.ID_ANY, _("New snippet"))
         menu.Bind(wx.EVT_MENU, self.add_snippet, new_snippet)
         if self.selected_category_id is not None:
             paste_item = menu.Append(
                 wx.ID_PASTE,
-                "Paste into category\tCtrl+V",
+                # Translators: Snippet-list menu command that pastes a copied or
+                # cut category into the current category. Keep Ctrl+V after "\t".
+                _("Paste into category\tCtrl+V"),
             )
             paste_item.Enable(self._transfer_buffer.value is not None)
             menu.Bind(wx.EVT_MENU, self.paste, paste_item)
             paste_root_item = menu.Append(
                 wx.ID_ANY,
-                "Paste category as top-level\tCtrl+Shift+V",
+                # Translators: Snippet-list menu command that pastes a copied or
+                # cut category at the root level. Keep Ctrl+Shift+V after "\t".
+                _("Paste category as top-level\tCtrl+Shift+V"),
             )
             paste_root_item.Enable(self._transfer_buffer.value is not None)
             menu.Bind(
@@ -128,19 +141,35 @@ class SnippetList(wx.ListView):
         selected_ids = self.get_selected_ids()
         if selected_ids:
             if len(selected_ids) == 1:
-                insert_snippet = menu.Append(wx.ID_ANY, "Insert Snippet")
+                # Translators: Snippet-list menu command that inserts the selected
+                # snippet into the previously active application.
+                insert_snippet = menu.Append(wx.ID_ANY, _("Insert snippet"))
                 menu.Bind(wx.EVT_MENU, self.insert_snippet, insert_snippet)
-                edit_snippet = menu.Append(wx.ID_ANY, "Edit Snippet")
+                # Translators: Snippet-list menu command that opens the selected
+                # snippet in the editor.
+                edit_snippet = menu.Append(wx.ID_ANY, _("Edit snippet"))
                 menu.Bind(wx.EVT_MENU, self.edit_snippet, edit_snippet)
             menu.AppendSeparator()
-            label = "snippets" if len(selected_ids) != 1 else "snippet"
+            selected_count = len(selected_ids)
             copy_snippet = menu.Append(
                 wx.ID_COPY,
-                "Copy {}\tCtrl+C".format(label),
+                # Translators: Snippet-list menu command that copies the selected
+                # snippet or snippets. Keep Ctrl+C after "\t".
+                ngettext(
+                    "Copy snippet\tCtrl+C",
+                    "Copy snippets\tCtrl+C",
+                    selected_count,
+                ),
             )
             cut_snippet = menu.Append(
                 wx.ID_CUT,
-                "Cut {}\tCtrl+X".format(label),
+                # Translators: Snippet-list menu command that cuts the selected
+                # snippet or snippets. Keep Ctrl+X after "\t".
+                ngettext(
+                    "Cut snippet\tCtrl+X",
+                    "Cut snippets\tCtrl+X",
+                    selected_count,
+                ),
             )
             menu.Bind(
                 wx.EVT_MENU,
@@ -154,7 +183,13 @@ class SnippetList(wx.ListView):
             )
             delete_snippets = menu.Append(
                 wx.ID_DELETE,
-                "Delete {}\tDelete".format(label),
+                # Translators: Snippet-list menu command that deletes the selected
+                # snippet or snippets. The final "Delete" is the keyboard key.
+                ngettext(
+                    "Delete snippet\tDelete",
+                    "Delete snippets\tDelete",
+                    selected_count,
+                ),
             )
             menu.Bind(wx.EVT_MENU, self.delete_snippet, delete_snippets)
         self.PopupMenu(menu)
@@ -186,15 +221,26 @@ class SnippetList(wx.ListView):
         if not snippet_ids:
             return
         self._transfer_buffer.set("snippet", snippet_ids, copy)
-        action = "Copied" if copy else "Cut"
-        noun = "snippet" if len(snippet_ids) == 1 else "snippets"
+        snippet_count = len(snippet_ids)
+        if copy:
+            # Translators: Status after copying snippets; they are not pasted yet.
+            # {count} is the number copied, and Ctrl+V is the paste shortcut.
+            message = ngettext(
+                "Copied {count} snippet. Select a category and press Ctrl+V.",
+                "Copied {count} snippets. Select a category and press Ctrl+V.",
+                snippet_count,
+            )
+        else:
+            # Translators: Status after cutting snippets; they are not moved yet.
+            # {count} is the number cut, and Ctrl+V is the paste shortcut.
+            message = ngettext(
+                "Cut {count} snippet. Select a category and press Ctrl+V.",
+                "Cut {count} snippets. Select a category and press Ctrl+V.",
+                snippet_count,
+            )
         self._ee.emit(
             "status.changed",
-            "{} {} {}. Select a category and press Ctrl+V.".format(
-                action,
-                len(snippet_ids),
-                noun,
-            ),
+            message.format(count=snippet_count),
         )
 
     def paste(self, event, as_top_level: bool = False):
@@ -207,8 +253,12 @@ class SnippetList(wx.ListView):
         if as_top_level:
             if transfer.kind != "category":
                 wx.MessageBox(
-                    "Only a category can be pasted as a top-level category.",
-                    "Paste as top-level",
+                    # Translators: Explains that the top-level paste command only
+                    # accepts a copied or cut category, not snippets.
+                    _("Only a category can be pasted as a top-level category."),
+                    # Translators: Title of information about pasting a category
+                    # at the category-tree root.
+                    _("Paste as top-level"),
                     wx.OK | wx.ICON_INFORMATION,
                     self,
                 )
@@ -247,20 +297,26 @@ class SnippetList(wx.ListView):
                 return
         except datamodel.DataModelError as error:
             wx.MessageBox(
-                str(error),
-                "Paste error",
+                format_user_error(error),
+                # Translators: Title of an error while pasting copied or cut items.
+                _("Paste error"),
                 wx.OK | wx.ICON_ERROR,
                 self,
             )
             return
         if not transfer.copy:
             self._transfer_buffer.clear()
+        item_count = len(transfer.entity_ids)
+        # Translators: Status after a pending copy or cut operation is pasted.
+        # {count} includes all transferred categories and snippets.
+        message = ngettext(
+            "Transferred {count} item.",
+            "Transferred {count} items.",
+            item_count,
+        ).format(count=item_count)
         self._ee.emit(
             "status.changed",
-            "Transferred {} item{}.".format(
-                len(transfer.entity_ids),
-                "" if len(transfer.entity_ids) == 1 else "s",
-            ),
+            message,
         )
 
     def begin_drag(self, event):
@@ -303,7 +359,12 @@ class SnippetList(wx.ListView):
         try:
             snippet = self._model.get_snippet(snippet_id)
         except datamodel.EntityNotFoundError as error:
-            wx.MessageBox(str(error), "Error", style=wx.OK | wx.ICON_ERROR)
+            wx.MessageBox(
+                format_user_error(error),
+                # Translators: Generic title for a failed snippet-list operation.
+                _("Error"),
+                style=wx.OK | wx.ICON_ERROR,
+            )
             self.update(self.selected_category_id, force=True)
             return
         with utils.managed_dialog(
@@ -328,18 +389,32 @@ class SnippetList(wx.ListView):
                 for snippet_id in snippet_ids
             ]
         except datamodel.EntityNotFoundError as error:
-            wx.MessageBox(str(error), "Error", style=wx.OK | wx.ICON_ERROR)
+            wx.MessageBox(
+                format_user_error(error),
+                # Translators: Generic title for a failed snippet-list operation.
+                _("Error"),
+                style=wx.OK | wx.ICON_ERROR,
+            )
             self.update(self.selected_category_id, force=True)
             return
         if len(snippets) == 1:
-            message = "Do you want to delete the snippet '{}'?"
-            message = message.format(snippets[0].name)
-            title = "Delete snippet?"
+            # Translators: Confirmation before permanently deleting one snippet.
+            # {name} is the snippet's name.
+            message = _(
+                "Do you want to delete the snippet '{name}'?"
+            ).format(name=snippets[0].name)
+            # Translators: Title of the confirmation for deleting one snippet.
+            title = _("Delete snippet?")
         else:
-            message = "Do you want to delete {} selected snippets?".format(
-                len(snippets)
-            )
-            title = "Delete snippets?"
+            # Translators: Confirmation before permanently deleting several
+            # selected snippets. {count} is the number selected.
+            message = ngettext(
+                "Do you want to delete {count} selected snippet?",
+                "Do you want to delete {count} selected snippets?",
+                len(snippets),
+            ).format(count=len(snippets))
+            # Translators: Title of the confirmation for deleting multiple snippets.
+            title = _("Delete snippets?")
         with utils.managed_dialog(
             wx.MessageDialog(
                 self,
@@ -354,7 +429,12 @@ class SnippetList(wx.ListView):
         try:
             self._model.delete_snippets(snippet_ids)
         except datamodel.DataModelError as error:
-            wx.MessageBox(str(error), "Error", style=wx.OK | wx.ICON_ERROR)
+            wx.MessageBox(
+                format_user_error(error),
+                # Translators: Generic title for a failed snippet deletion.
+                _("Error"),
+                style=wx.OK | wx.ICON_ERROR,
+            )
             self.update(self.selected_category_id, force=True)
             return
         transfer = self._transfer_buffer.value
@@ -367,12 +447,16 @@ class SnippetList(wx.ListView):
         if focus_id is not None:
             self.focus_id(focus_id)
         self.SetFocus()
+        # Translators: Status after selected snippets were permanently deleted.
+        # {count} is the number deleted.
+        message = ngettext(
+            "Deleted {count} snippet.",
+            "Deleted {count} snippets.",
+            len(snippet_ids),
+        ).format(count=len(snippet_ids))
         self._ee.emit(
             "status.changed",
-            "Deleted {} snippet{}.".format(
-                len(snippet_ids),
-                "" if len(snippet_ids) == 1 else "s",
-            ),
+            message,
         )
 
     def _get_focus_target_after_delete(self, deleted_ids: set[int]):

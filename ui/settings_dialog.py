@@ -6,6 +6,8 @@ import sys
 import wx
 
 from app_settings import DEFAULT_TOGGLE_HOTKEY, Hotkey
+from error_messages import format_user_error
+from i18n import DEFAULT_LANGUAGE, SYSTEM_LANGUAGE, _
 
 
 class FocusableReadOnlyTextCtrl(wx.TextCtrl):
@@ -25,30 +27,48 @@ class SettingsDialog(wx.Dialog):
         self,
         parent,
         current_hotkey: Hotkey,
-        apply_hotkey: Callable[[Hotkey], bool],
+        current_language: str,
+        available_languages: tuple[str, ...],
+        apply_settings: Callable[[Hotkey, str], bool],
         begin_recording: Callable[[], None],
         end_recording: Callable[[], None],
     ):
         """Build settings pages and install hotkey-recording callbacks."""
         super().__init__(
             parent,
-            title="Settings",
+            # Translators: Window title for application settings.
+            title=_("Settings"),
             style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
         self._current_hotkey = current_hotkey
         self._candidate_hotkey = current_hotkey
-        self._apply_hotkey = apply_hotkey
+        self._current_language = current_language
+        self._candidate_language = current_language
+        self._available_languages = available_languages
+        self._apply_settings = apply_settings
         self._begin_recording = begin_recording
         self._end_recording = end_recording
         self._recording = False
 
         self.notebook = wx.Notebook(self)
+        self.general_page = self._create_general_page(self.notebook)
+        # Translators: Tab for general application settings such as language.
+        # "&" marks the keyboard mnemonic.
+        self.notebook.AddPage(self.general_page, _("&General"))
         self.hotkey_page = self._create_hotkey_page(self.notebook)
-        self.notebook.AddPage(self.hotkey_page, "&Keyboard")
+        # Translators: Tab for configuring the global keyboard shortcut.
+        # "&" marks the keyboard mnemonic.
+        self.notebook.AddPage(self.hotkey_page, _("&Keyboard"))
 
-        self.ok_button = wx.Button(self, wx.ID_OK, "&OK")
-        self.cancel_button = wx.Button(self, wx.ID_CANCEL, "&Cancel")
-        self.apply_button = wx.Button(self, wx.ID_APPLY, "&Apply")
+        # Translators: Settings-dialog button that saves pending changes and
+        # closes the dialog. "&" marks the keyboard mnemonic.
+        self.ok_button = wx.Button(self, wx.ID_OK, _("&OK"))
+        # Translators: Settings-dialog button that discards pending changes and
+        # closes the dialog. "&" marks the keyboard mnemonic.
+        self.cancel_button = wx.Button(self, wx.ID_CANCEL, _("&Cancel"))
+        # Translators: Settings-dialog button that saves and activates pending
+        # changes without closing the dialog. "&" marks the keyboard mnemonic.
+        self.apply_button = wx.Button(self, wx.ID_APPLY, _("&Apply"))
         self.apply_button.Enable(False)
 
         button_sizer = wx.StdDialogButtonSizer()
@@ -74,12 +94,90 @@ class SettingsDialog(wx.Dialog):
         self.ok_button.Bind(wx.EVT_BUTTON, self._on_ok)
         self.apply_button.Bind(wx.EVT_BUTTON, self._on_apply)
 
+    def _create_general_page(self, notebook: wx.Notebook) -> wx.Panel:
+        """Create controls for selecting the user-interface language."""
+        page = wx.Panel(notebook, style=wx.TAB_TRAVERSAL)
+        # Translators: Label for the user-interface language selector.
+        # "&" marks the keyboard mnemonic for the adjacent choice control.
+        language_label = wx.StaticText(page, label=_("&Language"))
+        language_values = (
+            SYSTEM_LANGUAGE,
+            *self._available_languages,
+        )
+        language_labels = tuple(
+            self._language_label(language) for language in language_values
+        )
+        self.language_choice = wx.Choice(page, choices=language_labels)
+        try:
+            selection = language_values.index(self._candidate_language)
+        except ValueError:
+            selection = 0
+        self.language_choice.SetSelection(selection)
+        self.language_choice.Bind(wx.EVT_CHOICE, self._on_language_changed)
+        self._language_values = language_values
+
+        restart_note = wx.StaticText(
+            page,
+            # Translators: Explains that a newly selected interface language is
+            # loaded the next time the application starts.
+            label=_("Language changes take effect after restarting btText."),
+        )
+        restart_note.Wrap(540)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(language_label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 12)
+        sizer.Add(
+            self.language_choice,
+            0,
+            wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            12,
+        )
+        sizer.Add(
+            restart_note,
+            0,
+            wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            12,
+        )
+        page.SetSizer(sizer)
+        return page
+
+    @staticmethod
+    def _language_label(language: str) -> str:
+        """Return a readable label while retaining dynamic language support."""
+        if language == SYSTEM_LANGUAGE:
+            # Translators: Language-choice entry that follows the operating
+            # system's language when a matching catalog is installed.
+            return _("System default")
+        if language == DEFAULT_LANGUAGE:
+            # Translators: Language-choice entry for the English source UI.
+            return _("English")
+        if language == "de":
+            # Translators: Native name of the German user-interface language.
+            return _("German")
+        return language
+
+    def _on_language_changed(self, event: wx.CommandEvent):
+        """Store the pending language selected in the choice control."""
+        selection = self.language_choice.GetSelection()
+        if selection != wx.NOT_FOUND:
+            self._candidate_language = self._language_values[selection]
+        self._update_apply_button()
+
+    def _update_apply_button(self):
+        """Enable Apply whenever either setting differs from its saved value."""
+        self.apply_button.Enable(
+            self._candidate_hotkey != self._current_hotkey
+            or self._candidate_language != self._current_language
+        )
+
     def _create_hotkey_page(self, notebook: wx.Notebook) -> wx.Panel:
         """Create controls for displaying and recording the global hotkey."""
         page = wx.Panel(notebook, style=wx.TAB_TRAVERSAL)
         description = wx.StaticText(
             page,
-            label=(
+            # Translators: Settings-page explanation of the global shortcut and
+            # its required modifier keys.
+            label=_(
                 "Configure the global shortcut used to show or hide the main "
                 "window. A shortcut must contain Ctrl, Shift, Alt or the "
                 "Windows key."
@@ -87,36 +185,51 @@ class SettingsDialog(wx.Dialog):
         )
         description.Wrap(540)
 
-        hotkey_label = wx.StaticText(page, label="Current &hotkey")
+        # Translators: Label for the currently configured global shortcut.
+        # "&" marks the keyboard mnemonic for the adjacent read-only field.
+        hotkey_label = wx.StaticText(page, label=_("Current &hotkey"))
         self.hotkey_display = FocusableReadOnlyTextCtrl(
             page,
             value=self._candidate_hotkey.to_display_string(),
         )
-        self.hotkey_display.SetName("Current show or hide window shortcut")
+        self.hotkey_display.SetName(
+            # Translators: Accessible name for the read-only field displaying
+            # the currently configured global show-or-hide shortcut.
+            _("Current show or hide window shortcut")
+        )
 
         self.record_button = wx.Button(
             page,
-            label="&Record new shortcut",
+            # Translators: Button that starts listening for a new global
+            # shortcut. "&" marks the keyboard mnemonic.
+            label=_("&Record new shortcut"),
         )
         self.record_button.Bind(wx.EVT_BUTTON, self._start_recording)
         self.cancel_recording_button = wx.Button(
             page,
-            label="Cancel &recording",
+            # Translators: Button that stops the current shortcut recording
+            # without accepting it. "&" marks the keyboard mnemonic.
+            label=_("Cancel &recording"),
         )
         self.cancel_recording_button.Enable(False)
         self.cancel_recording_button.Bind(
             wx.EVT_BUTTON,
             self._cancel_recording,
         )
-        default_button = wx.Button(page, label="Use &default")
+        # Translators: Button that selects btText's default global shortcut as
+        # the pending setting. "&" marks the keyboard mnemonic.
+        default_button = wx.Button(page, label=_("Use &default"))
         default_button.Bind(wx.EVT_BUTTON, self._use_default)
         self.hotkey_display.MoveBeforeInTabOrder(self.record_button)
 
         self.recording_status = wx.StaticText(
             page,
-            label="Recording is not active.",
+            # Translators: Initial status before shortcut recording starts.
+            label=_("Recording is not active."),
         )
-        self.recording_status.SetName("Shortcut recording status")
+        # Translators: Accessible name for the text that reports shortcut
+        # recording instructions and results.
+        self.recording_status.SetName(_("Shortcut recording status"))
 
         button_sizer = wx.BoxSizer(wx.HORIZONTAL)
         button_sizer.Add(self.record_button, 0, wx.RIGHT, 8)
@@ -149,13 +262,25 @@ class SettingsDialog(wx.Dialog):
             return
         self._begin_recording()
         self._recording = True
-        self.record_button.SetLabel("Press shortcut now")
+        # Translators: Temporary button label while btText waits for the user to
+        # press a new global shortcut.
+        self.record_button.SetLabel(_("Press shortcut now"))
         self.record_button.SetName(
-            "Recording shortcut. Press Escape to cancel or Tab to leave recording."
+            # Translators: Accessible name while btText is waiting for a shortcut;
+            # Escape cancels and Tab leaves the recording control.
+            _(
+                "Recording shortcut. Press Escape to cancel or Tab to leave "
+                "recording."
+            )
         )
         self.cancel_recording_button.Enable(True)
         self.recording_status.SetLabel(
-            "Press one shortcut now. Escape cancels; Tab and Shift+Tab remain available."
+            # Translators: Instructions shown while recording a new global
+            # shortcut. Keep Escape, Tab, and Shift+Tab recognizable key names.
+            _(
+                "Press one shortcut now. Escape cancels; Tab and Shift+Tab "
+                "remain available."
+            )
         )
         self.recording_status.Wrap(540)
         self.record_button.SetFocus()
@@ -164,14 +289,19 @@ class SettingsDialog(wx.Dialog):
         """Cancel recording and retain the previously selected hotkey."""
         if not self._recording:
             return
-        self._finish_recording("Shortcut recording cancelled.")
+        # Translators: Status after the user cancels shortcut recording.
+        self._finish_recording(_("Shortcut recording cancelled."))
 
     def _finish_recording(self, status: str):
         """Leave recording mode, resume the binding, and report status."""
         was_recording = self._recording
         self._recording = False
-        self.record_button.SetLabel("&Record new shortcut")
-        self.record_button.SetName("Record new shortcut")
+        # Translators: Button label restored after shortcut recording ends; it
+        # starts listening for another shortcut. "&" marks the mnemonic.
+        self.record_button.SetLabel(_("&Record new shortcut"))
+        # Translators: Accessible button name restored after recording ends; the
+        # button starts recording another global shortcut.
+        self.record_button.SetName(_("Record new shortcut"))
         self.cancel_recording_button.Enable(False)
         self.recording_status.SetLabel(status)
         self.recording_status.Wrap(540)
@@ -215,19 +345,24 @@ class SettingsDialog(wx.Dialog):
         except ValueError as error:
             wx.Bell()
             self._finish_recording(
-                "Shortcut not accepted: {}. Recording has stopped.".format(
-                    error
-                )
+                # Translators: Status announced after an invalid shortcut ends
+                # recording. {error} explains why the key was rejected.
+                _(
+                    "Shortcut not accepted: {error}. Recording has stopped."
+                ).format(error=format_user_error(error))
             )
             return
 
         self._candidate_hotkey = hotkey
         self.hotkey_display.SetValue(hotkey.to_display_string())
-        self.apply_button.Enable(hotkey != self._current_hotkey)
+        self._update_apply_button()
         self._finish_recording(
-            "Shortcut {} recorded. Choose Apply or OK to activate it.".format(
-                hotkey.to_display_string()
-            )
+            # Translators: Status after recording succeeds. The shortcut is not
+            # active until Apply or OK saves it. {shortcut} is such as Ctrl+Alt+T.
+            _(
+                "Shortcut {shortcut} recorded. Choose Apply or OK to activate "
+                "it."
+            ).format(shortcut=hotkey.to_display_string())
         )
 
     def _handle_hotkey_display_navigation(self, event: wx.KeyEvent) -> bool:
@@ -354,23 +489,34 @@ class SettingsDialog(wx.Dialog):
         self.hotkey_display.SetValue(
             self._candidate_hotkey.to_display_string()
         )
-        self.apply_button.Enable(
-            self._candidate_hotkey != self._current_hotkey
-        )
+        self._update_apply_button()
         self.recording_status.SetLabel(
-            "Default shortcut selected. Choose Apply or OK to activate it."
+            # Translators: Status after selecting btText's default shortcut; it
+            # is only activated when Apply or OK saves the setting.
+            _(
+                "Default shortcut selected. Choose Apply or OK to activate it."
+            )
         )
 
     def _apply(self) -> bool:
         """Apply the pending hotkey through the main-frame callback."""
         self._cancel_recording()
-        if self._candidate_hotkey == self._current_hotkey:
+        if (
+            self._candidate_hotkey == self._current_hotkey
+            and self._candidate_language == self._current_language
+        ):
             return True
-        if not self._apply_hotkey(self._candidate_hotkey):
+        if not self._apply_settings(
+            self._candidate_hotkey,
+            self._candidate_language,
+        ):
             return False
         self._current_hotkey = self._candidate_hotkey
+        self._current_language = self._candidate_language
         self.apply_button.Enable(False)
-        self.recording_status.SetLabel("The shortcut has been applied.")
+        # Translators: Status confirming that the pending global shortcut was
+        # saved and activated.
+        self.recording_status.SetLabel(_("The shortcut has been applied."))
         return True
 
     def _on_apply(self, event: wx.CommandEvent):

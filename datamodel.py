@@ -6,8 +6,10 @@ from pathlib import Path
 
 import pymitter
 
+from user_errors import UserFacingError
 
-class DataModelError(Exception):
+
+class DataModelError(UserFacingError):
     """Base class for errors that can be shown to the user."""
 
 
@@ -65,18 +67,21 @@ class DataModel:
         self._closed = False
         db_file = Path(db_file)
         exists = db_file.exists()
-        # Foreign-key enforcement must be enabled outside a transaction.
-        self._connection = sqlite3.connect(db_file, autocommit=True)
-        self._connection.row_factory = sqlite3.Row
-        self._connection.execute("PRAGMA foreign_keys = ON")
-        foreign_keys_enabled = self._connection.execute(
-            "PRAGMA foreign_keys"
-        ).fetchone()[0]
-        if not foreign_keys_enabled:
-            self._connection.close()
-            raise DataModelError("Could not enable SQLite foreign-key support")
-        self._connection.autocommit = False
+        self._connection = None
         try:
+            # Foreign-key enforcement must be enabled outside a transaction.
+            self._connection = sqlite3.connect(db_file, autocommit=True)
+            self._connection.row_factory = sqlite3.Row
+            self._connection.execute("PRAGMA foreign_keys = ON")
+            foreign_keys_enabled = self._connection.execute(
+                "PRAGMA foreign_keys"
+            ).fetchone()[0]
+            if not foreign_keys_enabled:
+                raise DataModelError(
+                    "database_foreign_keys_unavailable",
+                    "Could not enable SQLite foreign-key support",
+                )
+            self._connection.autocommit = False
             tables = self._get_table_names()
             if not exists or not tables:
                 self.create_tables()
@@ -84,15 +89,26 @@ class DataModel:
                 missing_tables = {"category", "snippet"} - tables
                 if missing_tables:
                     raise DataModelError(
-                        "The database schema is incomplete. Missing table(s): {}".format(
-                            ", ".join(sorted(missing_tables))
-                        )
+                        "database_schema_incomplete",
+                        "The database schema is incomplete. Missing table(s): "
+                        "{missing_tables}",
+                        missing_tables=", ".join(sorted(missing_tables)),
                     )
                 self._migrate_database()
-        except Exception:
-            self._connection.close()
+        except DataModelError:
+            if self._connection is not None:
+                self._connection.close()
             self._closed = True
             raise
+        except sqlite3.Error as error:
+            if self._connection is not None:
+                self._connection.close()
+            self._closed = True
+            raise DataModelError(
+                "database_open_failed",
+                "The database could not be opened: {reason}",
+                reason=error,
+            ) from error
 
     def create_tables(self):
         """Create the current schema in a new or empty database."""
@@ -111,9 +127,12 @@ class DataModel:
         database_version = self._get_database_version()
         if database_version > self.SCHEMA_VERSION:
             raise DataModelError(
+                "database_version_too_new",
                 "The database was created by a newer version of the application "
-                "and cannot be opened (database schema version: {}; supported "
-                "version: {}).".format(database_version, self.SCHEMA_VERSION)
+                "and cannot be opened (database schema version: "
+                "{database_version}; supported version: {supported_version}).",
+                database_version=database_version,
+                supported_version=self.SCHEMA_VERSION,
             )
 
         while database_version < self.SCHEMA_VERSION:
@@ -121,9 +140,10 @@ class DataModel:
                 migration_name = self.MIGRATIONS[database_version]
             except IndexError as error:
                 raise DataModelError(
-                    "No database migration is available from schema version {}.".format(
-                        database_version
-                    )
+                    "database_migration_unavailable",
+                    "No database migration is available from schema version "
+                    "{database_version}.",
+                    database_version=database_version,
                 ) from error
 
             migration = getattr(self, migration_name)
@@ -131,12 +151,12 @@ class DataModel:
             migrated_version = self._get_database_version()
             if migrated_version != database_version + 1:
                 raise DataModelError(
-                    "Database migration {} did not advance the schema from "
-                    "version {} to version {}.".format(
-                        migration_name,
-                        database_version,
-                        database_version + 1,
-                    )
+                    "database_migration_failed",
+                    "Database migration {migration_name} did not advance the "
+                    "schema from version {old_version} to version {new_version}.",
+                    migration_name=migration_name,
+                    old_version=database_version,
+                    new_version=database_version + 1,
                 )
             database_version = migrated_version
 
@@ -158,7 +178,8 @@ class DataModel:
         ).fetchone()[0]
         if invalid_category_names:
             raise DataModelError(
-                "The database contains categories without a name"
+                "database_category_name_missing",
+                "The database contains categories without a name",
             )
 
         invalid_weights = self._connection.execute(
@@ -167,7 +188,8 @@ class DataModel:
         ).fetchone()[0]
         if invalid_weights:
             raise DataModelError(
-                "The database contains snippets with an invalid weight"
+                "database_snippet_weight_invalid",
+                "The database contains snippets with an invalid weight",
             )
 
         duplicate_snippet_names = self._connection.execute(
@@ -177,7 +199,8 @@ class DataModel:
         ).fetchone()[0]
         if duplicate_snippet_names:
             raise DataModelError(
-                "The database contains duplicate snippet names in a category"
+                "database_snippet_names_duplicate",
+                "The database contains duplicate snippet names in a category",
             )
 
         orphaned_snippets = self._connection.execute(
@@ -186,7 +209,8 @@ class DataModel:
         ).fetchone()[0]
         if orphaned_snippets:
             raise DataModelError(
-                "The database contains snippets without a category"
+                "database_snippet_category_missing",
+                "The database contains snippets without a category",
             )
 
         with self._connection as c:
@@ -266,7 +290,9 @@ class DataModel:
         category = result.fetchone()
         if category is None:
             raise EntityNotFoundError(
-                "Category with ID {} does not exist".format(id)
+                "category_not_found",
+                "Category with ID {id} does not exist",
+                id=id,
             )
         return Category(
             id=category["id"],
@@ -381,7 +407,9 @@ class DataModel:
         snippet = result.fetchone()
         if snippet is None:
             raise EntityNotFoundError(
-                "Snippet with ID {} does not exist".format(id)
+                "snippet_not_found",
+                "Snippet with ID {id} does not exist",
+                id=id,
             )
         return Snippet(
             id=snippet["id"],
@@ -442,7 +470,8 @@ class DataModel:
         self.validate_category(category)
         if self.category_exist(category.name, category.parent_id):
             raise CategoryValidationError(
-                "A category with this name already exists at this level"
+                "category_name_duplicate",
+                "A category with this name already exists at this level",
             )
         with self._connection as c:
             result = c.execute(
@@ -457,13 +486,17 @@ class DataModel:
         """Validate and persist changes to an existing category."""
         # Check that category exists:
         if category.id is None:
-            raise CategoryValidationError("The category has no ID")
+            raise CategoryValidationError(
+                "category_id_missing",
+                "The category has no ID",
+            )
         self.get_category(category.id)
         self.validate_category(category)
         existing_id = self.category_exist(category.name, category.parent_id)
         if existing_id is not None and existing_id != category.id:
             raise CategoryValidationError(
-                "A category with this name already exists at this level"
+                "category_name_duplicate",
+                "A category with this name already exists at this level",
             )
         with self._connection as c:
             c.execute(
@@ -485,17 +518,22 @@ class DataModel:
         )
         if category.parent_id is not None:
             if not self.category_exist(category.parent_id):
-                raise CategoryValidationError("The parent category does not exist")
+                raise CategoryValidationError(
+                    "category_parent_missing",
+                    "The parent category does not exist",
+                )
             if category.id == category.parent_id:
                 raise CategoryValidationError(
-                    "A category cannot be its own parent"
+                    "category_own_parent",
+                    "A category cannot be its own parent",
                 )
             if category.id is not None and self._is_category_descendant(
                 category.parent_id,
                 category.id,
             ):
                 raise CategoryValidationError(
-                    "A category cannot be moved below one of its descendants"
+                    "category_move_into_descendant",
+                    "A category cannot be moved below one of its descendants",
                 )
 
     def _is_category_descendant(self, id: int, possible_ancestor_id: int) -> bool:
@@ -521,14 +559,16 @@ class DataModel:
         source = self.get_category(id)
         if parent_id is not None and self._is_category_descendant(parent_id, id):
             raise CategoryValidationError(
-                "A category cannot be copied into itself or one of its descendants"
+                "category_copy_into_descendant",
+                "A category cannot be copied into itself or one of its descendants",
             )
         copied = Category(name=source.name, parent_id=parent_id)
         with self._connection as c:
             self.validate_category(copied)
             if self.category_exist(copied.name, copied.parent_id):
                 raise CategoryValidationError(
-                    "A category with this name already exists at this level"
+                    "category_name_duplicate",
+                    "A category with this name already exists at this level",
                 )
             copied.id = c.execute(
                 "INSERT INTO category (parent_id, name) VALUES (?, ?)",
@@ -637,11 +677,13 @@ class DataModel:
         # Check  that the content isn't empty:
         if snippet.content == "":
             raise SnippetValidationError(
+                "snippet_content_empty",
                 "The content must not be empty",
             )
         # Check that category id exists:
         if not self.category_exist(snippet.category_id):
             raise SnippetValidationError(
+                "snippet_category_missing",
                 "This category doesn't exist",
             )
         # Check that name in the same category doesn't exist:
@@ -649,11 +691,15 @@ class DataModel:
         id = snippet.id
         if old_id is not None and id != old_id:
             raise SnippetValidationError(
+                "snippet_name_duplicate",
                 "There is already a snippet with this name in this category"
             )
         # Check that weight is in the allowed range:
         if snippet.weight not in self.WEIGHTS:
-            raise SnippetValidationError("The weight isn't in the allowed range.")
+            raise SnippetValidationError(
+                "snippet_weight_invalid",
+                "The weight isn't in the allowed range.",
+            )
 
     def add_snippet(self, snippet: Snippet) -> Snippet:
         """Validate, persist, and publish a new snippet."""
@@ -676,7 +722,10 @@ class DataModel:
         """Validate and persist changes to an existing snippet."""
         # Check that snippet id exists:
         if snippet.id is None:
-            raise SnippetValidationError("The snippet has no ID")
+            raise SnippetValidationError(
+                "snippet_id_missing",
+                "The snippet has no ID",
+            )
         self.get_snippet(snippet.id)
         self.validate_snippet(snippet)
         with self._connection as c:
@@ -739,7 +788,10 @@ class DataModel:
         """Trim a name and raise the supplied error for empty values."""
         normalized_name = name.strip()
         if not normalized_name:
-            raise error_type("The name must not be empty")
+            raise error_type(
+                "entity_name_empty",
+                "The name must not be empty",
+            )
         return normalized_name
 
     def _escape_like(self, string: str) -> str:

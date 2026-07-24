@@ -18,6 +18,10 @@ class HotkeyTestCase(unittest.TestCase):
 
         self.assertEqual(hotkey, DEFAULT_TOGGLE_HOTKEY)
         self.assertEqual(str(hotkey), "CTRL+SHIFT+ALT+T")
+        self.assertEqual(
+            hotkey.to_display_string(),
+            "Ctrl+Shift+Alt+T",
+        )
 
     def test_function_key_is_supported(self):
         hotkey = Hotkey.parse("CTRL+F12")
@@ -86,6 +90,17 @@ class HotkeyTestCase(unittest.TestCase):
 
 
 class SettingsStoreTestCase(unittest.TestCase):
+    @staticmethod
+    def _add_catalog(locale_directory, language):
+        catalog = (
+            Path(locale_directory)
+            / language
+            / "LC_MESSAGES"
+            / "bttext.mo"
+        )
+        catalog.parent.mkdir(parents=True)
+        catalog.touch()
+
     def test_missing_file_uses_defaults(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             store = SettingsStore(Path(temporary_directory) / "settings.ini")
@@ -97,7 +112,8 @@ class SettingsStoreTestCase(unittest.TestCase):
             settings_file = Path(temporary_directory) / "settings.ini"
             store = SettingsStore(settings_file)
             settings = AppSettings(
-                toggle_window_hotkey=Hotkey.parse("CTRL+ALT+F8")
+                toggle_window_hotkey=Hotkey.parse("CTRL+ALT+F8"),
+                language="de",
             )
 
             store.save(settings)
@@ -107,6 +123,65 @@ class SettingsStoreTestCase(unittest.TestCase):
                 "toggle_window = CTRL+ALT+F8",
                 settings_file.read_text(encoding="utf-8"),
             )
+            self.assertIn(
+                "language = de",
+                settings_file.read_text(encoding="utf-8"),
+            )
+
+    def test_language_defaults_to_system(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            settings_file = Path(temporary_directory) / "settings.ini"
+            settings_file.write_text(
+                "[hotkeys]\ntoggle_window = CTRL+ALT+F8\n",
+                encoding="utf-8",
+            )
+
+            settings = SettingsStore(settings_file).load()
+
+            self.assertEqual(settings.language, "system")
+
+    def test_language_is_normalized(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            settings_file = Path(temporary_directory) / "settings.ini"
+            locale_directory = Path(temporary_directory) / "locale"
+            self._add_catalog(locale_directory, "de")
+            settings_file.write_text(
+                "[general]\nlanguage = de-DE\n",
+                encoding="utf-8",
+            )
+
+            settings = SettingsStore(
+                settings_file,
+                locale_directory,
+            ).load()
+
+            self.assertEqual(settings.language, "de")
+
+    def test_language_without_catalog_raises_settings_error(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            settings_file = Path(temporary_directory) / "settings.ini"
+            settings_file.write_text(
+                "[general]\nlanguage = fr\n",
+                encoding="utf-8",
+            )
+
+            with self.assertRaises(SettingsError):
+                SettingsStore(
+                    settings_file,
+                    Path(temporary_directory) / "locale",
+                ).load()
+
+    def test_language_without_catalog_cannot_be_saved(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            settings_file = Path(temporary_directory) / "settings.ini"
+
+            with self.assertRaises(SettingsError):
+                SettingsStore(
+                    settings_file,
+                    Path(temporary_directory) / "locale",
+                ).save(AppSettings(language="fr"))
+
+            self.assertFalse(settings_file.exists())
 
     def test_invalid_file_raises_settings_error(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -117,8 +192,10 @@ class SettingsStoreTestCase(unittest.TestCase):
             )
             store = SettingsStore(settings_file)
 
-            with self.assertRaises(SettingsError):
+            with self.assertRaises(SettingsError) as context:
                 store.load()
+
+            self.assertEqual(context.exception.code, "settings_read_failed")
 
     def test_open_error_is_reported_as_settings_error(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

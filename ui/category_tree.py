@@ -4,6 +4,8 @@ import pymitter
 import wx
 
 import datamodel
+from error_messages import format_user_error
+from i18n import _
 from ui import utils
 from ui.transfer import TransferBuffer
 
@@ -61,7 +63,8 @@ class CategoryTree(wx.TreeCtrl):
             wx.ArtProvider.GetBitmap(wx.ART_FOLDER, wx.ART_OTHER, (16, 16))
         )
         self.AssignImageList(self._images)
-        self._root = self.AddRoot("Categories")
+        # Translators: Root label of the main window's category tree.
+        self._root = self.AddRoot(_("Categories"))
         self.SetDropTarget(_CategoryDropTarget(self))
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.selection_changed)
         self.Bind(wx.EVT_TREE_BEGIN_DRAG, self.begin_drag)
@@ -80,7 +83,12 @@ class CategoryTree(wx.TreeCtrl):
 
     def _label(self, category: datamodel.Category) -> str:
         """Format a category name with its direct snippet count."""
-        return "{} ({})".format(category.name, category.number_of_snippets)
+        # Translators: Category-tree label. {name} is the category name and
+        # {count} is the number of snippets directly in it, excluding children.
+        return _("{name} ({count})").format(
+            name=category.name,
+            count=category.number_of_snippets,
+        )
 
     def update(self, *args):
         """Rebuild the tree while preserving expansion and selection state."""
@@ -99,7 +107,9 @@ class CategoryTree(wx.TreeCtrl):
         if not self._items:
             self._empty_item = self.AppendItem(
                 self._root,
-                "No categories",
+                # Translators: Category-tree placeholder shown when no category
+                # has been created yet.
+                _("No categories"),
             )
             self.SetItemData(self._empty_item, None)
             self.SelectItem(self._empty_item)
@@ -154,12 +164,16 @@ class CategoryTree(wx.TreeCtrl):
         menu = wx.Menu()
         new_root = menu.Append(
             wx.ID_ANY,
-            "New top-level category\tCtrl+N",
+            # Translators: Category-tree menu command that creates a category at
+            # the root level. Keep Ctrl+N after "\t".
+            _("New top-level category\tCtrl+N"),
         )
         menu.Bind(wx.EVT_MENU, lambda evt: self.add_category(None), new_root)
         paste_root = menu.Append(
             wx.ID_ANY,
-            "Paste as top-level\tCtrl+Shift+V",
+            # Translators: Category-tree menu command that pastes a copied or cut
+            # category at the root level. Keep Ctrl+Shift+V after "\t".
+            _("Paste as top-level\tCtrl+Shift+V"),
         )
         paste_root.Enable(self._transfer_buffer.value is not None)
         menu.Bind(wx.EVT_MENU, lambda evt: self.paste(evt, None), paste_root)
@@ -167,7 +181,9 @@ class CategoryTree(wx.TreeCtrl):
         if category_id is not None:
             new_child = menu.Append(
                 wx.ID_ANY,
-                "New subcategory\tCtrl+Shift+N",
+                # Translators: Category-tree menu command that creates a child of
+                # the selected category. Keep Ctrl+Shift+N after "\t".
+                _("New subcategory\tCtrl+Shift+N"),
             )
             menu.Bind(
                 wx.EVT_MENU,
@@ -175,9 +191,15 @@ class CategoryTree(wx.TreeCtrl):
                 new_child,
             )
             menu.AppendSeparator()
-            copy_item = menu.Append(wx.ID_COPY, "Copy\tCtrl+C")
-            cut_item = menu.Append(wx.ID_CUT, "Cut\tCtrl+X")
-            paste_item = menu.Append(wx.ID_PASTE, "Paste into\tCtrl+V")
+            # Translators: Category-tree menu command that copies the selected
+            # category and its contents. Keep Ctrl+C after "\t".
+            copy_item = menu.Append(wx.ID_COPY, _("Copy\tCtrl+C"))
+            # Translators: Category-tree menu command that cuts the selected
+            # category and its contents. Keep Ctrl+X after "\t".
+            cut_item = menu.Append(wx.ID_CUT, _("Cut\tCtrl+X"))
+            # Translators: Category-tree menu command that pastes a copied or cut
+            # category into the selected category. Keep Ctrl+V after "\t".
+            paste_item = menu.Append(wx.ID_PASTE, _("Paste into\tCtrl+V"))
             paste_item.Enable(self._transfer_buffer.value is not None)
             menu.Bind(wx.EVT_MENU, lambda evt: self.copy_or_cut(True), copy_item)
             menu.Bind(wx.EVT_MENU, lambda evt: self.copy_or_cut(False), cut_item)
@@ -187,8 +209,12 @@ class CategoryTree(wx.TreeCtrl):
                 paste_item,
             )
             menu.AppendSeparator()
-            edit_item = menu.Append(wx.ID_ANY, "Rename\tF2")
-            delete_item = menu.Append(wx.ID_DELETE, "Delete\tDelete")
+            # Translators: Category-tree menu command that renames the selected
+            # category. Keep F2 after "\t".
+            edit_item = menu.Append(wx.ID_ANY, _("Rename\tF2"))
+            # Translators: Category-tree menu command that deletes the selected
+            # category. The second "Delete" after "\t" is the keyboard key.
+            delete_item = menu.Append(wx.ID_DELETE, _("Delete\tDelete"))
             menu.Bind(wx.EVT_MENU, self.edit_category, edit_item)
             menu.Bind(wx.EVT_MENU, self.delete_category, delete_item)
         self.PopupMenu(menu)
@@ -217,8 +243,10 @@ class CategoryTree(wx.TreeCtrl):
         with utils.managed_dialog(
             wx.TextEntryDialog(
                 self,
-                "Enter the name of the new category",
-                "Add category",
+                # Translators: Prompt asking for the name of a category being created.
+                _("Enter the name of the new category"),
+                # Translators: Title of the dialog for creating a category.
+                _("Add category"),
             )
         ) as dialog:
             if dialog.ShowModal() != wx.ID_OK:
@@ -247,8 +275,10 @@ class CategoryTree(wx.TreeCtrl):
         with utils.managed_dialog(
             wx.TextEntryDialog(
                 self,
-                "Enter the new name of the category",
-                "Rename category",
+                # Translators: Prompt asking for a replacement category name.
+                _("Enter the new name of the category"),
+                # Translators: Title of the dialog for renaming a category.
+                _("Rename category"),
                 value=category.name,
             )
         ) as dialog:
@@ -275,14 +305,18 @@ class CategoryTree(wx.TreeCtrl):
             self._show_error(error)
             self.update()
             return
-        message = (
-            "Delete category '{}', {} subcategories and {} snippets?"
-        ).format(category.name, descendants, snippets)
+        message = self._get_delete_confirmation(
+            category.name,
+            descendants,
+            snippets,
+        )
         with utils.managed_dialog(
             wx.MessageDialog(
                 self,
                 message,
-                "Delete category",
+                # Translators: Title of the confirmation for deleting a category
+                # and everything it contains.
+                _("Delete category"),
                 style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
             )
         ) as dialog:
@@ -332,10 +366,21 @@ class CategoryTree(wx.TreeCtrl):
         if category_id is None:
             return
         self._transfer_buffer.set("category", category_id, copy)
-        action = "Copied" if copy else "Cut"
+        if copy:
+            # Translators: Status after copying a category; it remains pending
+            # until the user selects a destination and presses Ctrl+V.
+            message = _(
+                "Copied category. Select a destination and press Ctrl+V."
+            )
+        else:
+            # Translators: Status after cutting a category; it remains pending
+            # until the user selects a destination and presses Ctrl+V.
+            message = _(
+                "Cut category. Select a destination and press Ctrl+V."
+            )
         self._ee.emit(
             "status.changed",
-            "{} category. Select a destination and press Ctrl+V.".format(action),
+            message,
         )
 
     def paste(self, event, destination_id):
@@ -346,8 +391,12 @@ class CategoryTree(wx.TreeCtrl):
             return
         if destination_id is None and transfer.kind == "snippet":
             wx.MessageBox(
-                "A snippet must be pasted into a category.",
-                "Paste snippet",
+                # Translators: Explains that a snippet cannot be pasted at the
+                # category-tree root and requires a destination category.
+                _("A snippet must be pasted into a category."),
+                # Translators: Title of an informational message explaining that
+                # snippets cannot be pasted at the category-tree root.
+                _("Paste snippet"),
                 wx.OK | wx.ICON_INFORMATION,
                 self,
             )
@@ -396,7 +445,8 @@ class CategoryTree(wx.TreeCtrl):
         except datamodel.DataModelError as error:
             self._show_error(error)
             return False
-        self._ee.emit("status.changed", "Transfer completed.")
+        # Translators: Status after a copied or cut category was pasted.
+        self._ee.emit("status.changed", _("Transfer completed."))
         return True
 
     def begin_drag(self, event):
@@ -420,8 +470,39 @@ class CategoryTree(wx.TreeCtrl):
     def _show_error(self, error):
         """Display a category-operation error."""
         wx.MessageBox(
-            str(error),
-            "Category error",
+            format_user_error(error),
+            # Translators: Title of an error caused by a category operation.
+            _("Category error"),
             wx.OK | wx.ICON_ERROR,
             self,
         )
+
+    @staticmethod
+    def _get_delete_confirmation(
+        category_name: str,
+        descendants: int,
+        snippets: int,
+    ) -> str:
+        """Return a confirmation with correct independent plural forms."""
+        parameters = {
+            "name": category_name,
+            "descendants": descendants,
+            "snippets": snippets,
+        }
+        if descendants == 1 and snippets == 1:
+            # Translators: Confirmation before deleting a category and all its
+            # contents. {name} is its name; both displayed counts are exactly 1.
+            template = _("Delete category '{name}', {descendants} subcategory and {snippets} snippet?")
+        elif descendants == 1:
+            # Translators: Confirmation before deleting a category and all its
+            # contents. {name} is its name; descendants is 1, snippets is not 1.
+            template = _("Delete category '{name}', {descendants} subcategory and {snippets} snippets?")
+        elif snippets == 1:
+            # Translators: Confirmation before deleting a category and all its
+            # contents. {name} is its name; descendants is not 1, snippets is 1.
+            template = _("Delete category '{name}', {descendants} subcategories and {snippets} snippet?")
+        else:
+            # Translators: Confirmation before deleting a category and all its
+            # contents. {name} is its name; neither displayed count is 1.
+            template = _("Delete category '{name}', {descendants} subcategories and {snippets} snippets?")
+        return template.format(**parameters)

@@ -4,7 +4,11 @@ import wx
 import pymitter
 
 import app_paths
+import datamodel
 from app_settings import AppSettings, SettingsError, SettingsStore
+from error_messages import format_user_error
+import i18n
+from i18n import _
 import info
 import ui
 from datamodel import DataModel
@@ -12,28 +16,49 @@ from datamodel import DataModel
 def main():
     """Initialize the wx application and release resources on shutdown."""
     ee = pymitter.EventEmitter()
-    model = DataModel(ee, app_paths.get_database_file())
+    model = None
     try:
         app = wx.App()
         app.SetAppName(info.name)
-        settings_store = SettingsStore(app_paths.get_settings_file())
+        settings_store = SettingsStore(
+            app_paths.get_settings_file(),
+            app_paths.get_locale_directory(),
+        )
         settings_error = None
         try:
             settings = settings_store.load()
         except SettingsError as error:
             settings = AppSettings()
             settings_error = error
+        i18n.initialize(
+            settings.language,
+            app_paths.get_locale_directory(),
+            wx,
+        )
+        try:
+            model = DataModel(ee, app_paths.get_database_file())
+        except datamodel.DataModelError as error:
+            wx.MessageBox(
+                format_user_error(error),
+                # Translators: Title of a fatal startup error concerning the
+                # snippet database.
+                _("Database error"),
+                wx.OK | wx.ICON_ERROR,
+            )
+            return
         frame = ui.MainFrame(ee, model, settings_store, settings)
         if settings_error is not None:
             wx.MessageBox(
-                str(settings_error),
-                "Settings error",
+                format_user_error(settings_error),
+                # Translators: Title of a startup warning concerning settings.
+                _("Settings error"),
                 wx.OK | wx.ICON_ERROR,
                 frame,
             )
         app.MainLoop()
     finally:
-        model.close()
+        if model is not None:
+            model.close()
 
 if __name__ == '__main__':
     main()

@@ -5,6 +5,8 @@ import pymitter
 
 import datamodel
 import ui.validators as validators
+from error_messages import format_user_error
+from i18n import _
 from ui import utils
 
 
@@ -18,9 +20,11 @@ class SnippetEditor(wx.Dialog):
         )
         # Set title:
         if snippet is None:  # Add new snippet
-            self.SetTitle("Add snippet")
+            # Translators: Window title for creating a snippet.
+            self.SetTitle(_("Add snippet"))
         else:
-            self.SetTitle("Edit snippet")
+            # Translators: Window title for changing an existing snippet.
+            self.SetTitle(_("Edit snippet"))
         self.ee = ee
         self._model = model
         self._snippet = snippet
@@ -30,9 +34,13 @@ class SnippetEditor(wx.Dialog):
         form_sizer.AddGrowableRow(3, 1)
 
         # Create fields.
-        self.name_label = wx.StaticText(self.pane, label="&Name")
+        # Translators: Label for the editable snippet name. "&" marks the
+        # keyboard mnemonic for the adjacent text field.
+        self.name_label = wx.StaticText(self.pane, label=_("&Name"))
         self.name_input = wx.TextCtrl(self.pane, validator=validators.NonEmptyValidator())
-        self.category_label = wx.StaticText(self.pane, label="&Category")
+        # Translators: Label for the category in which the snippet is stored.
+        # "&" marks the mnemonic for the adjacent category selector.
+        self.category_label = wx.StaticText(self.pane, label=_("&Category"))
         categories_with_paths = [
             (self._model.get_category_path(category.id), category)
             for category in self._model.get_categories()
@@ -56,13 +64,17 @@ class SnippetEditor(wx.Dialog):
             self.category_input.SetSelection(0)
         self.weight_input = wx.RadioBox(
             self.pane,
-            label="&Weight",
+            # Translators: Group label for the snippet's ranking in search
+            # results. "&" marks the keyboard mnemonic.
+            label=_("&Weight"),
             choices=[
                 utils.get_weight_string(weight)
                 for weight in self._model.WEIGHTS
             ],
         )
-        self.content_label = wx.StaticText(self.pane, label="C&ontent")
+        # Translators: Label for the snippet text that will be inserted.
+        # "&" marks the mnemonic for the adjacent multiline editor.
+        self.content_label = wx.StaticText(self.pane, label=_("C&ontent"))
         self.content_input = wx.TextCtrl(self.pane, style=wx.TE_MULTILINE | wx.TE_RICH2, validator=validators.NonEmptyValidator())
         form_sizer.Add(self.name_label, 0, wx.ALIGN_CENTER_VERTICAL)
         form_sizer.Add(self.name_input, 0, wx.EXPAND)
@@ -78,9 +90,13 @@ class SnippetEditor(wx.Dialog):
 
         # Button-Sizer
         btn_sizer = wx.StdDialogButtonSizer()
-        self.save_btn = wx.Button(self, wx.ID_OK, "&Save")
+        # Translators: Snippet-editor button that saves the snippet and closes
+        # the dialog. "&" marks the keyboard mnemonic.
+        self.save_btn = wx.Button(self, wx.ID_OK, _("&Save"))
         self.save_btn.Bind(wx.EVT_BUTTON, self.save)
-        self.cancel_btn = wx.Button(self, wx.ID_CANCEL, "&Cancel")
+        # Translators: Snippet-editor button that discards unsaved changes and
+        # closes the dialog. "&" marks the keyboard mnemonic.
+        self.cancel_btn = wx.Button(self, wx.ID_CANCEL, _("&Cancel"))
         btn_sizer.AddButton(self.save_btn)
         btn_sizer.AddButton(self.cancel_btn)
         btn_sizer.Realize()
@@ -139,4 +155,8 @@ class SnippetEditor(wx.Dialog):
                 self._model.edit_snippet(snippet)
             self.EndModal(wx.OK)
         except datamodel.DataModelError as e:
-            wx.MessageBox(str(e), 'Validation error', wx.OK | wx.ICON_ERROR)
+            wx.MessageBox(
+                format_user_error(e),
+                _("Validation error"),
+                wx.OK | wx.ICON_ERROR,
+            )

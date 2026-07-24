@@ -1,5 +1,6 @@
 data.db
 __pycache__/
 *.py[cod]
+*.mo
 settings.ini
 settings.ini.tmp

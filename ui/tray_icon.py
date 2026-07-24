@@ -7,6 +7,7 @@ import wx.adv
 
 import app_paths
 import info
+from i18n import _
 
 if TYPE_CHECKING:
     from ui.main_frame import MainFrame
@@ -21,7 +22,9 @@ class TrayIcon(wx.adv.TaskBarIcon):
         icon = wx.Icon(wx.Bitmap(str(app_paths.get_icon_file())))
         self.SetIcon(
             icon,
-            "{app_name} - {app_version}".format(
+            # Translators: Notification-area tooltip identifying the running
+            # application. Keep the application name and version placeholders.
+            _("{app_name} - {app_version}").format(
                 app_name=info.name,
                 app_version=info.version,
             ),
@@ -31,9 +34,12 @@ class TrayIcon(wx.adv.TaskBarIcon):
     def CreatePopupMenu(self):
         """Build the tray menu on demand as required by wxPython."""
         menu = wx.Menu()
-        restore = menu.Append(wx.ID_ANY, "Show snippets")
+        # Translators: Notification-area menu command that restores and focuses
+        # btText's main window.
+        restore = menu.Append(wx.ID_ANY, _("Show snippets"))
         self.Bind(wx.EVT_MENU, self.on_restore, restore)
-        exit_item = menu.Append(wx.ID_EXIT, "Exit")
+        # Translators: Notification-area menu command that closes btText.
+        exit_item = menu.Append(wx.ID_EXIT, _("Exit"))
         self.Bind(wx.EVT_MENU, self.on_exit, exit_item)
         return menu
 

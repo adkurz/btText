@@ -7,9 +7,16 @@ from ctypes import create_unicode_buffer, windll
 from configparser import ConfigParser, Error as ConfigParserError
 from pathlib import Path
 
+import i18n
+from user_errors import UserFacingError
 
-class SettingsError(Exception):
+
+class SettingsError(UserFacingError):
     """Raised when application settings cannot be loaded or saved."""
+
+
+class HotkeyError(UserFacingError, ValueError):
+    """Raised when a hotkey representation is invalid."""
 
 
 SPECIAL_KEY_CODES = {
@@ -73,9 +80,15 @@ class Hotkey:
         else:
             normalized_key = self.key.upper()
         if not self._is_supported_key(normalized_key):
-            raise ValueError("The hotkey contains an unsupported key")
+            raise HotkeyError(
+                "hotkey_key_unsupported",
+                "The hotkey contains an unsupported key",
+            )
         if not (self.control or self.shift or self.alt or self.windows):
-            raise ValueError("The hotkey requires at least one modifier")
+            raise HotkeyError(
+                "hotkey_modifier_required",
+                "The hotkey requires at least one modifier",
+            )
         object.__setattr__(self, "key", normalized_key)
 
     @staticmethod
@@ -99,7 +112,10 @@ class Hotkey:
         """Parse the stable, locale-independent representation used on disk."""
         parts = [part.strip() for part in value.split("+")]
         if not parts or any(not part for part in parts):
-            raise ValueError("The hotkey has an invalid format")
+            raise HotkeyError(
+                "hotkey_format_invalid",
+                "The hotkey has an invalid format",
+            )
 
         modifiers = {
             "CTRL": False,
@@ -112,12 +128,18 @@ class Hotkey:
             normalized_part = part.upper()
             if normalized_part in modifiers:
                 if modifiers[normalized_part]:
-                    raise ValueError("The hotkey contains a duplicate modifier")
+                    raise HotkeyError(
+                        "hotkey_modifier_duplicate",
+                        "The hotkey contains a duplicate modifier",
+                    )
                 modifiers[normalized_part] = True
             else:
                 keys.append(part)
         if len(keys) != 1:
-            raise ValueError("The hotkey must contain exactly one key")
+            raise HotkeyError(
+                "hotkey_key_count_invalid",
+                "The hotkey must contain exactly one key",
+            )
 
         return cls(
             key=keys[0],
@@ -131,7 +153,10 @@ class Hotkey:
     def key_from_code(cls, key_code: int) -> str:
         """Convert a usable Windows virtual-key code to stored form."""
         if key_code in MODIFIER_KEY_CODES or not 1 <= key_code <= 0xFE:
-            raise ValueError("The key cannot be used as a hotkey")
+            raise HotkeyError(
+                "hotkey_key_unusable",
+                "The key cannot be used as a hotkey",
+            )
         if ord("A") <= key_code <= ord("Z"):
             return chr(key_code)
         if ord("0") <= key_code <= ord("9"):
@@ -170,13 +195,18 @@ class Hotkey:
         """Return a localized label suitable for the settings UI."""
         parts = []
         if self.control:
-            parts.append("CTRL")
+            # Translators: Abbreviated Control-key name in a displayed shortcut,
+            # for example "Ctrl+Alt+T".
+            parts.append(i18n.pgettext("hotkey modifier", "Ctrl"))
         if self.shift:
-            parts.append("SHIFT")
+            # Translators: Shift-key name in a displayed keyboard shortcut.
+            parts.append(i18n.pgettext("hotkey modifier", "Shift"))
         if self.alt:
-            parts.append("ALT")
+            # Translators: Alt-key name in a displayed keyboard shortcut.
+            parts.append(i18n.pgettext("hotkey modifier", "Alt"))
         if self.windows:
-            parts.append("WIN")
+            # Translators: Abbreviated Windows-key name in a displayed shortcut.
+            parts.append(i18n.pgettext("hotkey modifier", "Win"))
         parts.append(self.get_key_label())
         return "+".join(parts)
 
@@ -207,13 +237,23 @@ DEFAULT_TOGGLE_HOTKEY = Hotkey(
 class AppSettings:
     """Immutable collection of user-configurable application settings."""
     toggle_window_hotkey: Hotkey = DEFAULT_TOGGLE_HOTKEY
+    language: str = i18n.SYSTEM_LANGUAGE
 
 
 class SettingsStore:
     """Load and atomically replace the application's INI settings file."""
-    def __init__(self, settings_file: str | Path):
-        """Store settings in ``settings_file``."""
+    def __init__(
+        self,
+        settings_file: str | Path,
+        locale_directory: str | Path | None = None,
+    ):
+        """Store settings and optionally validate languages against catalogs."""
         self.settings_file = Path(settings_file)
+        self.locale_directory = (
+            Path(locale_directory)
+            if locale_directory is not None
+            else None
+        )
 
     def load(self) -> AppSettings:
         """Load settings, using defaults when the file or key is absent."""
@@ -225,32 +265,53 @@ class SettingsStore:
                 "toggle_window",
                 fallback=str(DEFAULT_TOGGLE_HOTKEY),
             )
-            return AppSettings(toggle_window_hotkey=Hotkey.parse(value))
+            language = i18n.validate_language(
+                parser.get(
+                    "general",
+                    "language",
+                    fallback=i18n.SYSTEM_LANGUAGE,
+                ),
+                self.locale_directory,
+            )
+            return AppSettings(
+                toggle_window_hotkey=Hotkey.parse(value),
+                language=language,
+            )
         except (ConfigParserError, OSError, ValueError) as error:
             raise SettingsError(
-                "The settings file could not be read: {}".format(error)
+                "settings_read_failed",
+                "The settings file could not be read: {reason}",
+                reason=error,
             ) from error
 
     def save(self, settings: AppSettings) -> None:
         """Atomically save a complete settings file."""
-        parser = ConfigParser()
-        parser["hotkeys"] = {
-            "toggle_window": str(settings.toggle_window_hotkey),
-        }
         # Replace a complete temporary file so an interrupted write cannot
         # leave a truncated settings file behind.
         temporary_file = self.settings_file.with_suffix(
             self.settings_file.suffix + ".tmp"
         )
         try:
+            parser = ConfigParser()
+            parser["general"] = {
+                "language": i18n.validate_language(
+                    settings.language,
+                    self.locale_directory,
+                ),
+            }
+            parser["hotkeys"] = {
+                "toggle_window": str(settings.toggle_window_hotkey),
+            }
             with temporary_file.open("w", encoding="utf-8") as file:
                 parser.write(file)
             temporary_file.replace(self.settings_file)
-        except OSError as error:
+        except (OSError, ValueError) as error:
             try:
                 temporary_file.unlink(missing_ok=True)
             except OSError:
                 pass
             raise SettingsError(
-                "The settings file could not be saved: {}".format(error)
+                "settings_save_failed",
+                "The settings file could not be saved: {reason}",
+                reason=error,
             ) from error

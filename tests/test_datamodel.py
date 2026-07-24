@@ -447,8 +447,14 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             database_file = Path(temporary_directory) / "corrupt.db"
             database_file.write_bytes(b"This is not a SQLite database")
 
-            with self.assertRaises(sqlite3.DatabaseError):
+            with self.assertRaises(DataModelError) as context:
                 DataModel(RecordingEventEmitter(), database_file)
+
+            self.assertEqual(context.exception.code, "database_open_failed")
+            self.assertIsInstance(
+                context.exception.parameters["reason"],
+                sqlite3.DatabaseError,
+            )
 
     def test_newer_database_schema_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

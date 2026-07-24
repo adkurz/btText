@@ -3,6 +3,8 @@
 import wx
 
 import datamodel
+from error_messages import format_user_error
+from i18n import _
 from ui import utils
 
 
@@ -16,7 +18,8 @@ class SearchDialog(wx.Dialog):
         """Build the search controls and delayed-query timer."""
         super().__init__(
             parent,
-            title="Search snippets",
+            # Translators: Window title for finding snippets.
+            title=_("Search snippets"),
             style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
         self._model = model
@@ -24,24 +27,37 @@ class SearchDialog(wx.Dialog):
         self._search_timer = wx.Timer(self)
 
         pane = wx.Panel(self)
-        search_label = wx.StaticText(pane, label="&Search")
+        # Translators: Label for the text field used to search snippets.
+        # "&" marks the keyboard mnemonic for the adjacent field.
+        search_label = wx.StaticText(pane, label=_("&Search"))
         self.search_input = wx.TextCtrl(pane)
-        result_label = wx.StaticText(pane, label="Search &results")
+        # Translators: Label for the list of snippets matching the search.
+        # "&" marks the keyboard mnemonic for the adjacent result list.
+        result_label = wx.StaticText(pane, label=_("Search &results"))
         self.result_list = wx.ListView(
             pane,
             style=wx.LC_REPORT | wx.LC_SINGLE_SEL,
         )
-        self.result_list.AppendColumn("Name", width=self.FromDIP(210))
-        self.result_list.AppendColumn("Category", width=self.FromDIP(180))
-        self.result_list.AppendColumn("Weight", width=self.FromDIP(90))
+        # Translators: Search-results column containing each snippet's name.
+        self.result_list.AppendColumn(_("Name"), width=self.FromDIP(210))
+        # Translators: Search-results column containing the snippet's category.
+        self.result_list.AppendColumn(_("Category"), width=self.FromDIP(180))
+        # Translators: Search-results column containing the snippet's search rank.
+        self.result_list.AppendColumn(_("Weight"), width=self.FromDIP(90))
         self.result_list.AppendColumn(
-            "Content preview",
+            # Translators: Search-results column showing the beginning of the
+            # snippet text.
+            _("Content preview"),
             width=self.FromDIP(330),
         )
 
-        self.open_button = wx.Button(pane, wx.ID_OK, "&Show snippet")
+        # Translators: Search-dialog button that selects the highlighted result
+        # in the main window and closes the dialog. "&" marks the mnemonic.
+        self.open_button = wx.Button(pane, wx.ID_OK, _("&Show snippet"))
         self.open_button.Enable(False)
-        cancel_button = wx.Button(pane, wx.ID_CANCEL, "&Cancel")
+        # Translators: Search-dialog button that closes the dialog without
+        # selecting a result. "&" marks the keyboard mnemonic.
+        cancel_button = wx.Button(pane, wx.ID_CANCEL, _("&Cancel"))
 
         button_sizer = wx.StdDialogButtonSizer()
         button_sizer.AddButton(self.open_button)
@@ -147,8 +163,9 @@ class SearchDialog(wx.Dialog):
                 self.result_list.SetItemData(index, snippet.id or 0)
         except datamodel.DataModelError as error:
             wx.MessageBox(
-                str(error),
-                "Search error",
+                format_user_error(error),
+                # Translators: Title of an error while searching snippets.
+                _("Search error"),
                 wx.OK | wx.ICON_ERROR,
                 self,
             )

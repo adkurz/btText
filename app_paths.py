@@ -29,6 +29,11 @@ def get_icon_file() -> Path:
     return get_resource_directory() / "assets" / "icon.png"
 
 
+def get_locale_directory() -> Path:
+    """Return the directory containing bundled translation catalogs."""
+    return get_resource_directory() / "locale"
+
+
 def get_settings_file() -> Path:
     """Return the INI settings path beside the executable or script."""
     return get_application_directory() / "settings.ini"

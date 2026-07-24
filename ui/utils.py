@@ -2,6 +2,8 @@
 
 from contextlib import contextmanager
 
+from i18n import pgettext
+
 
 @contextmanager
 def managed_dialog(dialog):
@@ -14,7 +16,14 @@ def managed_dialog(dialog):
 
 def get_weight_string(weight: int) -> str:
     """Return the human-readable label for a snippet weight."""
-    weights = {1: "Low", 2: "Middle", 3: "High"}
+    weights = {
+        # Translators: Lowest search-ranking weight assigned to a snippet.
+        1: pgettext("snippet weight", "Low"),
+        # Translators: Medium search-ranking weight assigned to a snippet.
+        2: pgettext("snippet weight", "Middle"),
+        # Translators: Highest search-ranking weight assigned to a snippet.
+        3: pgettext("snippet weight", "High"),
+    }
     if not isinstance(weight, int):
         raise TypeError("weight has to be an integer")
     if weight not in weights:

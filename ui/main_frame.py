@@ -7,8 +7,11 @@ import wx.lib.sized_controls as sc
 
 import clipboard_paste
 import datamodel
+import i18n
 import info
 from app_settings import AppSettings, Hotkey, SettingsError, SettingsStore
+from error_messages import format_user_error
+from i18n import _
 from ui import utils
 from ui.category_tree import CategoryTree
 from ui.search_dialog import SearchDialog
@@ -55,7 +58,9 @@ class MainFrame(sc.SizedFrame):
 
         self.category_tree_label = wx.StaticText(
             layout_panel,
-            label="&Categories",
+            # Translators: Heading for the tree used to select a category.
+            # "&" marks the keyboard mnemonic for the category tree.
+            label=_("&Categories"),
         )
         self._style_section_label(self.category_tree_label)
         self.category_tree = CategoryTree(
@@ -64,10 +69,13 @@ class MainFrame(sc.SizedFrame):
             model,
             self.transfer_buffer,
         )
-        self.category_tree.SetName("Categories")
+        # Translators: Accessible name for the main window's category tree.
+        self.category_tree.SetName(_("Categories"))
         self.snippet_list_label = wx.StaticText(
             layout_panel,
-            label="&Snippets",
+            # Translators: Heading for the list of snippets in the selected
+            # category. "&" marks the keyboard mnemonic for the snippet list.
+            label=_("&Snippets"),
         )
         self._style_section_label(self.snippet_list_label)
         self.snippet_list = SnippetList(
@@ -76,7 +84,9 @@ class MainFrame(sc.SizedFrame):
             model,
             self.transfer_buffer,
         )
-        self.snippet_list.SetName("Snippets in the selected category")
+        # Translators: Accessible name for the main window list showing snippets
+        # from the selected category.
+        self.snippet_list.SetName(_("Snippets in the selected category"))
 
         main_sizer = wx.GridBagSizer(
             vgap=self.FromDIP(6),
@@ -148,8 +158,9 @@ class MainFrame(sc.SizedFrame):
                 selected_snippet = dialog.get_selected_snippet()
             except datamodel.DataModelError as error:
                 wx.MessageBox(
-                    str(error),
-                    "Error",
+                    format_user_error(error),
+                    # Translators: Generic title for a failed main-window operation.
+                    _("Error"),
                     wx.OK | wx.ICON_ERROR,
                     self,
                 )
@@ -164,8 +175,11 @@ class MainFrame(sc.SizedFrame):
             return
         if not self.category_tree.focus_id(snippet.category_id):
             wx.MessageBox(
-                "The category of the selected snippet no longer exists.",
-                "Error",
+                # Translators: Error shown when a selected snippet points to a
+                # category that was deleted meanwhile.
+                _("The category of the selected snippet no longer exists."),
+                # Translators: Generic title for a failed main-window operation.
+                _("Error"),
                 wx.OK | wx.ICON_ERROR,
                 self,
             )
@@ -173,8 +187,11 @@ class MainFrame(sc.SizedFrame):
         self.snippet_list.update(snippet.category_id, force=True)
         if not self.snippet_list.focus_id(snippet.id):
             wx.MessageBox(
-                "The selected snippet no longer exists.",
-                "Error",
+                # Translators: Error shown when the selected snippet was deleted
+                # before it could be displayed or inserted.
+                _("The selected snippet no longer exists."),
+                # Translators: Generic title for a failed main-window operation.
+                _("Error"),
                 wx.OK | wx.ICON_ERROR,
                 self,
             )
@@ -191,10 +208,14 @@ class MainFrame(sc.SizedFrame):
         if not success:
             if show_error:
                 wx.MessageBox(
-                    "The global hotkey {} is already in use and could not be registered.".format(
-                        hotkey.to_display_string()
-                    ),
-                    "Hotkey error",
+                    # Translators: Startup error shown when btText cannot claim
+                    # its global shortcut. {} is a shortcut such as Ctrl+Alt+T.
+                    _(
+                        "The global hotkey {} is already in use and could not "
+                        "be registered."
+                    ).format(hotkey.to_display_string()),
+                    # Translators: Title of an error registering a global shortcut.
+                    _("Hotkey error"),
                     wx.OK | wx.ICON_ERROR,
                     self,
                 )
@@ -241,48 +262,72 @@ class MainFrame(sc.SizedFrame):
         if self._registered_hotkey is None:
             self._register_hotkey(self._settings.toggle_window_hotkey)
 
-    def _change_hotkey(self, hotkey: Hotkey) -> bool:
-        """Register and persist a new hotkey, rolling back on failure."""
+    def _change_settings(self, hotkey: Hotkey, language: str) -> bool:
+        """Apply and persist settings, rolling the hotkey back on failure."""
         # Register before saving so an unusable shortcut is never persisted.
         # Every failure path attempts to restore the previous binding.
         old_hotkey = self._settings.toggle_window_hotkey
-        self._unregister_hotkey()
-        if not self._register_hotkey(hotkey, show_error=False):
+        hotkey_changed = hotkey != old_hotkey
+        if hotkey_changed:
+            self._unregister_hotkey()
+        if hotkey_changed and not self._register_hotkey(
+            hotkey,
+            show_error=False,
+        ):
             restored = self._register_hotkey(old_hotkey, show_error=False)
             if restored:
-                message = (
+                # Translators: Settings error: the requested global shortcut is
+                # occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
+                message = _(
                     "The selected hotkey {} is already in use. "
                     "The previous hotkey has been restored."
                 ).format(hotkey.to_display_string())
             else:
-                message = (
+                # Translators: Settings error: the requested shortcut is occupied
+                # and restoring the old one also failed. {} is such as Ctrl+Alt+T.
+                message = _(
                     "The selected hotkey {} is already in use and the previous "
                     "hotkey could not be restored. No global hotkey is active."
                 ).format(hotkey.to_display_string())
             wx.MessageBox(
                 message,
-                "Hotkey error",
+                # Translators: Title of an error changing the global shortcut.
+                _("Hotkey error"),
                 wx.OK | wx.ICON_ERROR,
                 self,
             )
             return False
 
-        new_settings = AppSettings(toggle_window_hotkey=hotkey)
+        new_settings = AppSettings(
+            toggle_window_hotkey=hotkey,
+            language=language,
+        )
         try:
             self._settings_store.save(new_settings)
         except SettingsError as error:
-            self._unregister_hotkey()
-            restored = self._register_hotkey(old_hotkey, show_error=False)
-            if not restored:
+            if hotkey_changed:
+                self._unregister_hotkey()
+            restored = (
+                not hotkey_changed
+                or self._register_hotkey(old_hotkey, show_error=False)
+            )
+            if hotkey_changed and not restored:
                 wx.MessageBox(
-                    "The previous hotkey could not be restored. No global hotkey is active.",
-                    "Hotkey error",
+                    # Translators: Error after cancelling settings when btText
+                    # could not restore the previously active global shortcut.
+                    _(
+                        "The previous hotkey could not be restored. No global "
+                        "hotkey is active."
+                    ),
+                    # Translators: Title of an error restoring a global shortcut.
+                    _("Hotkey error"),
                     wx.OK | wx.ICON_ERROR,
                     self,
                 )
             wx.MessageBox(
-                str(error),
-                "Settings error",
+                format_user_error(error),
+                # Translators: Title of an error saving or applying settings.
+                _("Settings error"),
                 wx.OK | wx.ICON_ERROR,
                 self,
             )
@@ -332,8 +377,11 @@ class MainFrame(sc.SizedFrame):
         """Hide the frame and schedule insertion into the previous window."""
         if self._paste_target_window is None:
             wx.MessageBox(
-                "There is no previous window to insert the snippet into.",
-                "Paste error",
+                # Translators: Error when no previously active external window is
+                # available as the destination for inserting a snippet.
+                _("There is no previous window to insert the snippet into."),
+                # Translators: Title of an error inserting a snippet externally.
+                _("Paste error"),
                 wx.OK | wx.ICON_ERROR,
                 self,
             )
@@ -341,7 +389,13 @@ class MainFrame(sc.SizedFrame):
         try:
             snippet = self._model.get_snippet(snippet_id)
         except datamodel.DataModelError as error:
-            wx.MessageBox(str(error), "Error", wx.OK | wx.ICON_ERROR, self)
+            wx.MessageBox(
+                format_user_error(error),
+                # Translators: Generic title for a failed snippet operation.
+                _("Error"),
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
             return
 
         self._remember_focused_control()
@@ -356,7 +410,13 @@ class MainFrame(sc.SizedFrame):
         except clipboard_paste.PasteError as error:
             self.Show()
             self.Iconize(False)
-            wx.MessageBox(str(error), "Paste error", wx.OK | wx.ICON_ERROR, self)
+            wx.MessageBox(
+                str(error),
+                # Translators: Title of an error inserting a snippet externally.
+                _("Paste error"),
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
             return
         wx.CallLater(
             CLIPBOARD_RESTORE_DELAY_MS,
@@ -386,10 +446,16 @@ class MainFrame(sc.SizedFrame):
                 return
             pending.discard_snapshot()
             wx.MessageBox(
-                "The previous clipboard contents could not be restored after "
-                "multiple attempts. The clipboard may still contain the inserted "
-                "snippet.\n\n{}".format(error),
-                "Clipboard restore error",
+                # Translators: Error after inserting a snippet when restoring the
+                # user's old clipboard repeatedly failed. {} is a technical error.
+                _(
+                    "The previous clipboard contents could not be restored "
+                    "after multiple attempts. The clipboard may still contain "
+                    "the inserted snippet.\n\n{}"
+                ).format(error),
+                # Translators: Title of an error restoring the user's clipboard
+                # after a snippet was inserted.
+                _("Clipboard restore error"),
                 wx.OK | wx.ICON_ERROR,
                 self,
             )
@@ -398,23 +464,46 @@ class MainFrame(sc.SizedFrame):
         """Create application menus and bind their commands."""
         menubar = wx.MenuBar()
         edit_menu = wx.Menu()
-        edit_menu.Append(int(self._search_command_id), "&Search...\tF3")
+        edit_menu.Append(
+            int(self._search_command_id),
+            # Translators: Edit-menu command that opens the snippet search
+            # dialog. "&" marks the mnemonic; keep F3 after "\t".
+            _("&Search...\tF3"),
+        )
         edit_menu.AppendSeparator()
-        edit_menu.Append(int(self._settings_command_id), "&Settings...\tCtrl+,")
-        menubar.Append(edit_menu, "&Edit")
+        edit_menu.Append(
+            int(self._settings_command_id),
+            # Translators: Edit-menu command that opens the settings dialog.
+            # "&" marks the mnemonic; keep Ctrl+, after "\t".
+            _("&Settings...\tCtrl+,"),
+        )
+        # Translators: Main-window menu containing search and settings commands.
+        # "&" marks the keyboard mnemonic.
+        menubar.Append(edit_menu, _("&Edit"))
         help_menu = wx.Menu()
-        about_item = help_menu.Append(wx.ID_ABOUT, "About")
+        # Translators: Help-menu command that opens application information.
+        about_item = help_menu.Append(wx.ID_ABOUT, _("About"))
         self.Bind(wx.EVT_MENU, self.on_about, about_item)
-        menubar.Append(help_menu, "&Help")
+        # Translators: Main-window menu containing application information.
+        # "&" marks the keyboard mnemonic.
+        menubar.Append(help_menu, _("&Help"))
         self.SetMenuBar(menubar)
 
     def on_settings(self, event: wx.CommandEvent):
         """Open the settings dialog."""
+        locale_directory = self._settings_store.locale_directory
+        available_languages = (
+            i18n.get_available_languages(locale_directory)
+            if locale_directory is not None
+            else (i18n.DEFAULT_LANGUAGE,)
+        )
         with utils.managed_dialog(
             SettingsDialog(
                 self,
                 self._settings.toggle_window_hotkey,
-                self._change_hotkey,
+                self._settings.language,
+                available_languages,
+                self._change_settings,
                 self._suspend_hotkey,
                 self._resume_hotkey,
             )
@@ -425,7 +514,9 @@ class MainFrame(sc.SizedFrame):
         """Create the status bar used by cross-view notifications."""
         self.status_bar = self.CreateStatusBar()
         self.status_bar.SetStatusText(
-            "F3: Search snippets    Enter: Insert selected snippet"
+            # Translators: Main-window status-bar hint. F3 opens search; Enter
+            # inserts the selected snippet. Keep both key names recognizable.
+            _("F3: Search snippets    Enter: Insert selected snippet")
         )
 
     def set_status_text(self, message: str):
