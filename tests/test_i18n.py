@@ -195,6 +195,49 @@ class I18nTestCase(unittest.TestCase):
         wx_locale.AddCatalog.assert_called_once_with("bttext")
         self.assertIs(i18n._wx_locale, wx_locale)
 
+    @patch("i18n.gettext.translation", return_value=gettext.NullTranslations())
+    def test_failed_wx_catalog_does_not_abort_gettext_initialization(
+        self,
+        translation,
+    ):
+        wx_module = Mock()
+        wx_module.Locale.FindLanguageInfo.return_value = Mock(Language=37)
+        wx_module.Locale.return_value.AddCatalog.return_value = False
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            self._add_catalog(temporary_directory, "nl")
+
+            active_language = i18n.initialize(
+                "nl",
+                temporary_directory,
+                wx_module,
+            )
+
+        self.assertEqual(active_language, "nl")
+        self.assertEqual(i18n.get_active_language(), "nl")
+        self.assertIsNone(i18n._wx_locale)
+
+    @patch("i18n.gettext.translation", return_value=gettext.NullTranslations())
+    def test_unexpected_wx_error_does_not_abort_gettext_initialization(
+        self,
+        translation,
+    ):
+        wx_module = Mock()
+        wx_module.Locale.FindLanguageInfo.side_effect = RuntimeError(
+            "wx locale failure"
+        )
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            self._add_catalog(temporary_directory, "nl")
+
+            active_language = i18n.initialize(
+                "nl",
+                temporary_directory,
+                wx_module,
+            )
+
+        self.assertEqual(active_language, "nl")
+        self.assertEqual(i18n.get_active_language(), "nl")
+        self.assertIsNone(i18n._wx_locale)
+
 
 if __name__ == "__main__":
     unittest.main()

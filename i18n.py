@@ -149,30 +149,35 @@ def initialize(
 
     locale_path = Path(locale_directory)
     active_language = resolve_language(language, locale_path, wx_module)
+    catalog_error = None
+    catalog_exception = None
     try:
-        _translation = gettext.translation(
+        translation = gettext.translation(
             DOMAIN,
             localedir=locale_path,
             languages=[active_language],
             fallback=True,
         )
     except (EOFError, OSError, struct.error, UnicodeError) as error:
-        _translation = gettext.NullTranslations()
-        _active_language = DEFAULT_LANGUAGE
-        _wx_locale = _create_wx_locale(
-            DEFAULT_LANGUAGE,
-            locale_path,
-            wx_module,
-        )
-        raise LanguageError(
+        translation = gettext.NullTranslations()
+        catalog_exception = error
+        catalog_error = LanguageError(
             "language_catalog_load_failed",
             "The translation catalog for {language} could not be loaded: "
             "{reason}",
             language=active_language,
             reason=error,
-        ) from error
-    _active_language = active_language
-    _wx_locale = _create_wx_locale(active_language, locale_path, wx_module)
+        )
+        active_language = DEFAULT_LANGUAGE
+
+    wx_locale = _create_wx_locale(active_language, locale_path, wx_module)
+    _translation, _active_language, _wx_locale = (
+        translation,
+        active_language,
+        wx_locale,
+    )
+    if catalog_error is not None:
+        raise catalog_error from catalog_exception
     return active_language
 
 
@@ -270,10 +275,14 @@ def _create_wx_locale(
     if wx_module is None:
         return None
 
-    language_info = wx_module.Locale.FindLanguageInfo(language)
-    if language_info is None:
+    try:
+        language_info = wx_module.Locale.FindLanguageInfo(language)
+        if language_info is None:
+            return None
+        wx_module.Locale.AddCatalogLookupPathPrefix(str(locale_directory))
+        wx_locale = wx_module.Locale(language_info.Language)
+        if not wx_locale.AddCatalog(DOMAIN):
+            return None
+    except Exception:
         return None
-    wx_module.Locale.AddCatalogLookupPathPrefix(str(locale_directory))
-    wx_locale = wx_module.Locale(language_info.Language)
-    wx_locale.AddCatalog(DOMAIN)
     return wx_locale

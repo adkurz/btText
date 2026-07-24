@@ -6,66 +6,41 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 
 
-def get_marked_messages(relative_file):
+def get_marked_arguments(
+    relative_file,
+    function_name="_",
+    argument_positions=(0,),
+):
     source_file = PROJECT_ROOT / relative_file
     tree = ast.parse(source_file.read_text(encoding="utf-8"))
-    return {
-        node.args[0].value
-        for node in ast.walk(tree)
-        if (
+    arguments = set()
+    for node in ast.walk(tree):
+        if not (
             isinstance(node, ast.Call)
             and isinstance(node.func, ast.Name)
-            and node.func.id == "_"
-            and node.args
-            and isinstance(node.args[0], ast.Constant)
-            and isinstance(node.args[0].value, str)
+            and node.func.id == function_name
+            and len(node.args) > max(argument_positions)
+        ):
+            continue
+        values = tuple(
+            node.args[position].value
+            for position in argument_positions
+            if (
+                isinstance(node.args[position], ast.Constant)
+                and isinstance(node.args[position].value, str)
+            )
         )
-    }
-
-
-def get_plural_messages(relative_file):
-    source_file = PROJECT_ROOT / relative_file
-    tree = ast.parse(source_file.read_text(encoding="utf-8"))
-    return {
-        (node.args[0].value, node.args[1].value)
-        for node in ast.walk(tree)
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "ngettext"
-            and len(node.args) >= 2
-            and isinstance(node.args[0], ast.Constant)
-            and isinstance(node.args[0].value, str)
-            and isinstance(node.args[1], ast.Constant)
-            and isinstance(node.args[1].value, str)
-        )
-    }
-
-
-def get_context_messages(relative_file):
-    source_file = PROJECT_ROOT / relative_file
-    tree = ast.parse(source_file.read_text(encoding="utf-8"))
-    return {
-        (node.args[0].value, node.args[1].value)
-        for node in ast.walk(tree)
-        if (
-            isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == "pgettext"
-            and len(node.args) >= 2
-            and isinstance(node.args[0], ast.Constant)
-            and isinstance(node.args[0].value, str)
-            and isinstance(node.args[1], ast.Constant)
-            and isinstance(node.args[1].value, str)
-        )
-    }
+        if len(values) != len(argument_positions):
+            continue
+        arguments.add(values[0] if len(values) == 1 else values)
+    return arguments
 
 
 class TranslationMarkersTestCase(unittest.TestCase):
     def test_application_startup_dialog_is_marked(self):
         self.assertLessEqual(
             {"Settings error", "Language error"},
-            get_marked_messages("btText.py"),
+            get_marked_arguments("btText.py"),
         )
 
     def test_main_window_labels_menus_and_dialogs_are_marked(self):
@@ -110,7 +85,7 @@ class TranslationMarkersTestCase(unittest.TestCase):
 
         self.assertLessEqual(
             expected_messages,
-            get_marked_messages("ui/main_frame.py"),
+            get_marked_arguments("ui/main_frame.py"),
         )
 
     def test_tray_tooltip_and_commands_are_marked(self):
@@ -120,7 +95,7 @@ class TranslationMarkersTestCase(unittest.TestCase):
                 "Show snippets",
                 "{app_name} - {app_version}",
             },
-            get_marked_messages("ui/tray_icon.py"),
+            get_marked_arguments("ui/tray_icon.py"),
         )
 
     def test_category_tree_commands_and_dialogs_are_marked(self):
@@ -134,11 +109,15 @@ class TranslationMarkersTestCase(unittest.TestCase):
                 "A snippet must be pasted into a category.",
                 "Category error",
             },
-            get_marked_messages("ui/category_tree.py"),
+            get_marked_arguments("ui/category_tree.py"),
         )
 
     def test_snippet_list_uses_plural_aware_messages(self):
-        plural_messages = get_plural_messages("ui/snippet_list.py")
+        plural_messages = get_marked_arguments(
+            "ui/snippet_list.py",
+            "ngettext",
+            (0, 1),
+        )
 
         self.assertIn(
             ("Copy snippet\tCtrl+C", "Copy snippets\tCtrl+C"),
@@ -207,12 +186,12 @@ class TranslationMarkersTestCase(unittest.TestCase):
             with self.subTest(relative_file=relative_file):
                 self.assertLessEqual(
                     expected_messages,
-                    get_marked_messages(relative_file),
+                    get_marked_arguments(relative_file),
                 )
 
     def test_weight_labels_use_translation_context(self):
         self.assertEqual(
-            get_context_messages("ui/utils.py"),
+            get_marked_arguments("ui/utils.py", "pgettext", (0, 1)),
             {
                 ("snippet weight", "Low"),
                 ("snippet weight", "Middle"),
