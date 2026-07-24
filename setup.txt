@@ -2,7 +2,7 @@
 
 ## Requirements
 
-- **Python 3.12 or higher** (required for the `sqlite3` `autocommit` parameter)
+- Python 3.12 or higher
 - A 64-bit Python installation is recommended
 
 ---
