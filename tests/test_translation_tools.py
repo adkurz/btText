@@ -31,6 +31,47 @@ class TranslationToolsTestCase(unittest.TestCase):
             path_patch.start()
             self.addCleanup(path_patch.stop)
 
+    def _write_catalog_pair(
+        self,
+        directory_language,
+        header_language,
+        plural_forms,
+    ):
+        self.template_file.parent.mkdir(parents=True, exist_ok=True)
+        self.template_file.write_text(
+            'msgid ""\n'
+            'msgstr ""\n'
+            '"Content-Type: text/plain; charset=utf-8\\n"\n'
+            "\n"
+            "#: example.py:1\n"
+            'msgid "Hello"\n'
+            'msgstr ""\n',
+            encoding="utf-8",
+        )
+        catalog_file = (
+            self.locale_directory
+            / directory_language
+            / "LC_MESSAGES"
+            / "bttext.po"
+        )
+        catalog_file.parent.mkdir(parents=True)
+        catalog_file.write_text(
+            'msgid ""\n'
+            'msgstr ""\n'
+            '"Language: {}\\n"\n'
+            '"Plural-Forms: {}\\n"\n'
+            '"Content-Type: text/plain; charset=utf-8\\n"\n'
+            "\n"
+            "#: example.py:1\n"
+            'msgid "Hello"\n'
+            'msgstr "Hallo"\n'.format(
+                header_language,
+                plural_forms,
+            ),
+            encoding="utf-8",
+        )
+        return catalog_file
+
     @patch("tools.translations.importlib.util.find_spec", return_value=object())
     @patch("tools.translations.subprocess.run")
     def test_extract_uses_deterministic_babel_options(self, run, find_spec):
@@ -105,6 +146,38 @@ class TranslationToolsTestCase(unittest.TestCase):
             with self.subTest(language=language):
                 with self.assertRaises(ValueError):
                     translations.initialize_catalog(language)
+
+    def test_catalog_language_must_match_its_directory(self):
+        catalog_file = self._write_catalog_pair(
+            "fr",
+            "de",
+            "nplurals=2; plural=(n != 1);",
+        )
+
+        with self.assertRaisesRegex(
+            translations.TranslationCheckError,
+            "declares language 'de', expected 'fr'",
+        ):
+            translations._validate_catalog(
+                self.template_file,
+                catalog_file,
+            )
+
+    def test_catalog_plural_forms_must_match_its_language(self):
+        catalog_file = self._write_catalog_pair(
+            "fr",
+            "fr",
+            "nplurals=2; plural=(n != 1);",
+        )
+
+        with self.assertRaisesRegex(
+            translations.TranslationCheckError,
+            "expected 'nplurals=2; plural=\\(n > 1\\);' for fr",
+        ):
+            translations._validate_catalog(
+                self.template_file,
+                catalog_file,
+            )
 
     @patch("tools.translations.extract")
     def test_check_rejects_an_outdated_template(self, extract):

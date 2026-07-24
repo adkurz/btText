@@ -188,12 +188,58 @@ def check_catalogs() -> None:
 
 def _validate_catalog(template_file: Path, catalog_file: Path) -> None:
     """Reject missing, obsolete, fuzzy, empty, or structurally invalid entries."""
+    from babel.core import UnknownLocaleError
+    from babel.messages.catalog import Catalog
     from babel.messages.pofile import read_po
 
     with template_file.open("r", encoding="utf-8") as template_stream:
         template = read_po(template_stream)
     with catalog_file.open("r", encoding="utf-8") as catalog_stream:
         catalog = read_po(catalog_stream)
+
+    language = catalog_file.parents[1].name
+    try:
+        normalized_language = i18n.validate_language(language)
+        expected_plural_forms = Catalog(
+            locale=normalized_language
+        ).plural_forms
+    except (UnknownLocaleError, ValueError) as error:
+        raise TranslationCheckError(
+            "{} has an invalid or unknown language directory: {}".format(
+                catalog_file,
+                language,
+            )
+        ) from error
+    if normalized_language != language:
+        raise TranslationCheckError(
+            "{} must use the normalized language directory {}".format(
+                catalog_file,
+                normalized_language,
+            )
+        )
+
+    catalog_language = (
+        str(catalog.locale)
+        if catalog.locale is not None
+        else None
+    )
+    if catalog_language != language:
+        raise TranslationCheckError(
+            "{} declares language {!r}, expected {!r}".format(
+                catalog_file,
+                catalog_language,
+                language,
+            )
+        )
+    if catalog.plural_forms != expected_plural_forms:
+        raise TranslationCheckError(
+            "{} has plural forms {!r}, expected {!r} for {}".format(
+                catalog_file,
+                catalog.plural_forms,
+                expected_plural_forms,
+                language,
+            )
+        )
 
     template_keys = {
         (message.context, message.id)
