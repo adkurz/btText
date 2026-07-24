@@ -31,10 +31,13 @@ class SearchDialog(wx.Dialog):
             pane,
             style=wx.LC_REPORT | wx.LC_SINGLE_SEL,
         )
-        self.result_list.AppendColumn("Name", width=180)
-        self.result_list.AppendColumn("Category", width=140)
-        self.result_list.AppendColumn("Weight", width=80)
-        self.result_list.AppendColumn("Content preview", width=280)
+        self.result_list.AppendColumn("Name", width=self.FromDIP(210))
+        self.result_list.AppendColumn("Category", width=self.FromDIP(180))
+        self.result_list.AppendColumn("Weight", width=self.FromDIP(90))
+        self.result_list.AppendColumn(
+            "Content preview",
+            width=self.FromDIP(330),
+        )
 
         self.open_button = wx.Button(pane, wx.ID_OK, "&Show snippet")
         self.open_button.Enable(False)
@@ -76,8 +79,9 @@ class SearchDialog(wx.Dialog):
         dialog_sizer = wx.BoxSizer(wx.VERTICAL)
         dialog_sizer.Add(pane, 1, wx.EXPAND)
         self.SetSizer(dialog_sizer)
-        self.SetMinSize((650, 400))
-        self.SetSize((800, 500))
+        self.SetMinSize(self.FromDIP((700, 440)))
+        self.SetSize(self.FromDIP((900, 580)))
+        self.CentreOnParent()
 
         self.Bind(wx.EVT_TIMER, self._on_search_timer, self._search_timer)
         self.search_input.Bind(wx.EVT_TEXT, self._on_search_text_changed)

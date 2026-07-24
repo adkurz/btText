@@ -1,7 +1,6 @@
 """Modal editor for creating and updating snippets."""
 
 import wx
-import wx.lib.sized_controls as sc
 import pymitter
 
 import datamodel
@@ -9,12 +8,14 @@ import ui.validators as validators
 from ui import utils
 
 
-class SnippetEditor(sc.SizedDialog):
+class SnippetEditor(wx.Dialog):
     """Edit one snippet and delegate validation to the data model."""
     def __init__(self, parent, ee: pymitter.EventEmitter, model: datamodel.DataModel, category_id: int, snippet: datamodel.Snippet|None = None):
         """Build an editor for a new snippet or an existing snippet."""
-        super().__init__(parent, style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER)
-        self.SetAutoLayout(True)
+        super().__init__(
+            parent,
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
         # Set title:
         if snippet is None:  # Add new snippet
             self.SetTitle("Add snippet")
@@ -23,13 +24,14 @@ class SnippetEditor(sc.SizedDialog):
         self.ee = ee
         self._model = model
         self._snippet = snippet
-        self.pane = self.GetContentsPane()
-        self.pane.SetSizerType("form")
+        self.pane = wx.Panel(self)
+        form_sizer = wx.FlexGridSizer(cols=2, vgap=self.FromDIP(10), hgap=self.FromDIP(12))
+        form_sizer.AddGrowableCol(1, 1)
+        form_sizer.AddGrowableRow(3, 1)
 
-            # Create Fields:
+        # Create fields.
         self.name_label = wx.StaticText(self.pane, label="&Name")
         self.name_input = wx.TextCtrl(self.pane, validator=validators.NonEmptyValidator())
-        self.name_input.SetSizerProps(expand=True, proportion=1) # type: ignore
         self.category_label = wx.StaticText(self.pane, label="&Category")
         categories_with_paths = [
             (self._model.get_category_path(category.id), category)
@@ -44,7 +46,6 @@ class SnippetEditor(sc.SizedDialog):
             self.pane,
             choices=[path for path, _category in categories_with_paths],
         )
-        self.category_input.SetSizerProps(expand=True, proportion=1) # type: ignore
         # Preselect current category:
         if category_id is not None:
             for index, category in enumerate(self._categories):
@@ -53,23 +54,49 @@ class SnippetEditor(sc.SizedDialog):
                     break
         else:
             self.category_input.SetSelection(0)
-        self.weight_input = wx.RadioBox(self.pane, label='Weight', choices=[utils.get_weight_string(w) for w in self._model.WEIGHTS])
-        self.weight_input.SetSizerProps(expand=True, proportion=1) # type: ignore
+        self.weight_input = wx.RadioBox(
+            self.pane,
+            label="&Weight",
+            choices=[
+                utils.get_weight_string(weight)
+                for weight in self._model.WEIGHTS
+            ],
+        )
         self.content_label = wx.StaticText(self.pane, label="C&ontent")
         self.content_input = wx.TextCtrl(self.pane, style=wx.TE_MULTILINE | wx.TE_RICH2, validator=validators.NonEmptyValidator())
-        self.content_input.SetSizerProps(expand=True, proportion=1) # type: ignore
+        form_sizer.Add(self.name_label, 0, wx.ALIGN_CENTER_VERTICAL)
+        form_sizer.Add(self.name_input, 1, wx.EXPAND)
+        form_sizer.Add(self.category_label, 0, wx.ALIGN_CENTER_VERTICAL)
+        form_sizer.Add(self.category_input, 1, wx.EXPAND)
+        form_sizer.AddSpacer((0, 0))
+        form_sizer.Add(self.weight_input, 0, wx.EXPAND)
+        form_sizer.Add(self.content_label, 0, wx.ALIGN_TOP)
+        form_sizer.Add(self.content_input, 1, wx.EXPAND)
+        pane_sizer = wx.BoxSizer(wx.VERTICAL)
+        pane_sizer.Add(form_sizer, 1, wx.EXPAND | wx.ALL, self.FromDIP(12))
+        self.pane.SetSizer(pane_sizer)
 
         # Button-Sizer
         btn_sizer = wx.StdDialogButtonSizer()
         self.save_btn = wx.Button(self, wx.ID_OK, "&Save")
         self.save_btn.Bind(wx.EVT_BUTTON, self.save)
-        self.cancel_btn = wx.Button(self, wx.ID_CANCEL, "Cancel")
+        self.cancel_btn = wx.Button(self, wx.ID_CANCEL, "&Cancel")
         btn_sizer.AddButton(self.save_btn)
         btn_sizer.AddButton(self.cancel_btn)
         btn_sizer.Realize()
 
-        # Adjust window size
-        self.SetMinSize((400, 300)) # type: ignore
+        dialog_sizer = wx.BoxSizer(wx.VERTICAL)
+        dialog_sizer.Add(self.pane, 1, wx.EXPAND)
+        dialog_sizer.Add(
+            btn_sizer,
+            0,
+            wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            self.FromDIP(12),
+        )
+        self.SetSizer(dialog_sizer)
+        self.SetMinSize(self.FromDIP((560, 430)))
+        self.SetSize(self.FromDIP((720, 560)))
+        self.CentreOnParent()
 
         if self._snippet is not None:
             self.load()

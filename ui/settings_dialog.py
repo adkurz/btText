@@ -66,8 +66,9 @@ class SettingsDialog(wx.Dialog):
             10,
         )
         self.SetSizer(dialog_sizer)
-        self.SetMinSize((620, 430))
-        self.SetSize((700, 480))
+        self.SetMinSize(self.FromDIP((620, 430)))
+        self.SetSize(self.FromDIP((720, 500)))
+        self.CentreOnParent()
 
         self.Bind(wx.EVT_CHAR_HOOK, self._on_character)
         self.ok_button.Bind(wx.EVT_BUTTON, self._on_ok)

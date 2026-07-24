@@ -29,12 +29,12 @@ class SnippetList(wx.ListView):
         self._model = model
         self._transfer_buffer = transfer_buffer
         self.selected_category_id = None
-        self.AppendColumn("Name")
-        self.AppendColumn("Weight")
+        self.AppendColumn("Name", width=self.FromDIP(220))
+        self.AppendColumn("Weight", width=self.FromDIP(100))
         weight_number = self.AppendColumn("Weight_number")
         # Sort by the hidden numeric value, not the localized weight label.
         self.SetColumnWidth(weight_number, 0)
-        self.AppendColumn("Content preview")
+        self.AppendColumn("Content preview", width=self.FromDIP(420))
         self.Bind(wx.EVT_CONTEXT_MENU, self.context_menu)
         self.Bind(wx.EVT_CHAR, self.key_handler)
         self.Bind(wx.EVT_LIST_BEGIN_DRAG, self.begin_drag)

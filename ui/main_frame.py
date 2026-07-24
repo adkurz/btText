@@ -49,24 +49,67 @@ class MainFrame(sc.SizedFrame):
         self.Bind(wx.EVT_ACTIVATE, self.on_activate)
         self.Bind(wx.EVT_HOTKEY, self.on_global_hotkey, id=self._hotkey_id)
         self.pane = self.GetContentsPane()
-        self.pane.SetSizerType("horizontal")
         self.transfer_buffer = TransferBuffer()
-        self.category_tree_label = wx.StaticText(self.pane, label="&Categories")
+        layout_panel = wx.Panel(self.pane)
+        layout_panel.SetSizerProps(expand=True, proportion=1)  # type: ignore
+
+        self.category_tree_label = wx.StaticText(
+            layout_panel,
+            label="&Categories",
+        )
+        self._style_section_label(self.category_tree_label)
         self.category_tree = CategoryTree(
-            self.pane,
+            layout_panel,
             ee,
             model,
             self.transfer_buffer,
         )
-        self.category_tree.SetSizerProps(expand=True, proportion=1)  # type: ignore
-        self.snippet_list_label = wx.StaticText(self.pane, label="&Snippets")
+        self.category_tree.SetName("Categories")
+        self.snippet_list_label = wx.StaticText(
+            layout_panel,
+            label="&Snippets",
+        )
+        self._style_section_label(self.snippet_list_label)
         self.snippet_list = SnippetList(
-            self.pane,
+            layout_panel,
             ee,
             model,
             self.transfer_buffer,
         )
-        self.snippet_list.SetSizerProps(expand=True, proportion=1)  # type: ignore
+        self.snippet_list.SetName("Snippets in the selected category")
+
+        main_sizer = wx.GridBagSizer(
+            vgap=self.FromDIP(6),
+            hgap=self.FromDIP(18),
+        )
+        main_sizer.Add(
+            self.category_tree_label,
+            pos=(0, 0),
+            flag=wx.LEFT | wx.TOP,
+            border=self.FromDIP(12),
+        )
+        main_sizer.Add(
+            self.category_tree,
+            pos=(1, 0),
+            flag=wx.EXPAND | wx.LEFT | wx.BOTTOM,
+            border=self.FromDIP(12),
+        )
+        main_sizer.Add(
+            self.snippet_list_label,
+            pos=(0, 1),
+            flag=wx.TOP | wx.RIGHT,
+            border=self.FromDIP(12),
+        )
+        main_sizer.Add(
+            self.snippet_list,
+            pos=(1, 1),
+            flag=wx.EXPAND | wx.RIGHT | wx.BOTTOM,
+            border=self.FromDIP(12),
+        )
+        main_sizer.AddGrowableRow(1, 1)
+        main_sizer.AddGrowableCol(0, 1)
+        main_sizer.AddGrowableCol(1, 2)
+        layout_panel.SetSizer(main_sizer)
         self._last_focused_control: wx.Window | None = None
         self._search_command_id = wx.NewIdRef()
         self._settings_command_id = wx.NewIdRef()
@@ -84,6 +127,16 @@ class MainFrame(sc.SizedFrame):
         self._create_statusbar()
         self._create_tray_icon()
         self._register_hotkey(self._settings.toggle_window_hotkey)
+        self.SetMinSize(self.FromDIP((760, 480)))
+        self.SetClientSize(self.FromDIP((1040, 680)))
+        self.Centre()
+
+    @staticmethod
+    def _style_section_label(label: wx.StaticText):
+        """Give a primary view heading the native bold system font."""
+        font = wx.Font(label.GetFont())
+        font.SetWeight(wx.FONTWEIGHT_BOLD)
+        label.SetFont(font)
 
     def on_search(self, event: wx.CommandEvent):
         """Open search and focus the snippet accepted by the user."""
@@ -371,6 +424,9 @@ class MainFrame(sc.SizedFrame):
     def _create_statusbar(self):
         """Create the status bar used by cross-view notifications."""
         self.status_bar = self.CreateStatusBar()
+        self.status_bar.SetStatusText(
+            "F3: Search snippets    Enter: Insert selected snippet"
+        )
 
     def set_status_text(self, message: str):
         """Display a transient application status message."""
