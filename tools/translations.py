@@ -282,10 +282,22 @@ def _validate_catalog(template_file: Path, catalog_file: Path) -> None:
         )
     ]
     if incomplete:
+        details = "\n".join(
+            "  - {} ({})".format(
+                _message_description(message),
+                ", ".join(
+                    "{}:{}".format(filename, line_number)
+                    for filename, line_number in message.locations
+                )
+                or "source location unknown",
+            )
+            for message in incomplete
+        )
         raise TranslationCheckError(
-            "{} has {} untranslated or fuzzy message(s)".format(
+            "{} has {} untranslated or fuzzy message(s):\n{}".format(
                 catalog_file,
                 len(incomplete),
+                details,
             )
         )
 
@@ -302,6 +314,14 @@ def _validate_catalog(template_file: Path, catalog_file: Path) -> None:
                 errors[0],
             )
         )
+
+
+def _message_description(message) -> str:
+    """Return a searchable description of a catalog message."""
+    description = repr(message.id)
+    if message.context is not None:
+        description += " [context: {!r}]".format(message.context)
+    return description
 
 
 def _catalog_files() -> tuple[Path, ...]:

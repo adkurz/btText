@@ -179,6 +179,37 @@ class TranslationToolsTestCase(unittest.TestCase):
                 catalog_file,
             )
 
+    def test_untranslated_message_reports_its_source_locations(self):
+        catalog_file = self._write_catalog_pair(
+            "de",
+            "de",
+            "nplurals=2; plural=(n != 1);",
+        )
+        catalog_file.write_text(
+            catalog_file.read_text(encoding="utf-8").replace(
+                "#: example.py:1\n"
+                'msgid "Hello"\n'
+                'msgstr "Hallo"',
+                "#: example.py:42 ui/example.py:7\n"
+                'msgid "Hello"\n'
+                'msgstr ""',
+            ),
+            encoding="utf-8",
+        )
+
+        with self.assertRaises(
+            translations.TranslationCheckError
+        ) as raised:
+            translations._validate_catalog(
+                self.template_file,
+                catalog_file,
+            )
+
+        error_message = str(raised.exception)
+        self.assertIn("'Hello'", error_message)
+        self.assertIn("example.py:42", error_message)
+        self.assertIn("ui/example.py:7", error_message)
+
     @patch("tools.translations.extract")
     def test_check_rejects_an_outdated_template(self, extract):
         self.template_file.parent.mkdir(parents=True)

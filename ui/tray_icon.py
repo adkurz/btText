@@ -24,7 +24,7 @@ class TrayIcon(wx.adv.TaskBarIcon):
             icon,
             # Translators: Notification-area tooltip identifying the running
             # application. Keep the application name and version placeholders.
-            _("{app_name} - {app_version}").format(
+            _("{app_name} {app_version}").format(
                 app_name=info.name,
                 app_version=info.version,
             ),

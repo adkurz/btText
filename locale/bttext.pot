@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-24 18:03+0200\n"
+"POT-Creation-Date: 2026-07-24 18:36+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -310,132 +310,132 @@ msgstr ""
 msgid "New top-level category\tCtrl+N"
 msgstr ""
 
-#. Translators: Category-tree menu command that pastes a copied or cut
-#. category at the root level. Keep Ctrl+Shift+V after "\t".
-#: ui/category_tree.py:176
-msgid "Paste as top-level\tCtrl+Shift+V"
-msgstr ""
-
 #. Translators: Category-tree menu command that creates a child of
 #. the selected category. Keep Ctrl+Shift+N after "\t".
-#: ui/category_tree.py:186
+#: ui/category_tree.py:178
 msgid "New subcategory\tCtrl+Shift+N"
+msgstr ""
+
+#. Translators: Category-tree menu command that pastes a copied or cut
+#. category at the root level. Keep Ctrl+Shift+V after "\t".
+#: ui/category_tree.py:189
+msgid "Paste as top-level\tCtrl+Shift+V"
 msgstr ""
 
 #. Translators: Category-tree menu command that copies the selected
 #. category and its contents. Keep Ctrl+C after "\t".
-#: ui/category_tree.py:196
+#: ui/category_tree.py:197
 msgid "Copy\tCtrl+C"
 msgstr ""
 
 #. Translators: Category-tree menu command that cuts the selected
 #. category and its contents. Keep Ctrl+X after "\t".
-#: ui/category_tree.py:199
+#: ui/category_tree.py:200
 msgid "Cut\tCtrl+X"
 msgstr ""
 
 #. Translators: Category-tree menu command that pastes a copied or cut
 #. category into the selected category. Keep Ctrl+V after "\t".
-#: ui/category_tree.py:202
+#: ui/category_tree.py:203
 msgid "Paste into\tCtrl+V"
 msgstr ""
 
 #. Translators: Category-tree menu command that renames the selected
 #. category. Keep F2 after "\t".
-#: ui/category_tree.py:214
+#: ui/category_tree.py:215
 msgid "Rename\tF2"
 msgstr ""
 
 #. Translators: Category-tree menu command that deletes the selected
 #. category. The second "Delete" after "\t" is the keyboard key.
-#: ui/category_tree.py:217
+#: ui/category_tree.py:218
 msgid "Delete\tDelete"
 msgstr ""
 
 #. Translators: Prompt asking for the name of a category being created.
-#: ui/category_tree.py:247
+#: ui/category_tree.py:248
 msgid "Enter the name of the new category"
 msgstr ""
 
 #. Translators: Title of the dialog for creating a category.
-#: ui/category_tree.py:249
+#: ui/category_tree.py:250
 msgid "Add category"
 msgstr ""
 
 #. Translators: Prompt asking for a replacement category name.
-#: ui/category_tree.py:279
+#: ui/category_tree.py:280
 msgid "Enter the new name of the category"
 msgstr ""
 
 #. Translators: Title of the dialog for renaming a category.
-#: ui/category_tree.py:281
+#: ui/category_tree.py:282
 msgid "Rename category"
 msgstr ""
 
 #. Translators: Title of the confirmation for deleting a category
 #. and everything it contains.
-#: ui/category_tree.py:319
+#: ui/category_tree.py:320
 msgid "Delete category"
 msgstr ""
 
 #. Translators: Status after copying a category; it remains pending
 #. until the user selects a destination and presses Ctrl+V.
-#: ui/category_tree.py:373
+#: ui/category_tree.py:374
 msgid "Copied category. Select a destination and press Ctrl+V."
 msgstr ""
 
 #. Translators: Status after cutting a category; it remains pending
 #. until the user selects a destination and presses Ctrl+V.
-#: ui/category_tree.py:379
+#: ui/category_tree.py:380
 msgid "Cut category. Select a destination and press Ctrl+V."
 msgstr ""
 
 #. Translators: Explains that a snippet cannot be pasted at the
 #. category-tree root and requires a destination category.
-#: ui/category_tree.py:396
+#: ui/category_tree.py:397
 msgid "A snippet must be pasted into a category."
 msgstr ""
 
 #. Translators: Title of an informational message explaining that
 #. snippets cannot be pasted at the category-tree root.
-#: ui/category_tree.py:399
+#: ui/category_tree.py:400
 msgid "Paste snippet"
 msgstr ""
 
 #. Translators: Status after a copied or cut category was pasted.
-#: ui/category_tree.py:449
+#: ui/category_tree.py:450
 msgid "Transfer completed."
 msgstr ""
 
 #. Translators: Title of an error caused by a category operation.
-#: ui/category_tree.py:475
+#: ui/category_tree.py:476
 msgid "Category error"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; both displayed counts are exactly 1.
-#: ui/category_tree.py:495
+#: ui/category_tree.py:496
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategory and {snippets} snippet?"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; descendants is 1, snippets is not 1.
-#: ui/category_tree.py:499
+#: ui/category_tree.py:500
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategory and {snippets} snippets?"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; descendants is not 1, snippets is 1.
-#: ui/category_tree.py:503
+#: ui/category_tree.py:504
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategories and {snippets} snippet?"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; neither displayed count is 1.
-#: ui/category_tree.py:507
+#: ui/category_tree.py:508
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategories and {snippets} snippets?"
 msgstr ""
@@ -522,7 +522,7 @@ msgstr ""
 
 #. Translators: Title of an error inserting a snippet externally.
 #. Translators: Title of an error while pasting copied or cut items.
-#: ui/main_frame.py:384 ui/main_frame.py:416 ui/snippet_list.py:302
+#: ui/main_frame.py:384 ui/main_frame.py:416 ui/snippet_list.py:290
 msgid "Paste error"
 msgstr ""
 
@@ -791,7 +791,7 @@ msgstr ""
 #. Translators: Window title for changing an existing snippet.
 #. Translators: Snippet-list menu command that opens the selected
 #. snippet in the editor.
-#: ui/snippet_editor.py:27 ui/snippet_list.py:150
+#: ui/snippet_editor.py:27 ui/snippet_list.py:138
 msgid "Edit snippet"
 msgstr ""
 
@@ -956,7 +956,7 @@ msgstr[1] ""
 #. application. Keep the application name and version placeholders.
 #: ui/tray_icon.py:27
 #, python-brace-format
-msgid "{app_name} - {app_version}"
+msgid "{app_name} {app_version}"
 msgstr ""
 
 #. Translators: Notification-area menu command that restores and focuses
@@ -993,3 +993,4 @@ msgstr ""
 #: ui/validators.py:26
 msgid "The input field must not be empty!"
 msgstr ""
+
