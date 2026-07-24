@@ -7,7 +7,7 @@ import wx
 
 from app_settings import DEFAULT_TOGGLE_HOTKEY, Hotkey
 from error_messages import format_user_error
-from i18n import DEFAULT_LANGUAGE, SYSTEM_LANGUAGE, _
+from i18n import SYSTEM_LANGUAGE, _, get_language_display_name
 
 
 class FocusableReadOnlyTextCtrl(wx.TextCtrl):
@@ -105,7 +105,8 @@ class SettingsDialog(wx.Dialog):
             *self._available_languages,
         )
         language_labels = tuple(
-            self._language_label(language) for language in language_values
+            get_language_display_name(language, wx)
+            for language in language_values
         )
         self.language_choice = wx.Choice(page, choices=language_labels)
         try:
@@ -140,21 +141,6 @@ class SettingsDialog(wx.Dialog):
         )
         page.SetSizer(sizer)
         return page
-
-    @staticmethod
-    def _language_label(language: str) -> str:
-        """Return a readable label while retaining dynamic language support."""
-        if language == SYSTEM_LANGUAGE:
-            # Translators: Language-choice entry that follows the operating
-            # system's language when a matching catalog is installed.
-            return _("System default")
-        if language == DEFAULT_LANGUAGE:
-            # Translators: Language-choice entry for the English source UI.
-            return _("English")
-        if language == "de":
-            # Translators: Native name of the German user-interface language.
-            return _("German")
-        return language
 
     def _on_language_changed(self, event: wx.CommandEvent):
         """Store the pending language selected in the choice control."""

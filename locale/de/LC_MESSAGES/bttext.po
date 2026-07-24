@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-24 17:54+0200\n"
+"POT-Creation-Date: 2026-07-24 18:03+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -268,8 +268,7 @@ msgid ""
 "\n"
 "{reason}"
 msgstr ""
-"Der Übersetzungskatalog für {language} konnte nicht geladen werden. btText "
-"wird auf Englisch fortgesetzt.\n"
+"Der Übersetzungskatalog für {language} konnte nicht geladen werden. btText wird auf Englisch fortgesetzt.\n"
 "\n"
 "{reason}"
 
@@ -283,6 +282,12 @@ msgstr "Die Spracheinstellung hat ein ungültiges Format."
 #: error_messages.py:232
 msgid "An unexpected application error occurred."
 msgstr "Es ist ein unerwarteter Anwendungsfehler aufgetreten."
+
+#. Translators: Language-choice entry that follows the operating
+#. system's language when a matching catalog is installed.
+#: i18n.py:67
+msgid "System default"
+msgstr "Systemstandard"
 
 #. Translators: Root label of the main window's category tree.
 #. Translators: Accessible name for the main window's category tree.
@@ -677,41 +682,25 @@ msgstr "&Sprache"
 
 #. Translators: Explains that a newly selected interface language is
 #. loaded the next time the application starts.
-#: ui/settings_dialog.py:123
+#: ui/settings_dialog.py:124
 msgid "Language changes take effect after restarting btText."
 msgstr "Sprachänderungen werden nach einem Neustart von btText wirksam."
 
-#. Translators: Language-choice entry that follows the operating
-#. system's language when a matching catalog is installed.
-#: ui/settings_dialog.py:150
-msgid "System default"
-msgstr "Systemstandard"
-
-#. Translators: Language-choice entry for the English source UI.
-#: ui/settings_dialog.py:153
-msgid "English"
-msgstr "English"
-
-#. Translators: Native name of the German user-interface language.
-#: ui/settings_dialog.py:156
-msgid "German"
-msgstr "Deutsch"
-
 #. Translators: Settings-page explanation of the global shortcut and
 #. its required modifier keys.
-#: ui/settings_dialog.py:181
+#: ui/settings_dialog.py:167
 msgid "Configure the global shortcut used to show or hide the main window. A shortcut must contain Ctrl, Shift, Alt or the Windows key."
 msgstr "Legen Sie die globale Tastenkombination zum Ein- oder Ausblenden des Hauptfensters fest. Sie muss Strg, Umschalt, Alt oder die Windows-Taste enthalten."
 
 #. Translators: Label for the currently configured global shortcut.
 #. "&" marks the keyboard mnemonic for the adjacent read-only field.
-#: ui/settings_dialog.py:190
+#: ui/settings_dialog.py:176
 msgid "Current &hotkey"
 msgstr "Aktuelle Tasten&kombination"
 
 #. Translators: Accessible name for the read-only field displaying
 #. the currently configured global show-or-hide shortcut.
-#: ui/settings_dialog.py:198
+#: ui/settings_dialog.py:184
 msgid "Current show or hide window shortcut"
 msgstr "Aktuelle Tastenkombination zum Ein- oder Ausblenden des Hauptfensters"
 
@@ -719,85 +708,85 @@ msgstr "Aktuelle Tastenkombination zum Ein- oder Ausblenden des Hauptfensters"
 #. shortcut. "&" marks the keyboard mnemonic.
 #. Translators: Button label restored after shortcut recording ends; it
 #. starts listening for another shortcut. "&" marks the mnemonic.
-#: ui/settings_dialog.py:205 ui/settings_dialog.py:301
+#: ui/settings_dialog.py:191 ui/settings_dialog.py:287
 msgid "&Record new shortcut"
 msgstr "&Neue Tastenkombination aufzeichnen"
 
 #. Translators: Button that stops the current shortcut recording
 #. without accepting it. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:212
+#: ui/settings_dialog.py:198
 msgid "Cancel &recording"
 msgstr "Auf&zeichnung abbrechen"
 
 #. Translators: Button that selects btText's default global shortcut as
 #. the pending setting. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:221
+#: ui/settings_dialog.py:207
 msgid "Use &default"
 msgstr "Stan&dard verwenden"
 
 #. Translators: Initial status before shortcut recording starts.
-#: ui/settings_dialog.py:228
+#: ui/settings_dialog.py:214
 msgid "Recording is not active."
 msgstr "Die Aufzeichnung ist nicht aktiv."
 
 #. Translators: Accessible name for the text that reports shortcut
 #. recording instructions and results.
-#: ui/settings_dialog.py:232
+#: ui/settings_dialog.py:218
 msgid "Shortcut recording status"
 msgstr "Status der Tastenkombinationsaufzeichnung"
 
 #. Translators: Temporary button label while btText waits for the user to
 #. press a new global shortcut.
-#: ui/settings_dialog.py:267
+#: ui/settings_dialog.py:253
 msgid "Press shortcut now"
 msgstr "Tastenkombination jetzt drücken"
 
 #. Translators: Accessible name while btText is waiting for a shortcut;
 #. Escape cancels and Tab leaves the recording control.
-#: ui/settings_dialog.py:272
+#: ui/settings_dialog.py:258
 msgid "Recording shortcut. Press Escape to cancel or Tab to leave recording."
 msgstr "Tastenkombination wird aufgezeichnet. Drücken Sie Esc zum Abbrechen oder die Tabulatortaste, um die Aufzeichnung zu verlassen."
 
 #. Translators: Instructions shown while recording a new global
 #. shortcut. Keep Escape, Tab, and Shift+Tab recognizable key names.
-#: ui/settings_dialog.py:281
+#: ui/settings_dialog.py:267
 msgid "Press one shortcut now. Escape cancels; Tab and Shift+Tab remain available."
 msgstr "Drücken Sie jetzt eine Tastenkombination. Esc bricht ab; Tab und Umschalt+Tab bleiben verfügbar."
 
 #. Translators: Status after the user cancels shortcut recording.
-#: ui/settings_dialog.py:293
+#: ui/settings_dialog.py:279
 msgid "Shortcut recording cancelled."
 msgstr "Aufzeichnung der Tastenkombination abgebrochen."
 
 #. Translators: Accessible button name restored after recording ends; the
 #. button starts recording another global shortcut.
-#: ui/settings_dialog.py:304
+#: ui/settings_dialog.py:290
 msgid "Record new shortcut"
 msgstr "Neue Tastenkombination aufzeichnen"
 
 #. Translators: Status announced after an invalid shortcut ends
 #. recording. {error} explains why the key was rejected.
-#: ui/settings_dialog.py:351
+#: ui/settings_dialog.py:337
 #, python-brace-format
 msgid "Shortcut not accepted: {error}. Recording has stopped."
 msgstr "Tastenkombination nicht akzeptiert: {error}. Die Aufzeichnung wurde beendet."
 
 #. Translators: Status after recording succeeds. The shortcut is not
 #. active until Apply or OK saves it. {shortcut} is such as Ctrl+Alt+T.
-#: ui/settings_dialog.py:363
+#: ui/settings_dialog.py:349
 #, python-brace-format
 msgid "Shortcut {shortcut} recorded. Choose Apply or OK to activate it."
 msgstr "Tastenkombination {shortcut} aufgezeichnet. Wählen Sie „Übernehmen“ oder „OK“, um sie zu aktivieren."
 
 #. Translators: Status after selecting btText's default shortcut; it
 #. is only activated when Apply or OK saves the setting.
-#: ui/settings_dialog.py:497
+#: ui/settings_dialog.py:483
 msgid "Default shortcut selected. Choose Apply or OK to activate it."
 msgstr "Standardtastenkombination ausgewählt. Wählen Sie „Übernehmen“ oder „OK“, um sie zu aktivieren."
 
 #. Translators: Status confirming that the pending global shortcut was
 #. saved and activated.
-#: ui/settings_dialog.py:519
+#: ui/settings_dialog.py:505
 msgid "The shortcut has been applied."
 msgstr "Die Tastenkombination wurde übernommen."
 

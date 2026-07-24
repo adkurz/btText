@@ -33,6 +33,35 @@ class I18nTestCase(unittest.TestCase):
 
         self.assertEqual(languages, ("en", "de", "pt_BR"))
 
+    def test_language_display_name_uses_native_wx_description(self):
+        wx_module = Mock()
+        wx_module.Locale.FindLanguageInfo.return_value = Mock(
+            DescriptionNative="Deutsch",
+            Description="German",
+        )
+
+        self.assertEqual(
+            i18n.get_language_display_name("de", wx_module),
+            "Deutsch",
+        )
+        wx_module.Locale.FindLanguageInfo.assert_called_once_with("de")
+
+    def test_language_display_name_falls_back_to_code(self):
+        wx_module = Mock()
+        wx_module.Locale.FindLanguageInfo.return_value = None
+
+        self.assertEqual(
+            i18n.get_language_display_name("pt_BR", wx_module),
+            "pt_BR",
+        )
+        self.assertEqual(i18n.get_language_display_name("en"), "en")
+
+    def test_system_language_has_readable_display_name_without_wx(self):
+        self.assertEqual(
+            i18n.get_language_display_name(i18n.SYSTEM_LANGUAGE),
+            "System default",
+        )
+
     def test_explicit_language_is_resolved_from_available_catalogs(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             self._add_catalog(temporary_directory, "de")

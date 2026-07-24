@@ -184,13 +184,13 @@ class TranslationMarkersTestCase(unittest.TestCase):
                 "&Language",
                 "Current &hotkey",
                 "&Record new shortcut",
-                "English",
-                "German",
                 "Language changes take effect after restarting btText.",
                 "Recording is not active.",
                 "Shortcut recording cancelled.",
-                "System default",
                 "The shortcut has been applied.",
+            },
+            "i18n.py": {
+                "System default",
             },
             "ui/validators.py": {
                 "The input field must not be empty!",

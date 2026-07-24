@@ -56,6 +56,30 @@ def get_available_languages(locale_directory: str | Path) -> tuple[str, ...]:
     )
 
 
+def get_language_display_name(
+    language: str,
+    wx_module: Any | None = None,
+) -> str:
+    """Return a native language name, falling back to its stable code."""
+    if language == SYSTEM_LANGUAGE:
+        # Translators: Language-choice entry that follows the operating
+        # system's language when a matching catalog is installed.
+        return _("System default")
+    if wx_module is None:
+        return language
+    try:
+        language_info = wx_module.Locale.FindLanguageInfo(language)
+    except (AttributeError, TypeError, ValueError):
+        return language
+    if language_info is None:
+        return language
+    return (
+        getattr(language_info, "DescriptionNative", None)
+        or getattr(language_info, "Description", None)
+        or language
+    )
+
+
 def validate_language(
     language: str,
     locale_directory: str | Path | None = None,
