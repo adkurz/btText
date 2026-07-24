@@ -116,13 +116,18 @@ class I18nTestCase(unittest.TestCase):
         self.assertEqual(i18n.ngettext("snippet", "snippets", 2), "snippets")
         self.assertEqual(i18n.pgettext("menu", "Copy"), "Copy")
 
-    def test_damaged_catalog_falls_back_to_source_messages(self):
+    def test_damaged_catalog_falls_back_to_english_and_reports_error(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             self._add_catalog(temporary_directory, "nl")
 
-            active_language = i18n.initialize("nl", temporary_directory)
+            with self.assertRaises(i18n.LanguageError) as context:
+                i18n.initialize("nl", temporary_directory)
 
-        self.assertEqual(active_language, "nl")
+        self.assertEqual(
+            context.exception.code,
+            "language_catalog_load_failed",
+        )
+        self.assertEqual(i18n.get_active_language(), "en")
         self.assertEqual(i18n._("Settings"), "Settings")
 
     @patch("i18n.gettext.translation")
@@ -142,7 +147,8 @@ class I18nTestCase(unittest.TestCase):
             fallback=True,
         )
 
-    def test_wx_locale_is_initialized_and_retained(self):
+    @patch("i18n.gettext.translation", return_value=gettext.NullTranslations())
+    def test_wx_locale_is_initialized_and_retained(self, translation):
         wx_module = Mock()
         language_info = Mock(Language=37)
         wx_module.Locale.FindLanguageInfo.return_value = language_info

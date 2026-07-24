@@ -30,11 +30,15 @@ def main():
         except SettingsError as error:
             settings = AppSettings()
             settings_error = error
-        i18n.initialize(
-            settings.language,
-            app_paths.get_locale_directory(),
-            wx,
-        )
+        language_error = None
+        try:
+            i18n.initialize(
+                settings.language,
+                app_paths.get_locale_directory(),
+                wx,
+            )
+        except i18n.LanguageError as error:
+            language_error = error
         try:
             model = DataModel(ee, app_paths.get_database_file())
         except datamodel.DataModelError as error:
@@ -52,6 +56,15 @@ def main():
                 format_user_error(settings_error),
                 # Translators: Title of a startup warning concerning settings.
                 _("Settings error"),
+                wx.OK | wx.ICON_ERROR,
+                frame,
+            )
+        if language_error is not None:
+            wx.MessageBox(
+                format_user_error(language_error),
+                # Translators: Title of a startup warning after a translation
+                # catalog could not be loaded.
+                _("Language error"),
                 wx.OK | wx.ICON_ERROR,
                 frame,
             )

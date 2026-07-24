@@ -63,8 +63,8 @@ def get_context_messages(relative_file):
 
 class TranslationMarkersTestCase(unittest.TestCase):
     def test_application_startup_dialog_is_marked(self):
-        self.assertIn(
-            "Settings error",
+        self.assertLessEqual(
+            {"Settings error", "Language error"},
             get_marked_messages("btText.py"),
         )
 
@@ -195,6 +195,12 @@ class TranslationMarkersTestCase(unittest.TestCase):
             "ui/validators.py": {
                 "The input field must not be empty!",
                 "Validation error",
+            },
+            "error_messages.py": {
+                (
+                    "The translation catalog for {language} could not be "
+                    "loaded. btText will continue in English.\n\n{reason}"
+                ),
             },
         }
         for relative_file, expected_messages in expected_by_file.items():

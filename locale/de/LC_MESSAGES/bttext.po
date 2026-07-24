@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-24 16:33+0200\n"
+"POT-Creation-Date: 2026-07-24 17:54+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -45,15 +45,21 @@ msgstr "Win"
 
 #. Translators: Title of a fatal startup error concerning the
 #. snippet database.
-#: btText.py:45
+#: btText.py:49
 msgid "Database error"
 msgstr "Datenbankfehler"
 
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:54 ui/main_frame.py:330
+#: btText.py:58 ui/main_frame.py:330
 msgid "Settings error"
 msgstr "Einstellungsfehler"
+
+#. Translators: Title of a startup warning after a translation
+#. catalog could not be loaded.
+#: btText.py:67
+msgid "Language error"
+msgstr "Sprachfehler"
 
 #. Translators: Startup error when the snippet database cannot be opened.
 #. {reason} is a technical SQLite or operating-system message.
@@ -252,14 +258,29 @@ msgstr "Diese Taste kann nicht für eine Tastenkombination verwendet werden."
 msgid "No translation catalog is available for the selected language."
 msgstr "Für die ausgewählte Sprache ist kein Übersetzungskatalog verfügbar."
 
+#. Translators: Startup warning after a damaged translation catalog forced
+#. btText to continue in English. {language} is a locale code such as de;
+#. {reason} is a technical catalog-loading error.
+#: error_messages.py:209
+#, python-brace-format
+msgid ""
+"The translation catalog for {language} could not be loaded. btText will continue in English.\n"
+"\n"
+"{reason}"
+msgstr ""
+"Der Übersetzungskatalog für {language} konnte nicht geladen werden. btText "
+"wird auf Englisch fortgesetzt.\n"
+"\n"
+"{reason}"
+
 #. Translators: Settings error when the saved UI language code is malformed.
-#: error_messages.py:207
+#: error_messages.py:217
 msgid "The language setting has an invalid format."
 msgstr "Die Spracheinstellung hat ein ungültiges Format."
 
 #. Translators: Safe fallback when no specific localized application-error
 #. message is available.
-#: error_messages.py:222
+#: error_messages.py:232
 msgid "An unexpected application error occurred."
 msgstr "Es ist ein unerwarteter Anwendungsfehler aufgetreten."
 

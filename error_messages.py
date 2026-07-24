@@ -202,6 +202,16 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "language_catalog_unavailable": lambda parameters: _(
         "No translation catalog is available for the selected language."
     ),
+    # Translators: Startup warning after a damaged translation catalog forced
+    # btText to continue in English. {language} is a locale code such as de;
+    # {reason} is a technical catalog-loading error.
+    "language_catalog_load_failed": lambda parameters: _(
+        "The translation catalog for {language} could not be loaded. btText "
+        "will continue in English.\n\n{reason}"
+    ).format(
+        language=parameters["language"],
+        reason=_format_reason(parameters["reason"]),
+    ),
     # Translators: Settings error when the saved UI language code is malformed.
     "language_format_invalid": lambda parameters: _(
         "The language setting has an invalid format."

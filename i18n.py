@@ -132,8 +132,21 @@ def initialize(
             languages=[active_language],
             fallback=True,
         )
-    except (EOFError, OSError, struct.error):
+    except (EOFError, OSError, struct.error, UnicodeError) as error:
         _translation = gettext.NullTranslations()
+        _active_language = DEFAULT_LANGUAGE
+        _wx_locale = _create_wx_locale(
+            DEFAULT_LANGUAGE,
+            locale_path,
+            wx_module,
+        )
+        raise LanguageError(
+            "language_catalog_load_failed",
+            "The translation catalog for {language} could not be loaded: "
+            "{reason}",
+            language=active_language,
+            reason=error,
+        ) from error
     _active_language = active_language
     _wx_locale = _create_wx_locale(active_language, locale_path, wx_module)
     return active_language

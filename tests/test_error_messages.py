@@ -92,6 +92,21 @@ class ErrorMessagesTestCase(unittest.TestCase):
             "An unexpected application error occurred.",
         )
 
+    def test_catalog_load_error_explains_english_fallback(self):
+        error = i18n.LanguageError(
+            "language_catalog_load_failed",
+            "The translation catalog for {language} could not be loaded: "
+            "{reason}",
+            language="de",
+            reason=OSError("damaged catalog"),
+        )
+
+        self.assertEqual(
+            format_user_error(error),
+            "The translation catalog for de could not be loaded. btText will "
+            "continue in English.\n\ndamaged catalog",
+        )
+
     def test_every_declared_application_error_has_a_ui_formatter(self):
         error_constructors = {
             "CategoryValidationError",
