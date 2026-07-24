@@ -169,14 +169,6 @@ class CategoryTree(wx.TreeCtrl):
             _("New top-level category\tCtrl+N"),
         )
         menu.Bind(wx.EVT_MENU, lambda evt: self.add_category(None), new_root)
-        paste_root = menu.Append(
-            wx.ID_ANY,
-            # Translators: Category-tree menu command that pastes a copied or cut
-            # category at the root level. Keep Ctrl+Shift+V after "\t".
-            _("Paste as top-level\tCtrl+Shift+V"),
-        )
-        paste_root.Enable(self._transfer_buffer.value is not None)
-        menu.Bind(wx.EVT_MENU, lambda evt: self.paste(evt, None), paste_root)
         category_id = self.get_selected_id()
         if category_id is not None:
             new_child = menu.Append(
@@ -190,6 +182,15 @@ class CategoryTree(wx.TreeCtrl):
                 lambda evt: self.add_category(category_id),
                 new_child,
             )
+        paste_root = menu.Append(
+            wx.ID_ANY,
+            # Translators: Category-tree menu command that pastes a copied or cut
+            # category at the root level. Keep Ctrl+Shift+V after "\t".
+            _("Paste as top-level\tCtrl+Shift+V"),
+        )
+        paste_root.Enable(self._transfer_buffer.value is not None)
+        menu.Bind(wx.EVT_MENU, lambda evt: self.paste(evt, None), paste_root)
+        if category_id is not None:
             menu.AppendSeparator()
             # Translators: Category-tree menu command that copies the selected
             # category and its contents. Keep Ctrl+C after "\t".

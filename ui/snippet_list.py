@@ -126,18 +126,6 @@ class SnippetList(wx.ListView):
             )
             paste_item.Enable(self._transfer_buffer.value is not None)
             menu.Bind(wx.EVT_MENU, self.paste, paste_item)
-            paste_root_item = menu.Append(
-                wx.ID_ANY,
-                # Translators: Snippet-list menu command that pastes a copied or
-                # cut category at the root level. Keep Ctrl+Shift+V after "\t".
-                _("Paste category as top-level\tCtrl+Shift+V"),
-            )
-            paste_root_item.Enable(self._transfer_buffer.value is not None)
-            menu.Bind(
-                wx.EVT_MENU,
-                lambda evt: self.paste(evt, as_top_level=True),
-                paste_root_item,
-            )
         selected_ids = self.get_selected_ids()
         if selected_ids:
             if len(selected_ids) == 1:
