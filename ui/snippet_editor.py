@@ -65,13 +65,13 @@ class SnippetEditor(wx.Dialog):
         self.content_label = wx.StaticText(self.pane, label="C&ontent")
         self.content_input = wx.TextCtrl(self.pane, style=wx.TE_MULTILINE | wx.TE_RICH2, validator=validators.NonEmptyValidator())
         form_sizer.Add(self.name_label, 0, wx.ALIGN_CENTER_VERTICAL)
-        form_sizer.Add(self.name_input, 1, wx.EXPAND)
+        form_sizer.Add(self.name_input, 0, wx.EXPAND)
         form_sizer.Add(self.category_label, 0, wx.ALIGN_CENTER_VERTICAL)
-        form_sizer.Add(self.category_input, 1, wx.EXPAND)
-        form_sizer.AddSpacer((0, 0))
+        form_sizer.Add(self.category_input, 0, wx.EXPAND)
+        form_sizer.AddSpacer(0)
         form_sizer.Add(self.weight_input, 0, wx.EXPAND)
         form_sizer.Add(self.content_label, 0, wx.ALIGN_TOP)
-        form_sizer.Add(self.content_input, 1, wx.EXPAND)
+        form_sizer.Add(self.content_input, 0, wx.EXPAND)
         pane_sizer = wx.BoxSizer(wx.VERTICAL)
         pane_sizer.Add(form_sizer, 1, wx.EXPAND | wx.ALL, self.FromDIP(12))
         self.pane.SetSizer(pane_sizer)
@@ -97,9 +97,16 @@ class SnippetEditor(wx.Dialog):
         self.SetMinSize(self.FromDIP((560, 430)))
         self.SetSize(self.FromDIP((720, 560)))
         self.CentreOnParent()
+        self.Bind(wx.EVT_SHOW, self._on_show)
 
         if self._snippet is not None:
             self.load()
+
+    def _on_show(self, event: wx.ShowEvent):
+        """Focus the first input after wx has activated the dialog."""
+        event.Skip()
+        if event.IsShown():
+            wx.CallAfter(self.name_input.SetFocus)
 
     def load(self):
         """Populate controls from the snippet being edited."""
