@@ -20,7 +20,7 @@ Verify the installation:
 python --version
 ```
 
-### 2. Create a virtual environment (recommended)
+### 2. Create a virtual environment
 
 Open a terminal in the project folder (`btText`) and run:
 
@@ -41,22 +41,55 @@ Activate it:
 
 ### 3. Install dependencies
 
-```bash
-pip install -r requirements.txt
+For running the application from source:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 ```
 
-If no `requirements.txt` exists, install the required packages manually:
+For development, translation work, tests, and packaging:
 
-```bash
-pip install wxPython pymitter
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
 ### 4. Launch the application
 
-With the virtual environment activated, run:
+Run the application with the virtual-environment interpreter:
 
-```bash
-python btText.py
+```powershell
+.\.venv\Scripts\python.exe btText.py
+```
+
+---
+
+## Create a packaged Windows build
+
+Run the build script from the project folder:
+
+```powershell
+.\build.ps1
+```
+
+The script creates `.venv` automatically when it is missing, installs all
+build dependencies into it, and then uses only that environment for catalog
+validation, tests, and PyInstaller. The globally available Python installation
+is used only once to create `.venv`.
+
+The finished portable archive is written to:
+
+```text
+build/btText-<version>-windows.zip
+```
+
+It contains the executable and immutable runtime resources. It does not contain
+`data.db` or `settings.ini`; btText creates those files beside the executable
+when they are needed.
+
+To select the Python installation used to create `.venv`:
+
+```powershell
+.\build.ps1 -Python "C:\Path\To\python.exe"
 ```
 
 ---

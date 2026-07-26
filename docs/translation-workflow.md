@@ -9,16 +9,19 @@ time, the PO file is compiled into an MO file that btText can load.
 
 ## 1. Prepare the repository
 
-From the repository root, install the development dependencies:
+From the repository root, create a virtual environment and install the
+development dependencies:
 
 ```powershell
-python -m pip install -r requirements-dev.txt
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
-This installs Babel, which provides the catalog tools. Verify the setup:
+This installs Babel and the other development tools without changing global
+Python packages. Verify the setup:
 
 ```powershell
-python tools/translations.py --help
+.\.venv\Scripts\python.exe tools/translations.py --help
 ```
 
 The relevant files have this layout:
@@ -59,8 +62,8 @@ If the application has gained new user-visible strings, update the existing
 catalog before translating:
 
 ```powershell
-python tools/translations.py extract
-python tools/translations.py update
+.\.venv\Scripts\python.exe tools/translations.py extract
+.\.venv\Scripts\python.exe tools/translations.py update
 ```
 
 `extract` refreshes the shared `locale/bttext.pot` template from the Python
@@ -80,21 +83,21 @@ After editing, continue with [Validate and test](#5-validate-and-test).
 First ensure that the POT template matches the current source:
 
 ```powershell
-python tools/translations.py extract
+.\.venv\Scripts\python.exe tools/translations.py extract
 ```
 
 Create the new PO catalog:
 
 ```powershell
-python tools/translations.py init <language-code>
+.\.venv\Scripts\python.exe tools/translations.py init <language-code>
 ```
 
 Examples:
 
 ```powershell
-python tools/translations.py init nl
-python tools/translations.py init fr
-python tools/translations.py init pt_BR
+.\.venv\Scripts\python.exe tools/translations.py init nl
+.\.venv\Scripts\python.exe tools/translations.py init fr
+.\.venv\Scripts\python.exe tools/translations.py init pt_BR
 ```
 
 Use a gettext locale code: a two- or three-letter language code, optionally
@@ -239,7 +242,7 @@ active at the same time.
 Run the catalog check:
 
 ```powershell
-python tools/translations.py check
+.\.venv\Scripts\python.exe tools/translations.py check
 ```
 
 It rejects:
@@ -253,13 +256,13 @@ It rejects:
 Compile the PO files into local MO files:
 
 ```powershell
-python tools/translations.py compile
+.\.venv\Scripts\python.exe tools/translations.py compile
 ```
 
 Run btText:
 
 ```powershell
-python btText.py
+.\.venv\Scripts\python.exe btText.py
 ```
 
 Open **Settings > General**, select the language, choose **Apply** or **OK**, and
@@ -269,7 +272,7 @@ plural messages, shortcuts, and mnemonics.
 Finally, run the tests:
 
 ```powershell
-python -m unittest discover -s tests -v
+.\.venv\Scripts\python.exe -m unittest discover -s tests -v
 ```
 
 ## 6. Run the local build checks
@@ -279,6 +282,11 @@ The repository provides a PowerShell build script:
 ```powershell
 .\build.ps1
 ```
+
+The script creates `.venv` automatically when necessary, installs
+`requirements-dev.txt` into it, and uses that environment exclusively for all
+checks and packaging. The `python` command, or the interpreter passed with
+`-Python`, is used only to create the virtual environment.
 
 It performs the required checks and packaging steps in order:
 
@@ -294,7 +302,7 @@ icon, and compiled translation catalogs. It deliberately does not contain
 database beside the executable on first start and creates the settings file
 only after settings are saved.
 
-To use a specific Python executable:
+To use a specific Python executable for creating `.venv`:
 
 ```powershell
 .\build.ps1 -Python "C:\Path\To\python.exe"
@@ -312,8 +320,8 @@ Mark source strings with `_`, `ngettext`, or `pgettext` and place a meaningful
 `Translators:` comment immediately next to every call. Then run:
 
 ```powershell
-python tools/translations.py extract
-python tools/translations.py update
+.\.venv\Scripts\python.exe tools/translations.py extract
+.\.venv\Scripts\python.exe tools/translations.py update
 ```
 
 `extract` regenerates `locale/bttext.pot` in source-file order. `update` merges

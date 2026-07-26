@@ -4,6 +4,10 @@ param(
 
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
+$VirtualEnvironmentDirectory = Join-Path $ProjectRoot ".venv"
+$VirtualEnvironmentPython = Join-Path (
+    $VirtualEnvironmentDirectory
+) "Scripts\python.exe"
 $BuildDirectory = Join-Path $ProjectRoot "build"
 $ExpectedBuildDirectory = [IO.Path]::GetFullPath(
     (Join-Path $ProjectRoot "build")
@@ -21,27 +25,46 @@ $DistributionDirectory = Join-Path $TemporaryRoot "dist"
 
 Push-Location $ProjectRoot
 try {
+    if (-not (Test-Path -LiteralPath $VirtualEnvironmentPython -PathType Leaf)) {
+        if (Test-Path -LiteralPath $VirtualEnvironmentDirectory) {
+            throw "The .venv directory is incomplete. Remove or repair it."
+        }
+        Write-Host "Creating project virtual environment..."
+        & $Python -m venv $VirtualEnvironmentDirectory
+        if ($LASTEXITCODE -ne 0) {
+            throw "Virtual environment creation failed: $LASTEXITCODE."
+        }
+    }
+
+    Write-Host "Installing build dependencies in .venv..."
+    & $VirtualEnvironmentPython -m pip install `
+        --disable-pip-version-check `
+        -r requirements-dev.txt
+    if ($LASTEXITCODE -ne 0) {
+        throw "Dependency installation failed with exit code $LASTEXITCODE."
+    }
+
     Write-Host "Validating translation sources..."
-    & $Python tools/translations.py check
+    & $VirtualEnvironmentPython tools/translations.py check
     if ($LASTEXITCODE -ne 0) {
         throw "Translation validation failed with exit code $LASTEXITCODE."
     }
 
     Write-Host "Compiling runtime translation catalogs..."
-    & $Python tools/translations.py compile
+    & $VirtualEnvironmentPython tools/translations.py compile
     if ($LASTEXITCODE -ne 0) {
         throw "Translation compilation failed with exit code $LASTEXITCODE."
     }
 
     Write-Host "Running tests..."
-    & $Python -m unittest discover -s tests -v
+    & $VirtualEnvironmentPython -m unittest discover -s tests -v
     if ($LASTEXITCODE -ne 0) {
         throw "Tests failed with exit code $LASTEXITCODE."
     }
 
     Write-Host "Creating portable Windows application..."
     New-Item -ItemType Directory -Path $TemporaryRoot | Out-Null
-    & $Python -m PyInstaller `
+    & $VirtualEnvironmentPython -m PyInstaller `
         --noconfirm `
         --clean `
         --workpath $WorkDirectory `
@@ -68,7 +91,9 @@ try {
         throw "The application bundle contains forbidden user data: $Paths"
     }
 
-    $Version = (& $Python -c "import info; print(info.version)").Trim()
+    $Version = (
+        & $VirtualEnvironmentPython -c "import info; print(info.version)"
+    ).Trim()
     if ($LASTEXITCODE -ne 0 -or -not $Version) {
         throw "The application version could not be read from info.py."
     }
