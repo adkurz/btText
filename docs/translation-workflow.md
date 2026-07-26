@@ -280,11 +280,19 @@ The repository provides a PowerShell build script:
 .\build.ps1
 ```
 
-It performs the required build checks in order:
+It performs the required checks and packaging steps in order:
 
 1. validates POT and PO sources;
 2. compiles all runtime MO catalogs;
-3. runs the complete test suite.
+3. runs the complete test suite;
+4. creates a portable, windowed PyInstaller application;
+5. writes `build/btText-<version>-windows.zip`.
+
+The archive contains `btText.exe`, its runtime dependencies, the application
+icon, and compiled translation catalogs. It deliberately does not contain
+`data.db`, `settings.ini`, or `settings.ini.tmp`. The application creates its
+database beside the executable on first start and creates the settings file
+only after settings are saved.
 
 To use a specific Python executable:
 
@@ -293,7 +301,7 @@ To use a specific Python executable:
 ```
 
 The script must succeed before submitting a translation. Generated MO files
-remain ignored and must not be added to Git.
+and the complete `build` directory remain ignored and must not be added to Git.
 
 ## 7. Update catalogs after source changes
 

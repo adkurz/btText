@@ -93,7 +93,7 @@ class TranslationMarkersTestCase(unittest.TestCase):
             {
                 "Exit",
                 "Show snippets",
-                "{app_name} - {app_version}",
+                "{app_name} {app_version}",
             },
             get_marked_arguments("ui/tray_icon.py"),
         )
