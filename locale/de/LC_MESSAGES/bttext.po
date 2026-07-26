@@ -312,37 +312,37 @@ msgstr "Keine Kategorien"
 #. the root level. Keep Ctrl+N after "\t".
 #: ui/category_tree.py:169
 msgid "New top-level category\tCtrl+N"
-msgstr "Neue Hauptkategorie\tStrg+N"
+msgstr "Neue Hauptkategorie\tCtrl+N"
 
 #. Translators: Category-tree menu command that creates a child of
 #. the selected category. Keep Ctrl+Shift+N after "\t".
 #: ui/category_tree.py:178
 msgid "New subcategory\tCtrl+Shift+N"
-msgstr "Neue Unterkategorie\tStrg+Umschalt+N"
+msgstr "Neue Unterkategorie\tCtrl+Shift+N"
 
 #. Translators: Category-tree menu command that pastes a copied or cut
 #. category at the root level. Keep Ctrl+Shift+V after "\t".
 #: ui/category_tree.py:189
 msgid "Paste as top-level\tCtrl+Shift+V"
-msgstr "Auf oberster Ebene einfügen\tStrg+Umschalt+V"
+msgstr "Auf oberster Ebene einfügen\tCtrl+Shift+V"
 
 #. Translators: Category-tree menu command that copies the selected
 #. category and its contents. Keep Ctrl+C after "\t".
 #: ui/category_tree.py:197
 msgid "Copy\tCtrl+C"
-msgstr "Kopieren\tStrg+C"
+msgstr "Kopieren\tCtrl+C"
 
 #. Translators: Category-tree menu command that cuts the selected
 #. category and its contents. Keep Ctrl+X after "\t".
 #: ui/category_tree.py:200
 msgid "Cut\tCtrl+X"
-msgstr "Ausschneiden\tStrg+X"
+msgstr "Ausschneiden\tCtrl+X"
 
 #. Translators: Category-tree menu command that pastes a copied or cut
 #. category into the selected category. Keep Ctrl+V after "\t".
 #: ui/category_tree.py:203
 msgid "Paste into\tCtrl+V"
-msgstr "Hier einfügen\tStrg+V"
+msgstr "Hier einfügen\tCtrl+V"
 
 #. Translators: Category-tree menu command that renames the selected
 #. category. Keep F2 after "\t".
@@ -582,7 +582,7 @@ msgstr "&Suchen...\tF3"
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
 #: ui/main_frame.py:490
 msgid "&Settings...\tCtrl+,"
-msgstr "&Einstellungen...\tStrg+,"
+msgstr "&Einstellungen...\tCtrl+,"
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
@@ -890,7 +890,7 @@ msgstr "Neuer Textbaustein"
 #. cut category into the current category. Keep Ctrl+V after "\t".
 #: ui/snippet_list.py:134
 msgid "Paste into category\tCtrl+V"
-msgstr "In Kategorie einfügen\tStrg+V"
+msgstr "In Kategorie einfügen\tCtrl+V"
 
 #. Translators: Snippet-list menu command that inserts the selected
 #. snippet into the previously active application.
@@ -903,23 +903,23 @@ msgstr "Textbaustein einfügen"
 #. Ctrl+Shift+C after "\t".
 #: ui/snippet_list.py:150
 msgid "Copy text to clipboard\tCtrl+Shift+C"
-msgstr "Text in die Zwischenablage kopieren\tStrg+Umschalt+C"
+msgstr "Text in die Zwischenablage kopieren\tCtrl+Shift+C"
 
 #. Translators: Snippet-list menu command that copies the selected
 #. snippet or snippets. Keep Ctrl+C after "\t".
 #: ui/snippet_list.py:164
 msgid "Copy snippet\tCtrl+C"
 msgid_plural "Copy snippets\tCtrl+C"
-msgstr[0] "Textbaustein kopieren\tStrg+C"
-msgstr[1] "Textbausteine kopieren\tStrg+C"
+msgstr[0] "Textbaustein kopieren\tCtrl+C"
+msgstr[1] "Textbausteine kopieren\tCtrl+C"
 
 #. Translators: Snippet-list menu command that cuts the selected
 #. snippet or snippets. Keep Ctrl+X after "\t".
 #: ui/snippet_list.py:174
 msgid "Cut snippet\tCtrl+X"
 msgid_plural "Cut snippets\tCtrl+X"
-msgstr[0] "Textbaustein ausschneiden\tStrg+X"
-msgstr[1] "Textbausteine ausschneiden\tStrg+X"
+msgstr[0] "Textbaustein ausschneiden\tCtrl+X"
+msgstr[1] "Textbausteine ausschneiden\tCtrl+X"
 
 #. Translators: Snippet-list menu command that deletes the selected
 #. snippet or snippets. The final "Delete" is the keyboard key.
