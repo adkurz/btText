@@ -2,5 +2,10 @@ data.db
 __pycache__/
 *.py[cod]
 *.mo
+.venv/
+venv/
+env/
+ENV/
+build/
 settings.ini
 settings.ini.tmp
