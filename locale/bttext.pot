@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-24 18:36+0200\n"
+"POT-Creation-Date: 2026-07-26 17:05+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -463,8 +463,8 @@ msgstr ""
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
 #: ui/main_frame.py:163 ui/main_frame.py:182 ui/main_frame.py:194
-#: ui/main_frame.py:395 ui/snippet_list.py:353 ui/snippet_list.py:383
-#: ui/snippet_list.py:423
+#: ui/main_frame.py:395 ui/snippet_list.py:394 ui/snippet_list.py:424
+#: ui/snippet_list.py:464
 msgid "Error"
 msgstr ""
 
@@ -522,7 +522,7 @@ msgstr ""
 
 #. Translators: Title of an error inserting a snippet externally.
 #. Translators: Title of an error while pasting copied or cut items.
-#: ui/main_frame.py:384 ui/main_frame.py:416 ui/snippet_list.py:290
+#: ui/main_frame.py:384 ui/main_frame.py:416 ui/snippet_list.py:331
 msgid "Paste error"
 msgstr ""
 
@@ -596,7 +596,7 @@ msgstr ""
 
 #. Translators: Search-results column containing each snippet's name.
 #. Translators: Snippet-list column containing each snippet's name.
-#: ui/search_dialog.py:42 ui/snippet_list.py:35
+#: ui/search_dialog.py:42 ui/snippet_list.py:36
 msgid "Name"
 msgstr ""
 
@@ -607,14 +607,14 @@ msgstr ""
 
 #. Translators: Search-results column containing the snippet's search rank.
 #. Translators: Snippet-list column containing the localized search rank.
-#: ui/search_dialog.py:46 ui/snippet_list.py:37
+#: ui/search_dialog.py:46 ui/snippet_list.py:38
 msgid "Weight"
 msgstr ""
 
 #. Translators: Search-results column showing the beginning of the
 #. snippet text.
 #. Translators: Snippet-list column showing the beginning of its content.
-#: ui/search_dialog.py:50 ui/snippet_list.py:44
+#: ui/search_dialog.py:50 ui/snippet_list.py:45
 msgid "Content preview"
 msgstr ""
 
@@ -791,7 +791,7 @@ msgstr ""
 #. Translators: Window title for changing an existing snippet.
 #. Translators: Snippet-list menu command that opens the selected
 #. snippet in the editor.
-#: ui/snippet_editor.py:27 ui/snippet_list.py:138
+#: ui/snippet_editor.py:27 ui/snippet_list.py:147
 msgid "Edit snippet"
 msgstr ""
 
@@ -832,31 +832,38 @@ msgstr ""
 
 #. Translators: Accessible name for a hidden numeric sort column that
 #. corresponds to the visible snippet weight.
-#: ui/snippet_list.py:40
+#: ui/snippet_list.py:41
 msgid "Weight number"
 msgstr ""
 
 #. Translators: Snippet-list menu command that opens the editor to create
 #. a snippet in the selected category.
-#: ui/snippet_list.py:118
+#: ui/snippet_list.py:119
 msgid "New snippet"
 msgstr ""
 
 #. Translators: Snippet-list menu command that pastes a copied or
 #. cut category into the current category. Keep Ctrl+V after "\t".
-#: ui/snippet_list.py:125
+#: ui/snippet_list.py:126
 msgid "Paste into category\tCtrl+V"
 msgstr ""
 
 #. Translators: Snippet-list menu command that inserts the selected
 #. snippet into the previously active application.
-#: ui/snippet_list.py:134
+#: ui/snippet_list.py:135
 msgid "Insert snippet"
+msgstr ""
+
+#. Translators: Snippet-list menu command that copies the
+#. selected snippet's text to the Windows clipboard. Keep
+#. Ctrl+Shift+C after "\t".
+#: ui/snippet_list.py:142
+msgid "Copy text to clipboard\tCtrl+Shift+C"
 msgstr ""
 
 #. Translators: Snippet-list menu command that copies the selected
 #. snippet or snippets. Keep Ctrl+C after "\t".
-#: ui/snippet_list.py:147
+#: ui/snippet_list.py:156
 msgid "Copy snippet\tCtrl+C"
 msgid_plural "Copy snippets\tCtrl+C"
 msgstr[0] ""
@@ -864,7 +871,7 @@ msgstr[1] ""
 
 #. Translators: Snippet-list menu command that cuts the selected
 #. snippet or snippets. Keep Ctrl+X after "\t".
-#: ui/snippet_list.py:157
+#: ui/snippet_list.py:166
 msgid "Cut snippet\tCtrl+X"
 msgid_plural "Cut snippets\tCtrl+X"
 msgstr[0] ""
@@ -872,15 +879,27 @@ msgstr[1] ""
 
 #. Translators: Snippet-list menu command that deletes the selected
 #. snippet or snippets. The final "Delete" is the keyboard key.
-#: ui/snippet_list.py:177
+#: ui/snippet_list.py:186
 msgid "Delete snippet\tDelete"
 msgid_plural "Delete snippets\tDelete"
 msgstr[0] ""
 msgstr[1] ""
 
+#. Translators: Title of an error copying snippet text to the
+#. Windows clipboard.
+#: ui/snippet_list.py:238
+msgid "Clipboard error"
+msgstr ""
+
+#. Translators: Status after a snippet's text was copied to the Windows
+#. clipboard.
+#: ui/snippet_list.py:245
+msgid "Text copied to clipboard."
+msgstr ""
+
 #. Translators: Status after copying snippets; they are not pasted yet.
 #. {count} is the number copied, and Ctrl+V is the paste shortcut.
-#: ui/snippet_list.py:217
+#: ui/snippet_list.py:258
 #, python-brace-format
 msgid "Copied {count} snippet. Select a category and press Ctrl+V."
 msgid_plural "Copied {count} snippets. Select a category and press Ctrl+V."
@@ -889,7 +908,7 @@ msgstr[1] ""
 
 #. Translators: Status after cutting snippets; they are not moved yet.
 #. {count} is the number cut, and Ctrl+V is the paste shortcut.
-#: ui/snippet_list.py:225
+#: ui/snippet_list.py:266
 #, python-brace-format
 msgid "Cut {count} snippet. Select a category and press Ctrl+V."
 msgid_plural "Cut {count} snippets. Select a category and press Ctrl+V."
@@ -898,19 +917,19 @@ msgstr[1] ""
 
 #. Translators: Explains that the top-level paste command only
 #. accepts a copied or cut category, not snippets.
-#: ui/snippet_list.py:246
+#: ui/snippet_list.py:287
 msgid "Only a category can be pasted as a top-level category."
 msgstr ""
 
 #. Translators: Title of information about pasting a category
 #. at the category-tree root.
-#: ui/snippet_list.py:249
+#: ui/snippet_list.py:290
 msgid "Paste as top-level"
 msgstr ""
 
 #. Translators: Status after a pending copy or cut operation is pasted.
 #. {count} includes all transferred categories and snippets.
-#: ui/snippet_list.py:301
+#: ui/snippet_list.py:342
 #, python-brace-format
 msgid "Transferred {count} item."
 msgid_plural "Transferred {count} items."
@@ -919,19 +938,19 @@ msgstr[1] ""
 
 #. Translators: Confirmation before permanently deleting one snippet.
 #. {name} is the snippet's name.
-#: ui/snippet_list.py:392
+#: ui/snippet_list.py:433
 #, python-brace-format
 msgid "Do you want to delete the snippet '{name}'?"
 msgstr ""
 
 #. Translators: Title of the confirmation for deleting one snippet.
-#: ui/snippet_list.py:395
+#: ui/snippet_list.py:436
 msgid "Delete snippet?"
 msgstr ""
 
 #. Translators: Confirmation before permanently deleting several
 #. selected snippets. {count} is the number selected.
-#: ui/snippet_list.py:400
+#: ui/snippet_list.py:441
 #, python-brace-format
 msgid "Do you want to delete {count} selected snippet?"
 msgid_plural "Do you want to delete {count} selected snippets?"
@@ -939,13 +958,13 @@ msgstr[0] ""
 msgstr[1] ""
 
 #. Translators: Title of the confirmation for deleting multiple snippets.
-#: ui/snippet_list.py:405
+#: ui/snippet_list.py:446
 msgid "Delete snippets?"
 msgstr ""
 
 #. Translators: Status after selected snippets were permanently deleted.
 #. {count} is the number deleted.
-#: ui/snippet_list.py:441
+#: ui/snippet_list.py:482
 #, python-brace-format
 msgid "Deleted {count} snippet."
 msgid_plural "Deleted {count} snippets."

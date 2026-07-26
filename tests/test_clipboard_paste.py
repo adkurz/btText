@@ -148,5 +148,46 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
         self.assertIsNone(copied_format)
 
 
+class CopyTextTestCase(unittest.TestCase):
+    def test_copy_text_replaces_clipboard_with_unicode_text(self):
+        with (
+            patch.object(clipboard_paste, "_open_clipboard") as open_clipboard,
+            patch.object(
+                clipboard_paste.user32,
+                "EmptyClipboard",
+                return_value=True,
+            ) as empty_clipboard,
+            patch.object(clipboard_paste, "_set_clipboard_text") as set_text,
+            patch.object(
+                clipboard_paste.user32,
+                "CloseClipboard",
+            ) as close_clipboard,
+        ):
+            clipboard_paste.copy_text("Text \N{CHECK MARK}")
+
+        open_clipboard.assert_called_once_with()
+        empty_clipboard.assert_called_once_with()
+        set_text.assert_called_once_with("Text \N{CHECK MARK}")
+        close_clipboard.assert_called_once_with()
+
+    def test_copy_text_closes_clipboard_when_clearing_fails(self):
+        with (
+            patch.object(clipboard_paste, "_open_clipboard"),
+            patch.object(
+                clipboard_paste.user32,
+                "EmptyClipboard",
+                return_value=False,
+            ),
+            patch.object(
+                clipboard_paste.user32,
+                "CloseClipboard",
+            ) as close_clipboard,
+        ):
+            with self.assertRaises(clipboard_paste.PasteError):
+                clipboard_paste.copy_text("Text")
+
+        close_clipboard.assert_called_once_with()
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -3,6 +3,7 @@
 import pymitter
 import wx
 
+import clipboard_paste
 import datamodel
 from error_messages import format_user_error
 from i18n import _, ngettext
@@ -133,6 +134,14 @@ class SnippetList(wx.ListView):
                 # snippet into the previously active application.
                 insert_snippet = menu.Append(wx.ID_ANY, _("Insert snippet"))
                 menu.Bind(wx.EVT_MENU, self.insert_snippet, insert_snippet)
+                copy_text = menu.Append(
+                    wx.ID_ANY,
+                    # Translators: Snippet-list menu command that copies the
+                    # selected snippet's text to the Windows clipboard. Keep
+                    # Ctrl+Shift+C after "\t".
+                    _("Copy text to clipboard\tCtrl+Shift+C"),
+                )
+                menu.Bind(wx.EVT_MENU, self.copy_text_to_clipboard, copy_text)
                 # Translators: Snippet-list menu command that opens the selected
                 # snippet in the editor.
                 edit_snippet = menu.Append(wx.ID_ANY, _("Edit snippet"))
@@ -185,7 +194,13 @@ class SnippetList(wx.ListView):
     def key_handler(self, event: wx.KeyEvent):
         """Map keyboard shortcuts to snippet operations."""
         key = event.GetKeyCode()
-        if event.ControlDown() and key in (ord("C"), 3, ord("X"), 24):
+        if (
+            event.ControlDown()
+            and event.ShiftDown()
+            and key in (ord("C"), 3)
+        ):
+            self.copy_text_to_clipboard(event)
+        elif event.ControlDown() and key in (ord("C"), 3, ord("X"), 24):
             self.copy_or_cut(key in (ord("C"), 3))
         elif event.ControlDown() and key in (ord("A"), 1):
             for index in range(self.GetItemCount()):
@@ -202,6 +217,32 @@ class SnippetList(wx.ListView):
             self.delete_snippet(event)
         else:
             event.Skip()
+
+    def copy_text_to_clipboard(
+        self,
+        event: wx.CommandEvent | wx.KeyEvent,
+    ):
+        """Copy the single selected snippet's content to the Windows clipboard."""
+        snippet_ids = self.get_selected_ids()
+        if len(snippet_ids) != 1:
+            wx.Bell()
+            return
+        try:
+            snippet = self._model.get_snippet(snippet_ids[0])
+            clipboard_paste.copy_text(snippet.content)
+        except (datamodel.DataModelError, clipboard_paste.PasteError) as error:
+            wx.MessageBox(
+                format_user_error(error),
+                # Translators: Title of an error copying snippet text to the
+                # Windows clipboard.
+                _("Clipboard error"),
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return
+        # Translators: Status after a snippet's text was copied to the Windows
+        # clipboard.
+        self._ee.emit("status.changed", _("Text copied to clipboard."))
 
     def copy_or_cut(self, copy: bool):
         """Place all selected snippets in the local transfer buffer."""

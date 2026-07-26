@@ -444,6 +444,17 @@ def _set_clipboard_text(text: str) -> None:
     _set_clipboard_data(CF_UNICODETEXT, (text + "\0").encode("utf-16-le"))
 
 
+def copy_text(text: str) -> None:
+    """Replace the Windows clipboard contents with Unicode text."""
+    _open_clipboard()
+    try:
+        if not user32.EmptyClipboard():
+            raise PasteError("The clipboard could not be cleared.")
+        _set_clipboard_text(text)
+    finally:
+        user32.CloseClipboard()
+
+
 def _replace_clipboard(text: str, marker: bytes) -> _ClipboardSnapshot:
     """Save the clipboard and replace it with marked snippet text."""
     snapshot = _ClipboardSnapshot.capture()
