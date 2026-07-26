@@ -1,215 +1,219 @@
+"""Enforce translation markers at user-visible wxPython text boundaries."""
+
 import ast
 import unittest
+from dataclasses import dataclass
 from pathlib import Path
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
+MARKER_NAMES = frozenset({"_", "ngettext", "pgettext"})
 
 
-def get_marked_arguments(
-    relative_file,
-    function_name="_",
-    argument_positions=(0,),
-):
-    source_file = PROJECT_ROOT / relative_file
-    tree = ast.parse(source_file.read_text(encoding="utf-8"))
-    arguments = set()
-    for node in ast.walk(tree):
-        if not (
+@dataclass(frozen=True)
+class TextArguments:
+    """Describe positional and named user-visible arguments of a call."""
+
+    positions: tuple[int, ...] = ()
+    keywords: tuple[str, ...] = ()
+
+
+# These rules are intentionally about stable APIs rather than current messages.
+# Adding a new message to an existing UI call therefore needs no test change.
+TEXT_ARGUMENTS_BY_CALL = {
+    "AddPage": TextArguments((1,)),
+    "AddRoot": TextArguments((0,)),
+    "Append": TextArguments((1,)),
+    "AppendColumn": TextArguments((0,)),
+    "Button": TextArguments((2,), ("label",)),
+    "CheckBox": TextArguments((2,), ("label",)),
+    "Dialog": TextArguments((1,), ("title",)),
+    "MessageBox": TextArguments((0, 1), ("message", "caption")),
+    "MessageDialog": TextArguments((1, 2), ("message", "caption")),
+    "RadioBox": TextArguments((2, 5), ("label", "choices")),
+    "SetLabel": TextArguments((0,)),
+    "SetName": TextArguments((0,)),
+    "SetStatusText": TextArguments((0,)),
+    "StaticText": TextArguments((1,), ("label",)),
+    "TextEntryDialog": TextArguments((1, 2), ("message", "caption")),
+}
+
+
+def _call_name(node):
+    """Return the final component of a called function or method name."""
+    if isinstance(node, ast.Name):
+        return node.id
+    if isinstance(node, ast.Attribute):
+        return node.attr
+    return None
+
+
+def _unmarked_literals(expression):
+    """Return string literals not enclosed by a translation marker."""
+    unmarked = []
+
+    def visit(node, inside_marker=False):
+        if isinstance(node, ast.Constant) and isinstance(node.value, str):
+            if node.value and not inside_marker:
+                unmarked.append(node)
+            return
+
+        marker_call = (
             isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Name)
-            and node.func.id == function_name
-            and len(node.args) > max(argument_positions)
-        ):
-            continue
-        values = tuple(
-            node.args[position].value
-            for position in argument_positions
-            if (
-                isinstance(node.args[position], ast.Constant)
-                and isinstance(node.args[position].value, str)
-            )
+            and _call_name(node.func) in MARKER_NAMES
         )
-        if len(values) != len(argument_positions):
-            continue
-        arguments.add(values[0] if len(values) == 1 else values)
-    return arguments
+        for child in ast.iter_child_nodes(node):
+            visit(child, inside_marker or marker_call)
+
+    visit(expression)
+    return unmarked
+
+
+def _scope_nodes(scope):
+    """Yield nodes belonging to ``scope`` without entering nested scopes."""
+    nested_scope_types = (
+        ast.AsyncFunctionDef,
+        ast.ClassDef,
+        ast.FunctionDef,
+        ast.Lambda,
+    )
+    pending = list(ast.iter_child_nodes(scope))
+    while pending:
+        node = pending.pop()
+        yield node
+        if not isinstance(node, nested_scope_types):
+            pending.extend(ast.iter_child_nodes(node))
+
+
+def _assignments_by_name(scope):
+    """Collect simple local assignments that can later feed a UI call."""
+    assignments = {}
+    for node in _scope_nodes(scope):
+        targets_and_value = ()
+        if isinstance(node, (ast.Assign, ast.NamedExpr)):
+            targets = node.targets if isinstance(node, ast.Assign) else (node.target,)
+            targets_and_value = ((target, node.value) for target in targets)
+        elif isinstance(node, ast.AnnAssign) and node.value is not None:
+            targets_and_value = ((node.target, node.value),)
+
+        for target, value in targets_and_value:
+            if isinstance(target, ast.Name):
+                assignments.setdefault(target.id, []).append(value)
+    return assignments
+
+
+def _argument_expressions(argument, assignments, resolving=()):
+    """Yield an argument and simple local values from which it can originate."""
+    yield argument
+    if not isinstance(argument, ast.Name) or argument.id in resolving:
+        return
+    for value in assignments.get(argument.id, ()):
+        yield from _argument_expressions(
+            value,
+            assignments,
+            resolving + (argument.id,),
+        )
+
+
+def find_unmarked_ui_strings(source, filename="<unknown>"):
+    """Find literal UI arguments that bypass gettext marker functions."""
+    tree = ast.parse(source, filename=filename)
+    violations = []
+    scopes = [tree]
+    scopes.extend(
+        node
+        for node in ast.walk(tree)
+        if isinstance(
+            node,
+            (ast.AsyncFunctionDef, ast.ClassDef, ast.FunctionDef, ast.Lambda),
+        )
+    )
+    for scope in scopes:
+        assignments = _assignments_by_name(scope)
+        for node in _scope_nodes(scope):
+            if not isinstance(node, ast.Call):
+                continue
+            rule = TEXT_ARGUMENTS_BY_CALL.get(_call_name(node.func))
+            if rule is None:
+                continue
+
+            arguments = [
+                node.args[position]
+                for position in rule.positions
+                if position < len(node.args)
+            ]
+            arguments.extend(
+                keyword.value
+                for keyword in node.keywords
+                if keyword.arg in rule.keywords
+            )
+            for argument in arguments:
+                for expression in _argument_expressions(argument, assignments):
+                    violations.extend(
+                        (literal.lineno, literal.value)
+                        for literal in _unmarked_literals(expression)
+                    )
+    return violations
+
+
+def production_python_files():
+    """Return application Python files covered by the marker audit."""
+    excluded_directories = {
+        ".git",
+        ".venv",
+        "__pycache__",
+        "build",
+        "tests",
+        "tools",
+    }
+    return tuple(
+        source_file
+        for source_file in sorted(PROJECT_ROOT.rglob("*.py"))
+        if not excluded_directories.intersection(
+            source_file.relative_to(PROJECT_ROOT).parts
+        )
+    )
 
 
 class TranslationMarkersTestCase(unittest.TestCase):
-    def test_application_startup_dialog_is_marked(self):
-        self.assertLessEqual(
-            {"Settings error", "Language error"},
-            get_marked_arguments("btText.py"),
-        )
-
-    def test_main_window_labels_menus_and_dialogs_are_marked(self):
-        expected_messages = {
-            "&Categories",
-            "&Edit",
-            "&Help",
-            "&Search...\tF3",
-            "&Settings...\tCtrl+,",
-            "&Snippets",
-            "About",
-            "Categories",
-            "Clipboard restore error",
-            "Error",
-            "F3: Search snippets    Enter: Insert selected snippet",
-            "Hotkey error",
-            "Paste error",
-            "Settings error",
-            "Snippets in the selected category",
-            "The category of the selected snippet no longer exists.",
-            "The global hotkey {} is already in use and could not be registered.",
-            (
-                "The previous clipboard contents could not be restored after "
-                "multiple attempts. The clipboard may still contain the "
-                "inserted snippet.\n\n{}"
-            ),
-            (
-                "The previous hotkey could not be restored. No global hotkey "
-                "is active."
-            ),
-            (
-                "The selected hotkey {} is already in use and the previous "
-                "hotkey could not be restored. No global hotkey is active."
-            ),
-            (
-                "The selected hotkey {} is already in use. The previous "
-                "hotkey has been restored."
-            ),
-            "The selected snippet no longer exists.",
-            "There is no previous window to insert the snippet into.",
-        }
-
-        self.assertLessEqual(
-            expected_messages,
-            get_marked_arguments("ui/main_frame.py"),
-        )
-
-    def test_tray_tooltip_and_commands_are_marked(self):
-        self.assertLessEqual(
-            {
-                "Exit",
-                "Show snippets",
-                "{app_name} {app_version}",
-            },
-            get_marked_arguments("ui/tray_icon.py"),
-        )
-
-    def test_category_tree_commands_and_dialogs_are_marked(self):
-        self.assertLessEqual(
-            {
-                "No categories",
-                "New top-level category\tCtrl+N",
-                "Paste as top-level\tCtrl+Shift+V",
-                "Enter the name of the new category",
-                "Enter the name of the new subcategory of '{parent_name}'",
-                "Add subcategory",
-                "Enter the new name of the subcategory of '{parent_name}'",
-                "Rename subcategory",
-                "Delete category",
-                "A snippet must be pasted into a category.",
-                "Category error",
-            },
-            get_marked_arguments("ui/category_tree.py"),
-        )
-
-    def test_snippet_list_uses_plural_aware_messages(self):
-        plural_messages = get_marked_arguments(
-            "ui/snippet_list.py",
-            "ngettext",
-            (0, 1),
-        )
-
-        self.assertIn(
-            ("Copy snippet\tCtrl+C", "Copy snippets\tCtrl+C"),
-            plural_messages,
-        )
-        self.assertIn(
-            (
-                "Deleted {count} snippet.",
-                "Deleted {count} snippets.",
-            ),
-            plural_messages,
-        )
-        self.assertIn(
-            (
-                "Transferred {count} item.",
-                "Transferred {count} items.",
-            ),
-            plural_messages,
-        )
-
-    def test_editors_search_and_settings_are_marked(self):
-        expected_by_file = {
-            "ui/snippet_editor.py": {
-                "Add snippet",
-                "Edit snippet",
-                "&Name",
-                "&Category",
-                "&Weight",
-                "C&ontent",
-                "Validation error",
-            },
-            "ui/search_dialog.py": {
-                "Search snippets",
-                "&Search",
-                "Search &results",
-                "&Show snippet",
-                "Search error",
-            },
-            "ui/settings_dialog.py": {
-                "Settings",
-                "&General",
-                "&Keyboard",
-                "&Language",
-                "Current &hotkey",
-                "&Record new shortcut",
-                "Language changes take effect after restarting btText.",
-                (
-                    "Include copied snippet &text in the Windows clipboard "
-                    "history"
-                ),
-                (
-                    "Allow copied snippet text to be stored in the Windows "
-                    "&cloud"
-                ),
-                "Recording is not active.",
-                "Shortcut recording cancelled.",
-                "The settings have been applied.",
-            },
-            "i18n.py": {
-                "System default",
-            },
-            "ui/validators.py": {
-                "The input field must not be empty!",
-                "Validation error",
-            },
-            "error_messages.py": {
-                (
-                    "The translation catalog for {language} could not be "
-                    "loaded. btText will continue in English.\n\n{reason}"
-                ),
-            },
-        }
-        for relative_file, expected_messages in expected_by_file.items():
-            with self.subTest(relative_file=relative_file):
-                self.assertLessEqual(
-                    expected_messages,
-                    get_marked_arguments(relative_file),
+    def test_user_visible_literal_arguments_are_marked(self):
+        violations = []
+        for source_file in production_python_files():
+            relative_file = source_file.relative_to(PROJECT_ROOT)
+            violations.extend(
+                "{}:{}: {!r}".format(relative_file, line_number, message)
+                for line_number, message in find_unmarked_ui_strings(
+                    source_file.read_text(encoding="utf-8"),
+                    str(relative_file),
                 )
+            )
 
-    def test_weight_labels_use_translation_context(self):
         self.assertEqual(
-            get_marked_arguments("ui/utils.py", "pgettext", (0, 1)),
-            {
-                ("snippet weight", "Low"),
-                ("snippet weight", "Middle"),
-                ("snippet weight", "High"),
-            },
+            violations,
+            [],
+            "User-visible string literals must use _(), ngettext(), or "
+            "pgettext():\n{}".format("\n".join(violations)),
         )
+
+    def test_a_raw_ui_string_is_rejected(self):
+        source = """
+message = "Could not save"
+wx.MessageBox(message, _("Save error"))
+"""
+
+        self.assertEqual(
+            find_unmarked_ui_strings(source),
+            [(2, "Could not save")],
+        )
+
+    def test_all_supported_markers_are_accepted(self):
+        source = """
+menu.Append(1, _("Open"))
+control.SetLabel(ngettext("item", "items", count))
+wx.StaticText(parent, label=pgettext("status", "Ready"))
+"""
+
+        self.assertEqual(find_unmarked_ui_strings(source), [])
 
 
 if __name__ == "__main__":
