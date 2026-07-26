@@ -115,6 +115,7 @@ class SettingsStoreTestCase(unittest.TestCase):
                 toggle_window_hotkey=Hotkey.parse("CTRL+ALT+F8"),
                 language="de",
                 include_copied_text_in_clipboard_history=False,
+                allow_copied_text_cloud_upload=False,
             )
 
             store.save(settings)
@@ -132,6 +133,10 @@ class SettingsStoreTestCase(unittest.TestCase):
                 "include_copied_text_in_clipboard_history = False",
                 settings_file.read_text(encoding="utf-8"),
             )
+            self.assertIn(
+                "allow_copied_text_cloud_upload = False",
+                settings_file.read_text(encoding="utf-8"),
+            )
 
     def test_language_defaults_to_system(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -145,6 +150,7 @@ class SettingsStoreTestCase(unittest.TestCase):
 
             self.assertEqual(settings.language, "system")
             self.assertTrue(settings.include_copied_text_in_clipboard_history)
+            self.assertTrue(settings.allow_copied_text_cloud_upload)
 
     def test_language_is_normalized(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

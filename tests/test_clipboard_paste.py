@@ -210,6 +210,28 @@ class CopyTextTestCase(unittest.TestCase):
             b"\0\0\0\0",
         )
 
+    def test_copy_text_can_be_excluded_from_cloud_clipboard(self):
+        with (
+            patch.object(clipboard_paste, "_open_clipboard"),
+            patch.object(
+                clipboard_paste.user32,
+                "EmptyClipboard",
+                return_value=True,
+            ),
+            patch.object(clipboard_paste, "_set_clipboard_text"),
+            patch.object(
+                clipboard_paste,
+                "_set_clipboard_data",
+            ) as set_clipboard_data,
+            patch.object(clipboard_paste.user32, "CloseClipboard"),
+        ):
+            clipboard_paste.copy_text("Private", allow_cloud_upload=False)
+
+        set_clipboard_data.assert_called_once_with(
+            clipboard_paste._CLOUD_CLIPBOARD_FORMAT,
+            b"\0\0\0\0",
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

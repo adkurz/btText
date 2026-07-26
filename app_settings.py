@@ -239,6 +239,7 @@ class AppSettings:
     toggle_window_hotkey: Hotkey = DEFAULT_TOGGLE_HOTKEY
     language: str = i18n.SYSTEM_LANGUAGE
     include_copied_text_in_clipboard_history: bool = True
+    allow_copied_text_cloud_upload: bool = True
 
 
 class SettingsStore:
@@ -279,12 +280,18 @@ class SettingsStore:
                 "include_copied_text_in_clipboard_history",
                 fallback=True,
             )
+            allow_copied_text_cloud_upload = parser.getboolean(
+                "general",
+                "allow_copied_text_cloud_upload",
+                fallback=True,
+            )
             return AppSettings(
                 toggle_window_hotkey=Hotkey.parse(value),
                 language=language,
                 include_copied_text_in_clipboard_history=(
                     include_copied_text_in_clipboard_history
                 ),
+                allow_copied_text_cloud_upload=allow_copied_text_cloud_upload,
             )
         except (ConfigParserError, OSError, ValueError) as error:
             raise SettingsError(
@@ -309,6 +316,9 @@ class SettingsStore:
                 ),
                 "include_copied_text_in_clipboard_history": str(
                     settings.include_copied_text_in_clipboard_history
+                ),
+                "allow_copied_text_cloud_upload": str(
+                    settings.allow_copied_text_cloud_upload
                 ),
             }
             parser["hotkeys"] = {

@@ -164,9 +164,17 @@ class TranslationMarkersTestCase(unittest.TestCase):
                 "Current &hotkey",
                 "&Record new shortcut",
                 "Language changes take effect after restarting btText.",
+                (
+                    "Include copied snippet &text in the Windows clipboard "
+                    "history"
+                ),
+                (
+                    "Allow copied snippet text to be stored in the Windows "
+                    "&cloud"
+                ),
                 "Recording is not active.",
                 "Shortcut recording cancelled.",
-                "The shortcut has been applied.",
+                "The settings have been applied.",
             },
             "i18n.py": {
                 "System default",

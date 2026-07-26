@@ -84,6 +84,7 @@ class MainFrame(sc.SizedFrame):
             model,
             self.transfer_buffer,
             lambda: self._settings.include_copied_text_in_clipboard_history,
+            lambda: self._settings.allow_copied_text_cloud_upload,
         )
         # Translators: Accessible name for the main window list showing snippets
         # from the selected category.
@@ -268,6 +269,7 @@ class MainFrame(sc.SizedFrame):
         hotkey: Hotkey,
         language: str,
         include_copied_text_in_clipboard_history: bool,
+        allow_copied_text_cloud_upload: bool,
     ) -> bool:
         """Apply and persist settings, rolling the hotkey back on failure."""
         # Register before saving so an unusable shortcut is never persisted.
@@ -310,6 +312,7 @@ class MainFrame(sc.SizedFrame):
             include_copied_text_in_clipboard_history=(
                 include_copied_text_in_clipboard_history
             ),
+            allow_copied_text_cloud_upload=allow_copied_text_cloud_upload,
         )
         try:
             self._settings_store.save(new_settings)
@@ -512,6 +515,7 @@ class MainFrame(sc.SizedFrame):
                 self._settings.toggle_window_hotkey,
                 self._settings.language,
                 self._settings.include_copied_text_in_clipboard_history,
+                self._settings.allow_copied_text_cloud_upload,
                 available_languages,
                 self._change_settings,
                 self._suspend_hotkey,

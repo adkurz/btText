@@ -25,6 +25,7 @@ class SnippetList(wx.ListView):
         model: datamodel.DataModel,
         transfer_buffer: TransferBuffer,
         include_copied_text_in_clipboard_history: Callable[[], bool],
+        allow_copied_text_cloud_upload: Callable[[], bool],
     ):
         """Build columns, commands, and model-event subscriptions."""
         super().__init__(
@@ -37,6 +38,7 @@ class SnippetList(wx.ListView):
         self._include_copied_text_in_clipboard_history = (
             include_copied_text_in_clipboard_history
         )
+        self._allow_copied_text_cloud_upload = allow_copied_text_cloud_upload
         self.selected_category_id = None
         # Translators: Snippet-list column containing each snippet's name.
         self.AppendColumn(_("Name"), width=self.FromDIP(220))
@@ -240,6 +242,7 @@ class SnippetList(wx.ListView):
                 include_in_history=(
                     self._include_copied_text_in_clipboard_history()
                 ),
+                allow_cloud_upload=self._allow_copied_text_cloud_upload(),
             )
         except (datamodel.DataModelError, clipboard_paste.PasteError) as error:
             wx.MessageBox(

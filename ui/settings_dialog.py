@@ -29,8 +29,9 @@ class SettingsDialog(wx.Dialog):
         current_hotkey: Hotkey,
         current_language: str,
         include_copied_text_in_clipboard_history: bool,
+        allow_copied_text_cloud_upload: bool,
         available_languages: tuple[str, ...],
-        apply_settings: Callable[[Hotkey, str, bool], bool],
+        apply_settings: Callable[[Hotkey, str, bool, bool], bool],
         begin_recording: Callable[[], None],
         end_recording: Callable[[], None],
     ):
@@ -50,6 +51,12 @@ class SettingsDialog(wx.Dialog):
         )
         self._candidate_include_copied_text_in_clipboard_history = (
             include_copied_text_in_clipboard_history
+        )
+        self._current_allow_copied_text_cloud_upload = (
+            allow_copied_text_cloud_upload
+        )
+        self._candidate_allow_copied_text_cloud_upload = (
+            allow_copied_text_cloud_upload
         )
         self._available_languages = available_languages
         self._apply_settings = apply_settings
@@ -148,6 +155,22 @@ class SettingsDialog(wx.Dialog):
             wx.EVT_CHECKBOX,
             self._on_clipboard_history_changed,
         )
+        self.cloud_clipboard_checkbox = wx.CheckBox(
+            page,
+            # Translators: General setting that controls whether copied snippet
+            # text may be synchronized through the Windows cloud clipboard.
+            # "&" marks the keyboard mnemonic.
+            label=_(
+                "Allow copied snippet text to be stored in the Windows &cloud"
+            ),
+        )
+        self.cloud_clipboard_checkbox.SetValue(
+            self._candidate_allow_copied_text_cloud_upload
+        )
+        self.cloud_clipboard_checkbox.Bind(
+            wx.EVT_CHECKBOX,
+            self._on_cloud_clipboard_changed,
+        )
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(language_label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 12)
@@ -169,6 +192,12 @@ class SettingsDialog(wx.Dialog):
             wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
             12,
         )
+        sizer.Add(
+            self.cloud_clipboard_checkbox,
+            0,
+            wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            12,
+        )
         page.SetSizer(sizer)
         return page
 
@@ -186,6 +215,13 @@ class SettingsDialog(wx.Dialog):
         )
         self._update_apply_button()
 
+    def _on_cloud_clipboard_changed(self, event: wx.CommandEvent):
+        """Store whether copied snippet text may enter the cloud clipboard."""
+        self._candidate_allow_copied_text_cloud_upload = (
+            self.cloud_clipboard_checkbox.GetValue()
+        )
+        self._update_apply_button()
+
     def _update_apply_button(self):
         """Enable Apply whenever either setting differs from its saved value."""
         self.apply_button.Enable(
@@ -193,6 +229,8 @@ class SettingsDialog(wx.Dialog):
             or self._candidate_language != self._current_language
             or self._candidate_include_copied_text_in_clipboard_history
             != self._current_include_copied_text_in_clipboard_history
+            or self._candidate_allow_copied_text_cloud_upload
+            != self._current_allow_copied_text_cloud_upload
         )
 
     def _create_hotkey_page(self, notebook: wx.Notebook) -> wx.Panel:
@@ -531,18 +569,24 @@ class SettingsDialog(wx.Dialog):
             and self._candidate_language == self._current_language
             and self._candidate_include_copied_text_in_clipboard_history
             == self._current_include_copied_text_in_clipboard_history
+            and self._candidate_allow_copied_text_cloud_upload
+            == self._current_allow_copied_text_cloud_upload
         ):
             return True
         if not self._apply_settings(
             self._candidate_hotkey,
             self._candidate_language,
             self._candidate_include_copied_text_in_clipboard_history,
+            self._candidate_allow_copied_text_cloud_upload,
         ):
             return False
         self._current_hotkey = self._candidate_hotkey
         self._current_language = self._candidate_language
         self._current_include_copied_text_in_clipboard_history = (
             self._candidate_include_copied_text_in_clipboard_history
+        )
+        self._current_allow_copied_text_cloud_upload = (
+            self._candidate_allow_copied_text_cloud_upload
         )
         self.apply_button.Enable(False)
         # Translators: Status confirming that all pending application settings

@@ -150,6 +150,11 @@ _CLIPBOARD_HISTORY_FORMAT = user32.RegisterClipboardFormatW(
 )
 if not _CLIPBOARD_HISTORY_FORMAT:
     raise ctypes.WinError(ctypes.get_last_error())
+_CLOUD_CLIPBOARD_FORMAT = user32.RegisterClipboardFormatW(
+    "CanUploadToCloudClipboard"
+)
+if not _CLOUD_CLIPBOARD_FORMAT:
+    raise ctypes.WinError(ctypes.get_last_error())
 
 
 class METAFILEPICT(ctypes.Structure):
@@ -449,8 +454,12 @@ def _set_clipboard_text(text: str) -> None:
     _set_clipboard_data(CF_UNICODETEXT, (text + "\0").encode("utf-16-le"))
 
 
-def copy_text(text: str, include_in_history: bool = True) -> None:
-    """Replace the clipboard with text and optionally exclude it from history."""
+def copy_text(
+    text: str,
+    include_in_history: bool = True,
+    allow_cloud_upload: bool = True,
+) -> None:
+    """Copy text with independent history and cloud-upload controls."""
     _open_clipboard()
     try:
         if not user32.EmptyClipboard():
@@ -460,6 +469,10 @@ def copy_text(text: str, include_in_history: bool = True) -> None:
             # Windows recognizes a serialized DWORD of zero in this registered
             # format as a request to omit the item from clipboard history.
             _set_clipboard_data(_CLIPBOARD_HISTORY_FORMAT, b"\0\0\0\0")
+        if not allow_cloud_upload:
+            # This registered format controls cross-device synchronization
+            # independently from the local clipboard-history setting.
+            _set_clipboard_data(_CLOUD_CLIPBOARD_FORMAT, b"\0\0\0\0")
     finally:
         user32.CloseClipboard()
 
