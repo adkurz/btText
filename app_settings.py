@@ -238,6 +238,7 @@ class AppSettings:
     """Immutable collection of user-configurable application settings."""
     toggle_window_hotkey: Hotkey = DEFAULT_TOGGLE_HOTKEY
     language: str = i18n.SYSTEM_LANGUAGE
+    include_copied_text_in_clipboard_history: bool = True
 
 
 class SettingsStore:
@@ -273,9 +274,17 @@ class SettingsStore:
                 ),
                 self.locale_directory,
             )
+            include_copied_text_in_clipboard_history = parser.getboolean(
+                "general",
+                "include_copied_text_in_clipboard_history",
+                fallback=True,
+            )
             return AppSettings(
                 toggle_window_hotkey=Hotkey.parse(value),
                 language=language,
+                include_copied_text_in_clipboard_history=(
+                    include_copied_text_in_clipboard_history
+                ),
             )
         except (ConfigParserError, OSError, ValueError) as error:
             raise SettingsError(
@@ -297,6 +306,9 @@ class SettingsStore:
                 "language": i18n.validate_language(
                     settings.language,
                     self.locale_directory,
+                ),
+                "include_copied_text_in_clipboard_history": str(
+                    settings.include_copied_text_in_clipboard_history
                 ),
             }
             parser["hotkeys"] = {

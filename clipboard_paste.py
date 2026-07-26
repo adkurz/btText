@@ -145,6 +145,11 @@ user32.SendInput.restype = wintypes.UINT
 _MARKER_FORMAT = user32.RegisterClipboardFormatW("BTText.PasteMarker")
 if not _MARKER_FORMAT:
     raise ctypes.WinError(ctypes.get_last_error())
+_CLIPBOARD_HISTORY_FORMAT = user32.RegisterClipboardFormatW(
+    "CanIncludeInClipboardHistory"
+)
+if not _CLIPBOARD_HISTORY_FORMAT:
+    raise ctypes.WinError(ctypes.get_last_error())
 
 
 class METAFILEPICT(ctypes.Structure):
@@ -444,13 +449,17 @@ def _set_clipboard_text(text: str) -> None:
     _set_clipboard_data(CF_UNICODETEXT, (text + "\0").encode("utf-16-le"))
 
 
-def copy_text(text: str) -> None:
-    """Replace the Windows clipboard contents with Unicode text."""
+def copy_text(text: str, include_in_history: bool = True) -> None:
+    """Replace the clipboard with text and optionally exclude it from history."""
     _open_clipboard()
     try:
         if not user32.EmptyClipboard():
             raise PasteError("The clipboard could not be cleared.")
         _set_clipboard_text(text)
+        if not include_in_history:
+            # Windows recognizes a serialized DWORD of zero in this registered
+            # format as a request to omit the item from clipboard history.
+            _set_clipboard_data(_CLIPBOARD_HISTORY_FORMAT, b"\0\0\0\0")
     finally:
         user32.CloseClipboard()
 

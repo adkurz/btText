@@ -114,6 +114,7 @@ class SettingsStoreTestCase(unittest.TestCase):
             settings = AppSettings(
                 toggle_window_hotkey=Hotkey.parse("CTRL+ALT+F8"),
                 language="de",
+                include_copied_text_in_clipboard_history=False,
             )
 
             store.save(settings)
@@ -125,6 +126,10 @@ class SettingsStoreTestCase(unittest.TestCase):
             )
             self.assertIn(
                 "language = de",
+                settings_file.read_text(encoding="utf-8"),
+            )
+            self.assertIn(
+                "include_copied_text_in_clipboard_history = False",
                 settings_file.read_text(encoding="utf-8"),
             )
 
@@ -139,6 +144,7 @@ class SettingsStoreTestCase(unittest.TestCase):
             settings = SettingsStore(settings_file).load()
 
             self.assertEqual(settings.language, "system")
+            self.assertTrue(settings.include_copied_text_in_clipboard_history)
 
     def test_language_is_normalized(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

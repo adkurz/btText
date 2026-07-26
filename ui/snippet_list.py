@@ -1,5 +1,7 @@
 """List view and editing commands for snippets in the selected category."""
 
+from collections.abc import Callable
+
 import pymitter
 import wx
 
@@ -22,6 +24,7 @@ class SnippetList(wx.ListView):
         ee: pymitter.EventEmitter,
         model: datamodel.DataModel,
         transfer_buffer: TransferBuffer,
+        include_copied_text_in_clipboard_history: Callable[[], bool],
     ):
         """Build columns, commands, and model-event subscriptions."""
         super().__init__(
@@ -31,6 +34,9 @@ class SnippetList(wx.ListView):
         self._ee = ee
         self._model = model
         self._transfer_buffer = transfer_buffer
+        self._include_copied_text_in_clipboard_history = (
+            include_copied_text_in_clipboard_history
+        )
         self.selected_category_id = None
         # Translators: Snippet-list column containing each snippet's name.
         self.AppendColumn(_("Name"), width=self.FromDIP(220))
@@ -229,7 +235,12 @@ class SnippetList(wx.ListView):
             return
         try:
             snippet = self._model.get_snippet(snippet_ids[0])
-            clipboard_paste.copy_text(snippet.content)
+            clipboard_paste.copy_text(
+                snippet.content,
+                include_in_history=(
+                    self._include_copied_text_in_clipboard_history()
+                ),
+            )
         except (datamodel.DataModelError, clipboard_paste.PasteError) as error:
             wx.MessageBox(
                 format_user_error(error),

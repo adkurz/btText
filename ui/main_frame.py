@@ -83,6 +83,7 @@ class MainFrame(sc.SizedFrame):
             ee,
             model,
             self.transfer_buffer,
+            lambda: self._settings.include_copied_text_in_clipboard_history,
         )
         # Translators: Accessible name for the main window list showing snippets
         # from the selected category.
@@ -262,7 +263,12 @@ class MainFrame(sc.SizedFrame):
         if self._registered_hotkey is None:
             self._register_hotkey(self._settings.toggle_window_hotkey)
 
-    def _change_settings(self, hotkey: Hotkey, language: str) -> bool:
+    def _change_settings(
+        self,
+        hotkey: Hotkey,
+        language: str,
+        include_copied_text_in_clipboard_history: bool,
+    ) -> bool:
         """Apply and persist settings, rolling the hotkey back on failure."""
         # Register before saving so an unusable shortcut is never persisted.
         # Every failure path attempts to restore the previous binding.
@@ -301,6 +307,9 @@ class MainFrame(sc.SizedFrame):
         new_settings = AppSettings(
             toggle_window_hotkey=hotkey,
             language=language,
+            include_copied_text_in_clipboard_history=(
+                include_copied_text_in_clipboard_history
+            ),
         )
         try:
             self._settings_store.save(new_settings)
@@ -502,6 +511,7 @@ class MainFrame(sc.SizedFrame):
                 self,
                 self._settings.toggle_window_hotkey,
                 self._settings.language,
+                self._settings.include_copied_text_in_clipboard_history,
                 available_languages,
                 self._change_settings,
                 self._suspend_hotkey,
