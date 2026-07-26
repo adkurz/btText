@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-26 17:23+0200\n"
+"POT-Creation-Date: 2026-07-26 21:46+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -353,89 +353,112 @@ msgid "Delete\tDelete"
 msgstr ""
 
 #. Translators: Prompt asking for the name of a category being created.
-#: ui/category_tree.py:248
+#: ui/category_tree.py:246
 msgid "Enter the name of the new category"
 msgstr ""
 
 #. Translators: Title of the dialog for creating a category.
-#: ui/category_tree.py:250
+#: ui/category_tree.py:248
 msgid "Add category"
 msgstr ""
 
+#. Translators: Prompt for a new child category. {parent_name} is its parent.
+#: ui/category_tree.py:257
+#, python-brace-format
+msgid "Enter the name of the new subcategory of '{parent_name}'"
+msgstr ""
+
+#. Translators: Title of the dialog for creating a child category.
+#: ui/category_tree.py:261
+msgid "Add subcategory"
+msgstr ""
+
 #. Translators: Prompt asking for a replacement category name.
-#: ui/category_tree.py:280
+#: ui/category_tree.py:294
 msgid "Enter the new name of the category"
 msgstr ""
 
 #. Translators: Title of the dialog for renaming a category.
-#: ui/category_tree.py:282
+#: ui/category_tree.py:296
 msgid "Rename category"
+msgstr ""
+
+#. Translators: Rename prompt for a child category. {parent_name} is its
+#. parent.
+#: ui/category_tree.py:305
+#, python-brace-format
+msgid "Enter the new name of the subcategory of '{parent_name}'"
+msgstr ""
+
+#. Translators: Title of the dialog for renaming a child category.
+#: ui/category_tree.py:309
+msgid "Rename subcategory"
 msgstr ""
 
 #. Translators: Title of the confirmation for deleting a category
 #. and everything it contains.
-#: ui/category_tree.py:320
+#: ui/category_tree.py:352
 msgid "Delete category"
 msgstr ""
 
 #. Translators: Status after copying a category; it remains pending
 #. until the user selects a destination and presses Ctrl+V.
-#: ui/category_tree.py:374
+#: ui/category_tree.py:406
 msgid "Copied category. Select a destination and press Ctrl+V."
 msgstr ""
 
 #. Translators: Status after cutting a category; it remains pending
 #. until the user selects a destination and presses Ctrl+V.
-#: ui/category_tree.py:380
+#: ui/category_tree.py:412
 msgid "Cut category. Select a destination and press Ctrl+V."
 msgstr ""
 
 #. Translators: Explains that a snippet cannot be pasted at the
 #. category-tree root and requires a destination category.
-#: ui/category_tree.py:397
+#: ui/category_tree.py:429
 msgid "A snippet must be pasted into a category."
 msgstr ""
 
 #. Translators: Title of an informational message explaining that
 #. snippets cannot be pasted at the category-tree root.
-#: ui/category_tree.py:400
+#: ui/category_tree.py:432
 msgid "Paste snippet"
 msgstr ""
 
 #. Translators: Status after a copied or cut category was pasted.
-#: ui/category_tree.py:450
+#: ui/category_tree.py:482
 msgid "Transfer completed."
 msgstr ""
 
 #. Translators: Title of an error caused by a category operation.
-#: ui/category_tree.py:476
+#: ui/category_tree.py:508
 msgid "Category error"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; both displayed counts are exactly 1.
-#: ui/category_tree.py:496
+#: ui/category_tree.py:528
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategory and {snippets} snippet?"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; descendants is 1, snippets is not 1.
-#: ui/category_tree.py:500
+#: ui/category_tree.py:532
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategory and {snippets} snippets?"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; descendants is not 1, snippets is 1.
-#: ui/category_tree.py:504
+#: ui/category_tree.py:536
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategories and {snippets} snippet?"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; neither displayed count is 1.
-#: ui/category_tree.py:508
+#: ui/category_tree.py:540
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategories and {snippets} snippets?"
 msgstr ""

@@ -241,13 +241,29 @@ class CategoryTree(wx.TreeCtrl):
 
     def add_category(self, parent_id):
         """Prompt for and create a root category or child category."""
+        if parent_id is None:
+            # Translators: Prompt asking for the name of a category being created.
+            message = _("Enter the name of the new category")
+            # Translators: Title of the dialog for creating a category.
+            title = _("Add category")
+        else:
+            try:
+                parent_category = self._model.get_category(parent_id)
+            except datamodel.DataModelError as error:
+                self._show_error(error)
+                self.update()
+                return
+            # Translators: Prompt for a new child category. {parent_name} is its parent.
+            message = _("Enter the name of the new subcategory of '{parent_name}'").format(
+                parent_name=parent_category.name
+            )
+            # Translators: Title of the dialog for creating a child category.
+            title = _("Add subcategory")
         with utils.managed_dialog(
             wx.TextEntryDialog(
                 self,
-                # Translators: Prompt asking for the name of a category being created.
-                _("Enter the name of the new category"),
-                # Translators: Title of the dialog for creating a category.
-                _("Add category"),
+                message,
+                title,
             )
         ) as dialog:
             if dialog.ShowModal() != wx.ID_OK:
@@ -273,13 +289,29 @@ class CategoryTree(wx.TreeCtrl):
             self._show_error(error)
             self.update()
             return
+        if category.parent_id is None:
+            # Translators: Prompt asking for a replacement category name.
+            message = _("Enter the new name of the category")
+            # Translators: Title of the dialog for renaming a category.
+            title = _("Rename category")
+        else:
+            try:
+                parent_category = self._model.get_category(category.parent_id)
+            except datamodel.DataModelError as error:
+                self._show_error(error)
+                self.update()
+                return
+            # Translators: Rename prompt for a child category. {parent_name} is its parent.
+            message = _("Enter the new name of the subcategory of '{parent_name}'").format(
+                parent_name=parent_category.name
+            )
+            # Translators: Title of the dialog for renaming a child category.
+            title = _("Rename subcategory")
         with utils.managed_dialog(
             wx.TextEntryDialog(
                 self,
-                # Translators: Prompt asking for a replacement category name.
-                _("Enter the new name of the category"),
-                # Translators: Title of the dialog for renaming a category.
-                _("Rename category"),
+                message,
+                title,
                 value=category.name,
             )
         ) as dialog:
