@@ -119,10 +119,27 @@ class DataModel:
         """Create the current schema in a new or empty database."""
         with self._connection as c:
             c.execute(
-                "CREATE TABLE category (id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, name TEXT NOT NULL, FOREIGN KEY (parent_id) REFERENCES category (id) ON DELETE CASCADE)"
+                "CREATE TABLE category ("
+                "id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, "
+                "name TEXT NOT NULL CHECK (length(trim(name, "
+                "char(9) || char(10) || char(11) || char(12) || "
+                "char(13) || ' ')) > 0), "
+                "CHECK (parent_id IS NULL OR parent_id <> id), "
+                "FOREIGN KEY (parent_id) REFERENCES category (id) "
+                "ON DELETE CASCADE)"
             )
             c.execute(
-                "CREATE TABLE snippet (id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, name TEXT NOT NULL, content TEXT NOT NULL, weight INTEGER NOT NULL DEFAULT 1 CHECK (weight IN (1, 2, 3)), UNIQUE (category_id, name), FOREIGN KEY (category_id) REFERENCES category (id) ON DELETE CASCADE)"
+                "CREATE TABLE snippet ("
+                "id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, "
+                "name TEXT NOT NULL CHECK (length(trim(name, "
+                "char(9) || char(10) || char(11) || char(12) || "
+                "char(13) || ' ')) > 0), "
+                "content TEXT NOT NULL CHECK (length(content) > 0), "
+                "weight INTEGER NOT NULL DEFAULT 1 "
+                "CHECK (weight IN (1, 2, 3)), "
+                "UNIQUE (category_id, name), "
+                "FOREIGN KEY (category_id) REFERENCES category (id) "
+                "ON DELETE CASCADE)"
             )
             self._create_category_indexes(c)
             self._create_snippet_indexes(c)
@@ -301,7 +318,47 @@ class DataModel:
             c.execute("PRAGMA user_version = 2")
 
     def _migrate_from_2_to_3(self) -> None:
-        """Enforce case-insensitive snippet-name uniqueness per category."""
+        """Add case-insensitive uniqueness and domain checks to the schema."""
+        invalid_category_names = self._connection.execute(
+            "SELECT COUNT(*) FROM category "
+            "WHERE length(trim(name, char(9) || char(10) || char(11) || "
+            "char(12) || char(13) || ' ')) = 0"
+        ).fetchone()[0]
+        if invalid_category_names:
+            raise DataModelError(
+                "database_category_name_empty",
+                "The database contains categories with an empty name",
+            )
+
+        invalid_category_parents = self._connection.execute(
+            "SELECT COUNT(*) FROM category WHERE parent_id = id"
+        ).fetchone()[0]
+        if invalid_category_parents:
+            raise DataModelError(
+                "database_category_own_parent",
+                "The database contains a category that is its own parent",
+            )
+
+        invalid_snippet_names = self._connection.execute(
+            "SELECT COUNT(*) FROM snippet "
+            "WHERE length(trim(name, char(9) || char(10) || char(11) || "
+            "char(12) || char(13) || ' ')) = 0"
+        ).fetchone()[0]
+        if invalid_snippet_names:
+            raise DataModelError(
+                "database_snippet_name_empty",
+                "The database contains snippets with an empty name",
+            )
+
+        invalid_snippet_contents = self._connection.execute(
+            "SELECT COUNT(*) FROM snippet WHERE length(content) = 0"
+        ).fetchone()[0]
+        if invalid_snippet_contents:
+            raise DataModelError(
+                "database_snippet_content_empty",
+                "The database contains snippets with empty content",
+            )
+
         duplicate_snippet_names = self._connection.execute(
             "SELECT COUNT(*) FROM ("
             "SELECT 1 FROM snippet "
@@ -316,6 +373,43 @@ class DataModel:
             )
 
         with self._connection as c:
+            c.execute(
+                "CREATE TABLE category_new ("
+                "id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, "
+                "name TEXT NOT NULL CHECK (length(trim(name, "
+                "char(9) || char(10) || char(11) || char(12) || "
+                "char(13) || ' ')) > 0), "
+                "CHECK (parent_id IS NULL OR parent_id <> id), "
+                "FOREIGN KEY (parent_id) REFERENCES category_new (id) "
+                "ON DELETE CASCADE)"
+            )
+            c.execute(
+                "INSERT INTO category_new (id, parent_id, name) "
+                "SELECT id, parent_id, name FROM category"
+            )
+            c.execute(
+                "CREATE TABLE snippet_new ("
+                "id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, "
+                "name TEXT NOT NULL CHECK (length(trim(name, "
+                "char(9) || char(10) || char(11) || char(12) || "
+                "char(13) || ' ')) > 0), "
+                "content TEXT NOT NULL CHECK (length(content) > 0), "
+                "weight INTEGER NOT NULL DEFAULT 1 "
+                "CHECK (weight IN (1, 2, 3)), "
+                "UNIQUE (category_id, name), "
+                "FOREIGN KEY (category_id) REFERENCES category_new (id) "
+                "ON DELETE CASCADE)"
+            )
+            c.execute(
+                "INSERT INTO snippet_new "
+                "(id, category_id, name, content, weight) "
+                "SELECT id, category_id, name, content, weight FROM snippet"
+            )
+            c.execute("DROP TABLE snippet")
+            c.execute("DROP TABLE category")
+            c.execute("ALTER TABLE category_new RENAME TO category")
+            c.execute("ALTER TABLE snippet_new RENAME TO snippet")
+            self._create_category_indexes(c)
             self._create_snippet_indexes(c)
             c.execute("PRAGMA user_version = 3")
 
@@ -879,6 +973,11 @@ class DataModel:
             raise CategoryValidationError(
                 "category_parent_missing",
                 "The parent category does not exist",
+            ) from error
+        if error_code == sqlite3.SQLITE_CONSTRAINT_CHECK:
+            raise CategoryValidationError(
+                "category_own_parent",
+                "A category cannot be its own parent",
             ) from error
         raise error
 

@@ -526,6 +526,45 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             finally:
                 model.close()
 
+    def test_current_schema_enforces_additional_domain_checks(self):
+        with ExitStack() as resources:
+            temporary_directory = resources.enter_context(
+                tempfile.TemporaryDirectory()
+            )
+            database_file = Path(temporary_directory) / "checks.db"
+            model = DataModel(RecordingEventEmitter(), database_file)
+            resources.callback(model.close)
+
+            category = model.add_category(Category("Category"))
+            invalid_statements = (
+                (
+                    "INSERT INTO category (name) VALUES (char(9) || ' ')",
+                    (),
+                ),
+                (
+                    "UPDATE category SET parent_id = id WHERE id = ?",
+                    (category.id,),
+                ),
+                (
+                    "INSERT INTO snippet "
+                    "(category_id, name, content, weight) "
+                    "VALUES (?, char(10) || ' ', 'Content', 1)",
+                    (category.id,),
+                ),
+                (
+                    "INSERT INTO snippet "
+                    "(category_id, name, content, weight) "
+                    "VALUES (?, 'Snippet', '', 1)",
+                    (category.id,),
+                ),
+            )
+
+            for sql, parameters in invalid_statements:
+                with self.subTest(sql=sql):
+                    with self.assertRaises(sqlite3.IntegrityError):
+                        model._connection.execute(sql, parameters)
+                    model._connection.rollback()
+
     def test_incomplete_database_schema_raises_clear_error(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             database_file = Path(temporary_directory) / "incomplete.db"
@@ -840,6 +879,79 @@ class DatabaseMigrationTestCase(unittest.TestCase):
                 )
             finally:
                 connection.close()
+
+    def test_version_two_migration_rejects_new_check_constraint_violations(self):
+        invalid_rows = (
+            (
+                "empty category name",
+                "INSERT INTO category (id, parent_id, name) "
+                "VALUES (2, NULL, '   ')",
+                "database_category_name_empty",
+            ),
+            (
+                "category is its own parent",
+                "INSERT INTO category (id, parent_id, name) "
+                "VALUES (2, 2, 'Self')",
+                "database_category_own_parent",
+            ),
+            (
+                "empty snippet name",
+                "INSERT INTO snippet "
+                "(category_id, name, content, weight) "
+                "VALUES (1, '   ', 'Content', 1)",
+                "database_snippet_name_empty",
+            ),
+            (
+                "empty snippet content",
+                "INSERT INTO snippet "
+                "(category_id, name, content, weight) "
+                "VALUES (1, 'Snippet', '', 1)",
+                "database_snippet_content_empty",
+            ),
+        )
+
+        for label, invalid_insert, expected_code in invalid_rows:
+            with self.subTest(case=label), tempfile.TemporaryDirectory() as directory:
+                database_file = Path(directory) / "invalid-check.db"
+                connection = sqlite3.connect(database_file)
+                connection.execute(
+                    "CREATE TABLE category ("
+                    "id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, "
+                    "name TEXT NOT NULL, FOREIGN KEY (parent_id) "
+                    "REFERENCES category (id) ON DELETE CASCADE)"
+                )
+                connection.execute(
+                    "CREATE TABLE snippet ("
+                    "id INTEGER NOT NULL PRIMARY KEY, "
+                    "category_id INTEGER NOT NULL, name TEXT NOT NULL, "
+                    "content TEXT NOT NULL, weight INTEGER NOT NULL DEFAULT 1 "
+                    "CHECK (weight IN (1, 2, 3)), "
+                    "UNIQUE (category_id, name), FOREIGN KEY (category_id) "
+                    "REFERENCES category (id) ON DELETE CASCADE)"
+                )
+                connection.execute(
+                    "INSERT INTO category (id, parent_id, name) "
+                    "VALUES (1, NULL, 'Valid')"
+                )
+                connection.execute(invalid_insert)
+                connection.execute("PRAGMA user_version = 2")
+                connection.commit()
+                connection.close()
+
+                with self.assertRaises(DataModelError) as context:
+                    DataModel(RecordingEventEmitter(), database_file)
+
+                self.assertEqual(context.exception.code, expected_code)
+                connection = sqlite3.connect(database_file)
+                try:
+                    self.assertEqual(
+                        connection.execute(
+                            "PRAGMA user_version"
+                        ).fetchone()[0],
+                        2,
+                    )
+                finally:
+                    connection.close()
 
 
 if __name__ == "__main__":

@@ -115,6 +115,26 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "database_category_name_missing": lambda parameters: _(
         "The database contains categories without a name."
     ),
+    # Translators: Fatal migration error for category names that are empty or
+    # consist only of spaces.
+    "database_category_name_empty": lambda parameters: _(
+        "The database contains categories with an empty name."
+    ),
+    # Translators: Fatal migration error when a category refers to itself as
+    # its parent.
+    "database_category_own_parent": lambda parameters: _(
+        "The database contains a category that is its own parent."
+    ),
+    # Translators: Fatal migration error for snippet names that are empty or
+    # consist only of spaces.
+    "database_snippet_name_empty": lambda parameters: _(
+        "The database contains snippets with an empty name."
+    ),
+    # Translators: Fatal migration error for snippets whose reusable text is
+    # empty.
+    "database_snippet_content_empty": lambda parameters: _(
+        "The database contains snippets with empty content."
+    ),
     # Translators: Fatal startup error for snippet records whose numeric
     # search-ranking weight is outside the supported range.
     "database_snippet_weight_invalid": lambda parameters: _(
