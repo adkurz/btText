@@ -353,7 +353,7 @@ class DataModel:
                 sql += " WHERE parent_id = ?"
                 parameters = (parent_id,)
         if order:
-            sql += " ORDER BY name COLLATE NOCASE"
+            sql += " ORDER BY name COLLATE NOCASE, id"
         for category in self._connection.execute(sql, parameters):
             yield Category(
                 id=category['id'],
@@ -400,11 +400,13 @@ class DataModel:
         ).fetchone()
         return row["descendants"], row["snippets"]
 
-    def get_snippets(self, category_id: int, order_by_name: bool = False):
-        """Yield snippets in a category, with higher weights first."""
-        sql = "SELECT id, category_id, name, weight, content FROM snippet WHERE category_id = ? ORDER BY weight DESC"
-        if order_by_name:
-            sql += ", name COLLATE NOCASE"
+    def get_snippets(self, category_id: int):
+        """Yield snippets ordered by weight, name, and ID."""
+        sql = (
+            "SELECT id, category_id, name, weight, content FROM snippet "
+            "WHERE category_id = ? "
+            "ORDER BY weight DESC, name COLLATE NOCASE, id"
+        )
         for snippet in self._connection.execute(sql, (category_id,)):
             yield Snippet(
                 id=snippet["id"],
@@ -418,7 +420,15 @@ class DataModel:
         """Yield snippets whose name or content contains a literal term."""
         if not term:
             return  # An empty query deliberately yields no results.
-        sql = "SELECT s.id, s.category_id, c.name AS category_name, s.name, s.weight, s.content FROM snippet s INNER JOIN category c ON s.category_id = c.id WHERE s.name LIKE :term ESCAPE '\\' OR s.content LIKE :term ESCAPE '\\' ORDER BY category_name, s.weight DESC, s.name COLLATE NOCASE"
+        sql = (
+            "SELECT s.id, s.category_id, c.name AS category_name, s.name, "
+            "s.weight, s.content FROM snippet s "
+            "INNER JOIN category c ON s.category_id = c.id "
+            "WHERE s.name LIKE :term ESCAPE '\\' "
+            "OR s.content LIKE :term ESCAPE '\\' "
+            "ORDER BY category_name COLLATE NOCASE, c.id, s.weight DESC, "
+            "s.name COLLATE NOCASE, s.id"
+        )
         for snippet in self._connection.execute(
             sql, {"term": "%" + self._escape_like(term) + "%"}
         ):

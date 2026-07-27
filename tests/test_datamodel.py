@@ -124,6 +124,51 @@ class DataModelTestCase(unittest.TestCase):
             3,
         )
 
+    def test_snippets_have_a_stable_weight_name_and_id_order(self):
+        category = self.model.add_category(Category("Ordering"))
+        snippets = [
+            self.model.add_snippet(
+                Snippet("Zulu", "Shared search term", category.id, 1)
+            ),
+            self.model.add_snippet(
+                Snippet("beta", "Shared search term", category.id, 3)
+            ),
+            self.model.add_snippet(
+                Snippet("Alpha", "Shared search term", category.id, 3)
+            ),
+        ]
+
+        expected_ids = [snippets[2].id, snippets[1].id, snippets[0].id]
+        self.assertEqual(
+            [snippet.id for snippet in self.model.get_snippets(category.id)],
+            expected_ids,
+        )
+        self.assertEqual(
+            [snippet.id for snippet in self.model.search_snippets("Shared")],
+            expected_ids,
+        )
+
+    def test_search_order_is_stable_for_equal_category_names(self):
+        first_parent = self.model.add_category(Category("First parent"))
+        second_parent = self.model.add_category(Category("Second parent"))
+        first_category = self.model.add_category(
+            Category("Shared", parent_id=first_parent.id)
+        )
+        second_category = self.model.add_category(
+            Category("shared", parent_id=second_parent.id)
+        )
+        first_snippet = self.model.add_snippet(
+            Snippet("Match", "First", first_category.id)
+        )
+        second_snippet = self.model.add_snippet(
+            Snippet("Match", "Second", second_category.id)
+        )
+
+        self.assertEqual(
+            [snippet.id for snippet in self.model.search_snippets("Match")],
+            [first_snippet.id, second_snippet.id],
+        )
+
     def test_duplicate_names_are_rejected(self):
         category = self.model.add_category(Category("Unique category"))
         with self.assertRaises(CategoryValidationError):
