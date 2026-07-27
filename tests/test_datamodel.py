@@ -501,6 +501,57 @@ class DatabaseMigrationTestCase(unittest.TestCase):
                 sqlite3.DatabaseError,
             )
 
+    def test_database_with_foreign_key_violation_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_file = Path(temporary_directory) / "invalid-foreign-key.db"
+            model = DataModel(RecordingEventEmitter(), database_file)
+            model.close()
+
+            connection = sqlite3.connect(database_file)
+            connection.execute("PRAGMA foreign_keys = OFF")
+            connection.execute(
+                "INSERT INTO snippet "
+                "(category_id, name, content, weight) "
+                "VALUES (999, 'Orphan', 'Content', 1)"
+            )
+            connection.commit()
+            connection.close()
+
+            with self.assertRaises(DataModelError) as context:
+                DataModel(RecordingEventEmitter(), database_file)
+
+            self.assertEqual(
+                context.exception.code,
+                "database_foreign_key_violation",
+            )
+
+    def test_database_with_category_cycle_is_rejected(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_file = Path(temporary_directory) / "category-cycle.db"
+            model = DataModel(RecordingEventEmitter(), database_file)
+            model.close()
+
+            connection = sqlite3.connect(database_file)
+            connection.execute("PRAGMA foreign_keys = OFF")
+            connection.execute(
+                "INSERT INTO category (id, parent_id, name) "
+                "VALUES (1, 2, 'First')"
+            )
+            connection.execute(
+                "INSERT INTO category (id, parent_id, name) "
+                "VALUES (2, 1, 'Second')"
+            )
+            connection.commit()
+            connection.close()
+
+            with self.assertRaises(DataModelError) as context:
+                DataModel(RecordingEventEmitter(), database_file)
+
+            self.assertEqual(
+                context.exception.code,
+                "database_category_cycle",
+            )
+
     def test_newer_database_schema_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             database_file = Path(temporary_directory) / "newer.db"

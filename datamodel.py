@@ -99,6 +99,7 @@ class DataModel:
                         missing_tables=", ".join(sorted(missing_tables)),
                     )
                 self._migrate_database()
+            self._validate_database_integrity()
         except DataModelError:
             if self._connection is not None:
                 self._connection.close()
@@ -168,6 +169,34 @@ class DataModel:
     def _get_database_version(self) -> int:
         """Return SQLite's application-defined schema version."""
         return self._connection.execute("PRAGMA user_version").fetchone()[0]
+
+    def _validate_database_integrity(self) -> None:
+        """Reject broken foreign keys and cycles in the category hierarchy."""
+        foreign_key_violation = self._connection.execute(
+            "PRAGMA foreign_key_check"
+        ).fetchone()
+        if foreign_key_violation is not None:
+            raise DataModelError(
+                "database_foreign_key_violation",
+                "The database contains records with invalid relationships",
+            )
+
+        category_cycle = self._connection.execute(
+            "WITH RECURSIVE ancestors(start_id, ancestor_id) AS ("
+            "SELECT id, parent_id FROM category WHERE parent_id IS NOT NULL "
+            "UNION "
+            "SELECT ancestors.start_id, category.parent_id "
+            "FROM ancestors JOIN category "
+            "ON category.id = ancestors.ancestor_id "
+            "WHERE category.parent_id IS NOT NULL"
+            ") SELECT 1 FROM ancestors "
+            "WHERE start_id = ancestor_id LIMIT 1"
+        ).fetchone()
+        if category_cycle is not None:
+            raise DataModelError(
+                "database_category_cycle",
+                "The database contains a cycle in the category hierarchy",
+            )
 
     def _migrate_from_0_to_1(self) -> None:
         """Add snippet weights and rebuild legacy tables with constraints."""

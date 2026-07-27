@@ -97,6 +97,16 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "database_foreign_keys_unavailable": lambda parameters: _(
         "SQLite foreign-key support could not be enabled."
     ),
+    # Translators: Fatal startup error when stored records refer to missing
+    # categories or otherwise violate a database foreign-key relationship.
+    "database_foreign_key_violation": lambda parameters: _(
+        "The database contains records with invalid relationships."
+    ),
+    # Translators: Fatal startup error when category parent relationships form
+    # a loop instead of a valid tree.
+    "database_category_cycle": lambda parameters: _(
+        "The database contains a cycle in the category hierarchy."
+    ),
     "database_schema_incomplete": _format_database_schema_incomplete,
     "database_version_too_new": _format_database_version_too_new,
     "database_migration_unavailable": _format_database_migration_unavailable,
