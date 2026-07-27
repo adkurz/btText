@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-27 22:03+0200\n"
+"POT-Creation-Date: 2026-07-27 22:35+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -157,9 +157,7 @@ msgstr "Die Datenbank enthält Kategorien mit einem leeren Namen."
 #. its parent.
 #: error_messages.py:126
 msgid "The database contains a category that is its own parent."
-msgstr ""
-"Die Datenbank enthält eine Kategorie, die sich selbst als übergeordnete "
-"Kategorie verwendet."
+msgstr "Die Datenbank enthält eine Kategorie, die sich selbst als übergeordnete Kategorie verwendet."
 
 #. Translators: Fatal migration error for snippet names that are empty or
 #. consist only of spaces.
@@ -354,159 +352,159 @@ msgstr "Keine Kategorien"
 
 #. Translators: Category-tree menu command that creates a category at
 #. the root level. Keep Ctrl+N after "\t".
-#: ui/category_tree.py:169
+#: ui/category_tree.py:170
 msgid "New top-level category\tCtrl+N"
 msgstr "Neue Hauptkategorie\tCtrl+N"
 
 #. Translators: Category-tree menu command that creates a child of
 #. the selected category. Keep Ctrl+Shift+N after "\t".
-#: ui/category_tree.py:178
+#: ui/category_tree.py:179
 msgid "New subcategory\tCtrl+Shift+N"
 msgstr "Neue Unterkategorie\tCtrl+Shift+N"
 
 #. Translators: Category-tree menu command that pastes a copied or cut
 #. category at the root level. Keep Ctrl+Shift+V after "\t".
-#: ui/category_tree.py:189
+#: ui/category_tree.py:190
 msgid "Paste as top-level\tCtrl+Shift+V"
 msgstr "Auf oberster Ebene einfügen\tCtrl+Shift+V"
 
 #. Translators: Category-tree menu command that copies the selected
 #. category and its contents. Keep Ctrl+C after "\t".
-#: ui/category_tree.py:197
+#: ui/category_tree.py:198
 msgid "Copy\tCtrl+C"
 msgstr "Kopieren\tCtrl+C"
 
 #. Translators: Category-tree menu command that cuts the selected
 #. category and its contents. Keep Ctrl+X after "\t".
-#: ui/category_tree.py:200
+#: ui/category_tree.py:201
 msgid "Cut\tCtrl+X"
 msgstr "Ausschneiden\tCtrl+X"
 
 #. Translators: Category-tree menu command that pastes a copied or cut
 #. category into the selected category. Keep Ctrl+V after "\t".
-#: ui/category_tree.py:203
+#: ui/category_tree.py:204
 msgid "Paste into\tCtrl+V"
 msgstr "Hier einfügen\tCtrl+V"
 
 #. Translators: Category-tree menu command that renames the selected
 #. category. Keep F2 after "\t".
-#: ui/category_tree.py:215
+#: ui/category_tree.py:216
 msgid "Rename\tF2"
 msgstr "Umbenennen\tF2"
 
 #. Translators: Category-tree menu command that deletes the selected
 #. category. The second "Delete" after "\t" is the keyboard key.
-#: ui/category_tree.py:218
+#: ui/category_tree.py:219
 msgid "Delete\tDelete"
 msgstr "Löschen\tEntf"
 
 #. Translators: Prompt asking for the name of a category being created.
-#: ui/category_tree.py:246
+#: ui/category_tree.py:247
 msgid "Enter the name of the new category"
 msgstr "Geben Sie den Namen der neuen Kategorie ein."
 
 #. Translators: Title of the dialog for creating a category.
-#: ui/category_tree.py:248
+#: ui/category_tree.py:249
 msgid "Add category"
 msgstr "Kategorie hinzufügen"
 
 #. Translators: Prompt for a new child category. {parent_name} is its parent.
-#: ui/category_tree.py:257
+#: ui/category_tree.py:258
 #, python-brace-format
 msgid "Enter the name of the new subcategory of '{parent_name}'"
 msgstr "Geben Sie den Namen der neuen Unterkategorie von „{parent_name}“ ein."
 
 #. Translators: Title of the dialog for creating a child category.
-#: ui/category_tree.py:261
+#: ui/category_tree.py:262
 msgid "Add subcategory"
 msgstr "Neue Unterkategorie anlegen"
 
 #. Translators: Prompt asking for a replacement category name.
-#: ui/category_tree.py:294
+#: ui/category_tree.py:295
 msgid "Enter the new name of the category"
 msgstr "Geben Sie den neuen Namen der Kategorie ein."
 
 #. Translators: Title of the dialog for renaming a category.
-#: ui/category_tree.py:296
+#: ui/category_tree.py:297
 msgid "Rename category"
 msgstr "Kategorie umbenennen"
 
 #. Translators: Rename prompt for a child category. {parent_name} is its
 #. parent.
-#: ui/category_tree.py:305
+#: ui/category_tree.py:306
 #, python-brace-format
 msgid "Enter the new name of the subcategory of '{parent_name}'"
 msgstr "Geben Sie den neuen Namen der Unterkategorie von „{parent_name}“ ein."
 
 #. Translators: Title of the dialog for renaming a child category.
-#: ui/category_tree.py:309
+#: ui/category_tree.py:310
 msgid "Rename subcategory"
 msgstr "Unterkategorie bearbeiten"
 
 #. Translators: Title of the confirmation for deleting a category
 #. and everything it contains.
-#: ui/category_tree.py:352
+#: ui/category_tree.py:353
 msgid "Delete category"
 msgstr "Kategorie löschen"
 
 #. Translators: Status after copying a category; it remains pending
 #. until the user selects a destination and presses Ctrl+V.
-#: ui/category_tree.py:406
+#: ui/category_tree.py:407
 msgid "Copied category. Select a destination and press Ctrl+V."
 msgstr "Kategorie kopiert. Wählen Sie ein Ziel aus und drücken Sie Strg+V."
 
 #. Translators: Status after cutting a category; it remains pending
 #. until the user selects a destination and presses Ctrl+V.
-#: ui/category_tree.py:412
+#: ui/category_tree.py:413
 msgid "Cut category. Select a destination and press Ctrl+V."
 msgstr "Kategorie ausgeschnitten. Wählen Sie ein Ziel aus und drücken Sie Strg+V."
 
 #. Translators: Explains that a snippet cannot be pasted at the
 #. category-tree root and requires a destination category.
-#: ui/category_tree.py:429
+#: ui/category_tree.py:430
 msgid "A snippet must be pasted into a category."
 msgstr "Ein Textbaustein muss in eine Kategorie eingefügt werden."
 
 #. Translators: Title of an informational message explaining that
 #. snippets cannot be pasted at the category-tree root.
-#: ui/category_tree.py:432
+#: ui/category_tree.py:433
 msgid "Paste snippet"
 msgstr "Textbaustein einfügen"
 
 #. Translators: Status after a copied or cut category was pasted.
-#: ui/category_tree.py:482
+#: ui/category_tree.py:483
 msgid "Transfer completed."
 msgstr "Übertragung abgeschlossen."
 
 #. Translators: Title of an error caused by a category operation.
-#: ui/category_tree.py:508
+#: ui/category_tree.py:509
 msgid "Category error"
 msgstr "Kategoriefehler"
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; both displayed counts are exactly 1.
-#: ui/category_tree.py:528
+#: ui/category_tree.py:529
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategory and {snippets} snippet?"
 msgstr "Kategorie „{name}“ einschließlich {descendants} Unterkategorie und {snippets} Textbaustein löschen?"
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; descendants is 1, snippets is not 1.
-#: ui/category_tree.py:532
+#: ui/category_tree.py:533
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategory and {snippets} snippets?"
 msgstr "Kategorie „{name}“ einschließlich {descendants} Unterkategorie und {snippets} Textbausteinen löschen?"
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; descendants is not 1, snippets is 1.
-#: ui/category_tree.py:536
+#: ui/category_tree.py:537
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategories and {snippets} snippet?"
 msgstr "Kategorie „{name}“ einschließlich {descendants} Unterkategorien und {snippets} Textbaustein löschen?"
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; neither displayed count is 1.
-#: ui/category_tree.py:540
+#: ui/category_tree.py:541
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategories and {snippets} snippets?"
 msgstr "Kategorie „{name}“ einschließlich {descendants} Unterkategorien und {snippets} Textbausteinen löschen?"
@@ -1107,3 +1105,4 @@ msgstr "Hoch"
 #: ui/validators.py:26
 msgid "The input field must not be empty!"
 msgstr "Das Eingabefeld darf nicht leer sein!"
+
