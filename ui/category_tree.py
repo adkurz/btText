@@ -81,13 +81,13 @@ class CategoryTree(wx.TreeCtrl):
             ee.on(event_name, self._on_model_changed)
         self.update()
 
-    def _label(self, category: datamodel.Category) -> str:
+    def _label(self, summary: datamodel.CategorySummary) -> str:
         """Format a category name with its direct snippet count."""
         # Translators: Category-tree label. {name} is the category name and
         # {count} is the number of snippets directly in it, excluding children.
         return _("{name} ({count})").format(
-            name=category.name,
-            count=category.number_of_snippets,
+            name=summary.category.name,
+            count=summary.number_of_snippets,
         )
 
     def update(self, *args):
@@ -123,10 +123,11 @@ class CategoryTree(wx.TreeCtrl):
 
     def _append_children(self, parent_item, parent_id):
         """Recursively append the model children below a tree item."""
-        for category in self._model.get_category_children(parent_id):
+        for summary in self._model.get_category_child_summaries(parent_id):
+            category = summary.category
             item = self.AppendItem(
                 parent_item,
-                self._label(category),
+                self._label(summary),
                 image=0,
             )
             self.SetItemData(item, category.id)

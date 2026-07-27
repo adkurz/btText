@@ -39,15 +39,17 @@ class Snippet:
 
 @dataclasses.dataclass
 class Category:
-    """A node in the category tree.
-
-    ``number_of_snippets`` is a query-derived display value rather than a
-    persisted property.
-    """
+    """A persisted node in the category tree."""
     name: str
     id: int|None = None
-    number_of_snippets: int = 0
     parent_id: int|None = None
+
+
+@dataclasses.dataclass(frozen=True)
+class CategorySummary:
+    """A category projection with its direct snippet count."""
+    category: Category
+    number_of_snippets: int
 
 
 class DataModel:
@@ -461,7 +463,31 @@ class DataModel:
         parent_id: int | None = None,
         all_categories: bool = True,
     ):
-        """Yield categories, optionally ordered or limited to direct children."""
+        """Yield persisted categories, optionally limited to direct children."""
+        sql = "SELECT id, parent_id, name FROM category"
+        parameters = ()
+        if not all_categories:
+            if parent_id is None:
+                sql += " WHERE parent_id IS NULL"
+            else:
+                sql += " WHERE parent_id = ?"
+                parameters = (parent_id,)
+        if order:
+            sql += " ORDER BY name COLLATE NOCASE, id"
+        for category in self._connection.execute(sql, parameters):
+            yield Category(
+                id=category['id'],
+                parent_id=category["parent_id"],
+                name=category['name'],
+            )
+
+    def get_category_summaries(
+        self,
+        order: bool = False,
+        parent_id: int | None = None,
+        all_categories: bool = True,
+    ):
+        """Yield category projections with direct snippet counts."""
         sql = (
             "SELECT id, parent_id, name, "
             "(SELECT COUNT(*) FROM snippet "
@@ -477,17 +503,27 @@ class DataModel:
                 parameters = (parent_id,)
         if order:
             sql += " ORDER BY name COLLATE NOCASE, id"
-        for category in self._connection.execute(sql, parameters):
-            yield Category(
-                id=category['id'],
-                parent_id=category["parent_id"],
-                name=category['name'],
-                number_of_snippets=category['number_of_snippets'],
+        for row in self._connection.execute(sql, parameters):
+            yield CategorySummary(
+                category=Category(
+                    id=row["id"],
+                    parent_id=row["parent_id"],
+                    name=row["name"],
+                ),
+                number_of_snippets=row["number_of_snippets"],
             )
 
     def get_category_children(self, parent_id: int | None):
         """Yield direct children of a category, ordered by name."""
         return self.get_categories(
+            order=True,
+            parent_id=parent_id,
+            all_categories=False,
+        )
+
+    def get_category_child_summaries(self, parent_id: int | None):
+        """Yield direct child projections ordered by category name."""
+        return self.get_category_summaries(
             order=True,
             parent_id=parent_id,
             all_categories=False,
