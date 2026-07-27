@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-27 12:46+0200\n"
+"POT-Creation-Date: 2026-07-27 13:28+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -20,25 +20,25 @@ msgstr ""
 
 #. Translators: Abbreviated Control-key name in a displayed shortcut,
 #. for example "Ctrl+Alt+T".
-#: app_settings.py:200
+#: app_settings.py:191
 msgctxt "hotkey modifier"
 msgid "Ctrl"
 msgstr "Strg"
 
 #. Translators: Shift-key name in a displayed keyboard shortcut.
-#: app_settings.py:203
+#: app_settings.py:194
 msgctxt "hotkey modifier"
 msgid "Shift"
 msgstr "Umschalt"
 
 #. Translators: Alt-key name in a displayed keyboard shortcut.
-#: app_settings.py:206
+#: app_settings.py:197
 msgctxt "hotkey modifier"
 msgid "Alt"
 msgstr "Alt"
 
 #. Translators: Abbreviated Windows-key name in a displayed shortcut.
-#: app_settings.py:209
+#: app_settings.py:200
 msgctxt "hotkey modifier"
 msgid "Win"
 msgstr "Win"
@@ -51,7 +51,7 @@ msgstr "Datenbankfehler"
 
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:58 ui/main_frame.py:342
+#: btText.py:58 ui/main_frame.py:399
 msgid "Settings error"
 msgstr "Einstellungsfehler"
 
@@ -291,7 +291,7 @@ msgstr "Systemstandard"
 
 #. Translators: Root label of the main window's category tree.
 #. Translators: Accessible name for the main window's category tree.
-#: ui/category_tree.py:67 ui/main_frame.py:73
+#: ui/category_tree.py:67 ui/main_frame.py:114
 msgid "Categories"
 msgstr "Kategorien"
 
@@ -469,19 +469,19 @@ msgstr "Kategorie „{name}“ einschließlich {descendants} Unterkategorien und
 
 #. Translators: Heading for the tree used to select a category.
 #. "&" marks the keyboard mnemonic for the category tree.
-#: ui/main_frame.py:63
+#: ui/main_frame.py:104
 msgid "&Categories"
 msgstr "&Kategorien"
 
 #. Translators: Heading for the list of snippets in the selected
 #. category. "&" marks the keyboard mnemonic for the snippet list.
-#: ui/main_frame.py:78
+#: ui/main_frame.py:119
 msgid "&Snippets"
 msgstr "&Textbausteine"
 
 #. Translators: Accessible name for the main window list showing snippets
 #. from the selected category.
-#: ui/main_frame.py:91
+#: ui/main_frame.py:132
 msgid "Snippets in the selected category"
 msgstr "Textbausteine in der ausgewählten Kategorie"
 
@@ -489,27 +489,27 @@ msgstr "Textbausteine in der ausgewählten Kategorie"
 #. Translators: Generic title for a failed snippet operation.
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
-#: ui/main_frame.py:165 ui/main_frame.py:184 ui/main_frame.py:196
-#: ui/main_frame.py:407 ui/snippet_list.py:415 ui/snippet_list.py:445
+#: ui/main_frame.py:206 ui/main_frame.py:225 ui/main_frame.py:237
+#: ui/main_frame.py:464 ui/snippet_list.py:415 ui/snippet_list.py:445
 #: ui/snippet_list.py:485
 msgid "Error"
 msgstr "Fehler"
 
 #. Translators: Error shown when a selected snippet points to a
 #. category that was deleted meanwhile.
-#: ui/main_frame.py:182
+#: ui/main_frame.py:223
 msgid "The category of the selected snippet no longer exists."
 msgstr "Die Kategorie des ausgewählten Textbausteins ist nicht mehr vorhanden."
 
 #. Translators: Error shown when the selected snippet was deleted
 #. before it could be displayed or inserted.
-#: ui/main_frame.py:194
+#: ui/main_frame.py:235
 msgid "The selected snippet no longer exists."
 msgstr "Der ausgewählte Textbaustein ist nicht mehr vorhanden."
 
 #. Translators: Startup error shown when btText cannot claim
 #. its global shortcut. {} is a shortcut such as Ctrl+Alt+T.
-#: ui/main_frame.py:216
+#: ui/main_frame.py:257
 #, python-brace-format
 msgid "The global hotkey {} is already in use and could not be registered."
 msgstr "Die globale Tastenkombination {} wird bereits verwendet und konnte nicht registriert werden."
@@ -517,45 +517,45 @@ msgstr "Die globale Tastenkombination {} wird bereits verwendet und konnte nicht
 #. Translators: Title of an error registering a global shortcut.
 #. Translators: Title of an error changing the global shortcut.
 #. Translators: Title of an error restoring a global shortcut.
-#: ui/main_frame.py:220 ui/main_frame.py:303 ui/main_frame.py:335
+#: ui/main_frame.py:261 ui/main_frame.py:360 ui/main_frame.py:392
 msgid "Hotkey error"
 msgstr "Fehler bei der Tastenkombination"
 
 #. Translators: Settings error: the requested global shortcut is
 #. occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
-#: ui/main_frame.py:290
+#: ui/main_frame.py:347
 #, python-brace-format
 msgid "The selected hotkey {} is already in use. The previous hotkey has been restored."
 msgstr "Die ausgewählte Tastenkombination {} wird bereits verwendet. Die vorherige Tastenkombination wurde wiederhergestellt."
 
 #. Translators: Settings error: the requested shortcut is occupied
 #. and restoring the old one also failed. {} is such as Ctrl+Alt+T.
-#: ui/main_frame.py:297
+#: ui/main_frame.py:354
 #, python-brace-format
 msgid "The selected hotkey {} is already in use and the previous hotkey could not be restored. No global hotkey is active."
 msgstr "Die ausgewählte Tastenkombination {} wird bereits verwendet, und die vorherige Tastenkombination konnte nicht wiederhergestellt werden. Es ist keine globale Tastenkombination aktiv."
 
 #. Translators: Error after cancelling settings when btText
 #. could not restore the previously active global shortcut.
-#: ui/main_frame.py:331
+#: ui/main_frame.py:388
 msgid "The previous hotkey could not be restored. No global hotkey is active."
 msgstr "Die vorherige Tastenkombination konnte nicht wiederhergestellt werden. Es ist keine globale Tastenkombination aktiv."
 
 #. Translators: Error when no previously active external window is
 #. available as the destination for inserting a snippet.
-#: ui/main_frame.py:394
+#: ui/main_frame.py:451
 msgid "There is no previous window to insert the snippet into."
 msgstr "Es gibt kein vorheriges Fenster, in das der Textbaustein eingefügt werden kann."
 
 #. Translators: Title of an error inserting a snippet externally.
 #. Translators: Title of an error while pasting copied or cut items.
-#: ui/main_frame.py:396 ui/main_frame.py:428 ui/snippet_list.py:352
+#: ui/main_frame.py:453 ui/main_frame.py:485 ui/snippet_list.py:352
 msgid "Paste error"
 msgstr "Fehler beim Einfügen"
 
 #. Translators: Error after inserting a snippet when restoring the
 #. user's old clipboard repeatedly failed. {} is a technical error.
-#: ui/main_frame.py:464
+#: ui/main_frame.py:521
 #, python-brace-format
 msgid ""
 "The previous clipboard contents could not be restored after multiple attempts. The clipboard may still contain the inserted snippet.\n"
@@ -568,42 +568,42 @@ msgstr ""
 
 #. Translators: Title of an error restoring the user's clipboard
 #. after a snippet was inserted.
-#: ui/main_frame.py:470
+#: ui/main_frame.py:527
 msgid "Clipboard restore error"
 msgstr "Fehler beim Wiederherstellen der Zwischenablage"
 
 #. Translators: Edit-menu command that opens the snippet search
 #. dialog. "&" marks the mnemonic; keep F3 after "\t".
-#: ui/main_frame.py:483
+#: ui/main_frame.py:540
 msgid "&Search...\tF3"
 msgstr "&Suchen...\tF3"
 
 #. Translators: Edit-menu command that opens the settings dialog.
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
-#: ui/main_frame.py:490
+#: ui/main_frame.py:547
 msgid "&Settings...\tCtrl+,"
 msgstr "&Einstellungen...\tCtrl+,"
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:494
+#: ui/main_frame.py:551
 msgid "&Edit"
 msgstr "&Bearbeiten"
 
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:497
+#: ui/main_frame.py:554
 msgid "About"
 msgstr "Über btText"
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:501
+#: ui/main_frame.py:558
 msgid "&Help"
 msgstr "&Hilfe"
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:533
+#: ui/main_frame.py:590
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr "F3: Textbausteine suchen    Eingabetaste: Ausgewählten Textbaustein einfügen"
 

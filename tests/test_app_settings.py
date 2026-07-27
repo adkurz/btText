@@ -29,14 +29,6 @@ class HotkeyTestCase(unittest.TestCase):
         self.assertEqual(hotkey.key, "F12")
         self.assertTrue(hotkey.control)
 
-    def test_german_oem_key_is_supported(self):
-        hotkey = Hotkey.parse("CTRL+SHIFT+<")
-
-        self.assertEqual(hotkey.key, "<")
-        self.assertTrue(hotkey.control)
-        self.assertTrue(hotkey.shift)
-        self.assertEqual(str(hotkey), "CTRL+SHIFT+<")
-
     def test_windows_key_is_supported_as_modifier(self):
         hotkey = Hotkey.parse("WIN+SHIFT+F4")
 
@@ -47,11 +39,13 @@ class HotkeyTestCase(unittest.TestCase):
 
     def test_oem_keys_are_supported_by_virtual_key_code(self):
         expected_codes = {
-            "CTRL+,": 0xBC,
-            "CTRL+.": 0xBE,
-            "CTRL+^": 0xC0,
-            "CTRL+ß": 0xBD,
-            "CTRL+´": 0xBB,
+            "CTRL+VK_BA": 0xBA,
+            "CTRL+VK_BB": 0xBB,
+            "CTRL+VK_BC": 0xBC,
+            "CTRL+VK_BD": 0xBD,
+            "CTRL+VK_BE": 0xBE,
+            "CTRL+VK_BF": 0xBF,
+            "CTRL+VK_C0": 0xC0,
             "CTRL+VK_DB": 0xDB,
             "CTRL+VK_DC": 0xDC,
             "CTRL+VK_DD": 0xDD,
@@ -82,6 +76,12 @@ class HotkeyTestCase(unittest.TestCase):
             "CTRL+CTRL+T",
             "CTRL+F25",
             "CTRL+TAB",
+            "CTRL+,",
+            "CTRL+.",
+            "CTRL+^",
+            "CTRL+ß",
+            "CTRL+´",
+            "CTRL+<",
         )
         for value in invalid_values:
             with self.subTest(value=value):

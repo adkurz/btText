@@ -40,14 +40,6 @@ SPECIAL_KEY_CODES = {
     "NUMLOCK": 0x90,
     "SCROLLLOCK": 0x91,
 }
-LITERAL_KEY_CODES = {
-    ",": 0xBC,
-    ".": 0xBE,
-    "^": 0xC0,
-    "ß": 0xBD,
-    "´": 0xBB,
-    "<": 0xE2,
-}
 KEY_CODE_NAMES = {value: key for key, value in SPECIAL_KEY_CODES.items()}
 MODIFIER_KEY_CODES = {
     0x10,  # Shift
@@ -75,10 +67,7 @@ class Hotkey:
 
     def __post_init__(self):
         """Normalize the key and reject unsupported modifier combinations."""
-        if self.key in LITERAL_KEY_CODES:
-            normalized_key = self.key
-        else:
-            normalized_key = self.key.upper()
+        normalized_key = self.key.upper()
         if not self._is_supported_key(normalized_key):
             raise HotkeyError(
                 "hotkey_key_unsupported",
@@ -94,8 +83,6 @@ class Hotkey:
     @staticmethod
     def _is_supported_key(key: str) -> bool:
         """Return whether a serialized key name maps to a usable virtual key."""
-        if key in LITERAL_KEY_CODES:
-            return True
         if key in SPECIAL_KEY_CODES:
             return True
         if re.fullmatch(r"VK_[0-9A-F]{2}", key):
@@ -170,8 +157,6 @@ class Hotkey:
     @property
     def key_code(self) -> int:
         """Return the Windows virtual-key code for this hotkey."""
-        if self.key in LITERAL_KEY_CODES:
-            return LITERAL_KEY_CODES[self.key]
         if len(self.key) == 1:
             return ord(self.key)
         if self.key.startswith("F"):
@@ -185,9 +170,15 @@ class Hotkey:
         if not self.key.startswith("VK_"):
             return self.key
         if sys.platform == "win32":
-            scan_code = windll.user32.MapVirtualKeyW(self.key_code, 0)
+            scan_code = windll.user32.MapVirtualKeyW(
+                self.key_code,
+                4,  # MAPVK_VK_TO_VSC_EX
+            )
+            key_data = (scan_code & 0xFF) << 16
+            if scan_code & 0xFF00 in (0xE000, 0xE100):
+                key_data |= 1 << 24
             buffer = create_unicode_buffer(64)
-            if windll.user32.GetKeyNameTextW(scan_code << 16, buffer, 64):
+            if windll.user32.GetKeyNameTextW(key_data, buffer, 64):
                 return buffer.value
         return self.key
 

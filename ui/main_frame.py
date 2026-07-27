@@ -1,5 +1,8 @@
 """Main-window coordination for navigation, hotkeys, and external paste."""
 
+import ctypes
+from ctypes import wintypes
+
 import pymitter
 import wx
 import wx.adv
@@ -21,6 +24,36 @@ from ui.tray_icon import TrayIcon
 from ui.transfer import TransferBuffer
 
 CLIPBOARD_RESTORE_DELAY_MS = 500
+HOTKEY_LAYOUT_CHECK_INTERVAL_MS = 500
+
+user32 = ctypes.WinDLL("user32", use_last_error=True)
+user32.GetForegroundWindow.restype = wintypes.HWND
+user32.GetWindowThreadProcessId.argtypes = (
+    wintypes.HWND,
+    ctypes.POINTER(wintypes.DWORD),
+)
+user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+user32.GetKeyboardLayout.argtypes = (wintypes.DWORD,)
+user32.GetKeyboardLayout.restype = wintypes.HANDLE
+user32.ActivateKeyboardLayout.argtypes = (wintypes.HANDLE, wintypes.UINT)
+user32.ActivateKeyboardLayout.restype = wintypes.HANDLE
+
+
+def _get_foreground_keyboard_layout() -> int | None:
+    """Return the keyboard layout used by the current foreground thread."""
+    foreground_window = user32.GetForegroundWindow()
+    if not foreground_window:
+        return None
+    thread_id = user32.GetWindowThreadProcessId(foreground_window, None)
+    if not thread_id:
+        return None
+    keyboard_layout = user32.GetKeyboardLayout(thread_id)
+    return int(keyboard_layout) if keyboard_layout else None
+
+
+def _activate_keyboard_layout(keyboard_layout: int) -> bool:
+    """Activate a foreground thread's keyboard layout for btText's UI thread."""
+    return bool(user32.ActivateKeyboardLayout(keyboard_layout, 0))
 
 
 class MainFrame(sc.SizedFrame):
@@ -41,6 +74,14 @@ class MainFrame(sc.SizedFrame):
         self._hotkey_id = 1
         self._registered_hotkey = None
         self._hotkey_suspended = False
+        self._hotkey_keyboard_layout = _get_foreground_keyboard_layout()
+        self._hotkey_layout_timer = wx.Timer(self)
+        self.Bind(
+            wx.EVT_TIMER,
+            self._on_hotkey_layout_timer,
+            self._hotkey_layout_timer,
+        )
+        self._hotkey_layout_timer.Start(HOTKEY_LAYOUT_CHECK_INTERVAL_MS)
         foreground_window = clipboard_paste.get_foreground_window()
         self._paste_target_window = (
             foreground_window
@@ -263,6 +304,22 @@ class MainFrame(sc.SizedFrame):
         self._hotkey_suspended = False
         if self._registered_hotkey is None:
             self._register_hotkey(self._settings.toggle_window_hotkey)
+
+    def _on_hotkey_layout_timer(self, event: wx.TimerEvent):
+        """Re-register the global hotkey after the input layout changes."""
+        keyboard_layout = _get_foreground_keyboard_layout()
+        if (
+            keyboard_layout is None
+            or keyboard_layout == self._hotkey_keyboard_layout
+        ):
+            return
+        self._hotkey_keyboard_layout = keyboard_layout
+        _activate_keyboard_layout(keyboard_layout)
+        if self._hotkey_suspended or self._registered_hotkey is None:
+            return
+        hotkey = self._registered_hotkey
+        self._unregister_hotkey()
+        self._register_hotkey(hotkey)
 
     def _change_settings(
         self,
@@ -554,6 +611,7 @@ class MainFrame(sc.SizedFrame):
     def on_close(self, event: wx.CloseEvent):
         """Hide normally, or release resources during an explicit exit."""
         if self.allow_close:
+            self._hotkey_layout_timer.Stop()
             self._unregister_hotkey()
             self.tray_icon.RemoveIcon()
             self.tray_icon.Destroy()
