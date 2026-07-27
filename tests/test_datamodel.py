@@ -5,6 +5,7 @@ import types
 import unittest
 from contextlib import ExitStack
 from pathlib import Path
+from unittest.mock import Mock
 
 
 try:
@@ -186,6 +187,59 @@ class DataModelTestCase(unittest.TestCase):
         self.model.add_snippet(
             Snippet("Unique snippet", "Allowed here", other_category.id)
         )
+
+    def test_category_unique_constraint_is_translated_to_domain_error(self):
+        self.model.add_category(Category("Existing"))
+        self.model.category_exist = Mock(return_value=None)
+
+        with self.assertRaises(CategoryValidationError) as context:
+            self.model.add_category(Category("EXISTING"))
+
+        self.assertEqual(context.exception.code, "category_name_duplicate")
+        self.assertIsInstance(context.exception.__cause__, sqlite3.IntegrityError)
+
+    def test_category_foreign_key_constraint_is_translated_to_domain_error(self):
+        self.model.category_exist = Mock(side_effect=(999, None))
+
+        with self.assertRaises(CategoryValidationError) as context:
+            self.model.add_category(Category("Child", parent_id=999))
+
+        self.assertEqual(context.exception.code, "category_parent_missing")
+        self.assertIsInstance(context.exception.__cause__, sqlite3.IntegrityError)
+
+    def test_snippet_unique_constraint_is_translated_to_domain_error(self):
+        category = self.model.add_category(Category("Category"))
+        self.model.add_snippet(Snippet("Existing", "First", category.id))
+        self.model.snippet_exist = Mock(return_value=None)
+
+        with self.assertRaises(SnippetValidationError) as context:
+            self.model.add_snippet(
+                Snippet("EXISTING", "Second", category.id)
+            )
+
+        self.assertEqual(context.exception.code, "snippet_name_duplicate")
+        self.assertIsInstance(context.exception.__cause__, sqlite3.IntegrityError)
+
+    def test_snippet_foreign_key_constraint_is_translated_to_domain_error(self):
+        self.model.category_exist = Mock(return_value=999)
+
+        with self.assertRaises(SnippetValidationError) as context:
+            self.model.add_snippet(Snippet("Orphan", "Content", 999))
+
+        self.assertEqual(context.exception.code, "snippet_category_missing")
+        self.assertIsInstance(context.exception.__cause__, sqlite3.IntegrityError)
+
+    def test_snippet_check_constraint_is_translated_to_domain_error(self):
+        category = self.model.add_category(Category("Category"))
+        self.model.WEIGHTS = (1, 2, 3, 4)
+
+        with self.assertRaises(SnippetValidationError) as context:
+            self.model.add_snippet(
+                Snippet("Invalid weight", "Content", category.id, 4)
+            )
+
+        self.assertEqual(context.exception.code, "snippet_weight_invalid")
+        self.assertIsInstance(context.exception.__cause__, sqlite3.IntegrityError)
 
     def test_category_names_are_unique_only_among_siblings(self):
         first_parent = self.model.add_category(Category("First"))

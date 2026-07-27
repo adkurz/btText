@@ -544,12 +544,15 @@ class DataModel:
                 "category_name_duplicate",
                 "A category with this name already exists at this level",
             )
-        with self._connection as c:
-            result = c.execute(
-                "INSERT INTO category (parent_id, name) VALUES (?, ?)",
-                (category.parent_id, category.name),
-            )
-            category.id = result.lastrowid
+        try:
+            with self._connection as c:
+                result = c.execute(
+                    "INSERT INTO category (parent_id, name) VALUES (?, ?)",
+                    (category.parent_id, category.name),
+                )
+                category.id = result.lastrowid
+        except sqlite3.IntegrityError as error:
+            self._raise_category_integrity_error(error)
         self.ee.emit("category.added", category)
         return category
 
@@ -569,15 +572,18 @@ class DataModel:
                 "category_name_duplicate",
                 "A category with this name already exists at this level",
             )
-        with self._connection as c:
-            c.execute(
-                "UPDATE category SET parent_id = ?, name = ? WHERE id = ?",
-                (
-                    category.parent_id,
-                    category.name,
-                    category.id
-                ),
-            )
+        try:
+            with self._connection as c:
+                c.execute(
+                    "UPDATE category SET parent_id = ?, name = ? WHERE id = ?",
+                    (
+                        category.parent_id,
+                        category.name,
+                        category.id
+                    ),
+                )
+        except sqlite3.IntegrityError as error:
+            self._raise_category_integrity_error(error)
         self.ee.emit("category.edited", category)
         return category
 
@@ -634,18 +640,21 @@ class DataModel:
                 "A category cannot be copied into itself or one of its descendants",
             )
         copied = Category(name=source.name, parent_id=parent_id)
-        with self._connection as c:
-            self.validate_category(copied)
-            if self.category_exist(copied.name, copied.parent_id):
-                raise CategoryValidationError(
-                    "category_name_duplicate",
-                    "A category with this name already exists at this level",
-                )
-            copied.id = c.execute(
-                "INSERT INTO category (parent_id, name) VALUES (?, ?)",
-                (copied.parent_id, copied.name),
-            ).lastrowid
-            self._copy_category_contents(c, source.id, copied.id)
+        try:
+            with self._connection as c:
+                self.validate_category(copied)
+                if self.category_exist(copied.name, copied.parent_id):
+                    raise CategoryValidationError(
+                        "category_name_duplicate",
+                        "A category with this name already exists at this level",
+                    )
+                copied.id = c.execute(
+                    "INSERT INTO category (parent_id, name) VALUES (?, ?)",
+                    (copied.parent_id, copied.name),
+                ).lastrowid
+                self._copy_category_contents(c, source.id, copied.id)
+        except sqlite3.IntegrityError as error:
+            self._raise_category_integrity_error(error)
         self.ee.emit("category.added", copied)
         return copied
 
@@ -697,11 +706,14 @@ class DataModel:
         for snippet in snippets:
             snippet.category_id = category_id
             self.validate_snippet(snippet)
-        with self._connection as c:
-            c.executemany(
-                "UPDATE snippet SET category_id = ? WHERE id = ?",
-                ((category_id, snippet.id) for snippet in snippets),
-            )
+        try:
+            with self._connection as c:
+                c.executemany(
+                    "UPDATE snippet SET category_id = ? WHERE id = ?",
+                    ((category_id, snippet.id) for snippet in snippets),
+                )
+        except sqlite3.IntegrityError as error:
+            self._raise_snippet_integrity_error(error)
         for snippet in snippets:
             self.ee.emit("snippet.edited", snippet)
         return snippets
@@ -723,18 +735,21 @@ class DataModel:
             )
             self.validate_snippet(snippet)
             snippets.append(snippet)
-        with self._connection as c:
-            for snippet in snippets:
-                snippet.id = c.execute(
-                    "INSERT INTO snippet "
-                    "(name, category_id, weight, content) VALUES (?, ?, ?, ?)",
-                    (
-                        snippet.name,
-                        snippet.category_id,
-                        snippet.weight,
-                        snippet.content,
-                    ),
-                ).lastrowid
+        try:
+            with self._connection as c:
+                for snippet in snippets:
+                    snippet.id = c.execute(
+                        "INSERT INTO snippet "
+                        "(name, category_id, weight, content) VALUES (?, ?, ?, ?)",
+                        (
+                            snippet.name,
+                            snippet.category_id,
+                            snippet.weight,
+                            snippet.content,
+                        ),
+                    ).lastrowid
+        except sqlite3.IntegrityError as error:
+            self._raise_snippet_integrity_error(error)
         for snippet in snippets:
             self.ee.emit("snippet.added", snippet)
         return snippets
@@ -775,16 +790,20 @@ class DataModel:
     def add_snippet(self, snippet: Snippet) -> Snippet:
         """Validate, persist, and publish a new snippet."""
         self.validate_snippet(snippet)
-        with self._connection as c:
-            result = c.execute(
-                "INSERT INTO snippet (name, category_id, weight, content) VALUES (?, ?, ?, ?)",
-                (
-                    snippet.name,
-                    snippet.category_id,
-                    snippet.weight,
-                    snippet.content
+        try:
+            with self._connection as c:
+                result = c.execute(
+                    "INSERT INTO snippet "
+                    "(name, category_id, weight, content) VALUES (?, ?, ?, ?)",
+                    (
+                        snippet.name,
+                        snippet.category_id,
+                        snippet.weight,
+                        snippet.content
+                    )
                 )
-            )
+        except sqlite3.IntegrityError as error:
+            self._raise_snippet_integrity_error(error)
         snippet.id = result.lastrowid
         self.ee.emit("snippet.added", snippet)
         return snippet
@@ -799,17 +818,21 @@ class DataModel:
             )
         self.get_snippet(snippet.id)
         self.validate_snippet(snippet)
-        with self._connection as c:
-            c.execute(
-                "UPDATE snippet SET name = ?, category_id = ?, weight = ?, content = ? WHERE id = ?",
-                (
-                    snippet.name,
-                    snippet.category_id,
-                    snippet.weight,
-                    snippet.content,
-                    snippet.id
+        try:
+            with self._connection as c:
+                c.execute(
+                    "UPDATE snippet SET name = ?, category_id = ?, "
+                    "weight = ?, content = ? WHERE id = ?",
+                    (
+                        snippet.name,
+                        snippet.category_id,
+                        snippet.weight,
+                        snippet.content,
+                        snippet.id
+                    )
                 )
-            )
+        except sqlite3.IntegrityError as error:
+            self._raise_snippet_integrity_error(error)
         self.ee.emit("snippet.edited", snippet)
         return snippet
 
@@ -842,6 +865,43 @@ class DataModel:
             (table, column),
         )
         return result.fetchone()["CNTREC"] > 0
+
+    @staticmethod
+    def _raise_category_integrity_error(error: sqlite3.IntegrityError) -> None:
+        """Translate expected category constraints into domain errors."""
+        error_code = getattr(error, "sqlite_errorcode", None)
+        if error_code == sqlite3.SQLITE_CONSTRAINT_UNIQUE:
+            raise CategoryValidationError(
+                "category_name_duplicate",
+                "A category with this name already exists at this level",
+            ) from error
+        if error_code == sqlite3.SQLITE_CONSTRAINT_FOREIGNKEY:
+            raise CategoryValidationError(
+                "category_parent_missing",
+                "The parent category does not exist",
+            ) from error
+        raise error
+
+    @staticmethod
+    def _raise_snippet_integrity_error(error: sqlite3.IntegrityError) -> None:
+        """Translate expected snippet constraints into domain errors."""
+        error_code = getattr(error, "sqlite_errorcode", None)
+        if error_code == sqlite3.SQLITE_CONSTRAINT_UNIQUE:
+            raise SnippetValidationError(
+                "snippet_name_duplicate",
+                "There is already a snippet with this name in this category",
+            ) from error
+        if error_code == sqlite3.SQLITE_CONSTRAINT_FOREIGNKEY:
+            raise SnippetValidationError(
+                "snippet_category_missing",
+                "This category doesn't exist",
+            ) from error
+        if error_code == sqlite3.SQLITE_CONSTRAINT_CHECK:
+            raise SnippetValidationError(
+                "snippet_weight_invalid",
+                "The weight isn't in the allowed range.",
+            ) from error
+        raise error
 
     def _get_table_names(self) -> set[str]:
         """Return all user-defined table names in the database."""
