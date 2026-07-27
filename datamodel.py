@@ -58,8 +58,12 @@ class DataModel:
     """
 
     WEIGHTS = (1, 2, 3)
-    SCHEMA_VERSION = 2
-    MIGRATIONS = ("_migrate_from_0_to_1", "_migrate_from_1_to_2")
+    SCHEMA_VERSION = 3
+    MIGRATIONS = (
+        "_migrate_from_0_to_1",
+        "_migrate_from_1_to_2",
+        "_migrate_from_2_to_3",
+    )
 
     def __init__(self, ee: pymitter.EventEmitter, db_file: str | Path):
         """Open, validate, and if necessary migrate the SQLite database."""
@@ -120,7 +124,8 @@ class DataModel:
                 "CREATE TABLE snippet (id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, name TEXT NOT NULL, content TEXT NOT NULL, weight INTEGER NOT NULL DEFAULT 1 CHECK (weight IN (1, 2, 3)), UNIQUE (category_id, name), FOREIGN KEY (category_id) REFERENCES category (id) ON DELETE CASCADE)"
             )
             self._create_category_indexes(c)
-            c.execute("PRAGMA user_version = 2")
+            self._create_snippet_indexes(c)
+            c.execute("PRAGMA user_version = 3")
 
     def _migrate_database(self) -> None:
         """Apply each schema migration exactly once and in version order."""
@@ -266,6 +271,25 @@ class DataModel:
             self._create_category_indexes(c)
             c.execute("PRAGMA user_version = 2")
 
+    def _migrate_from_2_to_3(self) -> None:
+        """Enforce case-insensitive snippet-name uniqueness per category."""
+        duplicate_snippet_names = self._connection.execute(
+            "SELECT COUNT(*) FROM ("
+            "SELECT 1 FROM snippet "
+            "GROUP BY category_id, name COLLATE NOCASE HAVING COUNT(*) > 1"
+            ")"
+        ).fetchone()[0]
+        if duplicate_snippet_names:
+            raise DataModelError(
+                "database_snippet_names_duplicate_case_insensitive",
+                "The database contains snippet names that differ only in "
+                "letter case within the same category",
+            )
+
+        with self._connection as c:
+            self._create_snippet_indexes(c)
+            c.execute("PRAGMA user_version = 3")
+
     @staticmethod
     def _create_category_indexes(connection) -> None:
         """Create indexes that enforce unique category names per tree level."""
@@ -279,6 +303,14 @@ class DataModel:
             "CREATE UNIQUE INDEX category_child_name_unique "
             "ON category(parent_id, name COLLATE NOCASE) "
             "WHERE parent_id IS NOT NULL"
+        )
+
+    @staticmethod
+    def _create_snippet_indexes(connection) -> None:
+        """Create indexes that enforce case-insensitive snippet uniqueness."""
+        connection.execute(
+            "CREATE UNIQUE INDEX snippet_category_name_unique "
+            "ON snippet(category_id, name COLLATE NOCASE)"
         )
 
     def get_category(self, id: int) -> Category:

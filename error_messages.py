@@ -114,6 +114,12 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "database_snippet_names_duplicate": lambda parameters: _(
         "The database contains duplicate snippet names in a category."
     ),
+    # Translators: Fatal migration error when two snippets in one category have
+    # names that differ only in uppercase or lowercase letters.
+    "database_snippet_names_duplicate_case_insensitive": lambda parameters: _(
+        "The database contains snippet names that differ only in letter case "
+        "within the same category."
+    ),
     # Translators: Fatal startup error for snippets without an existing category.
     "database_snippet_category_missing": lambda parameters: _(
         "The database contains snippets without a category."

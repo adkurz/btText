@@ -469,7 +469,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
 
             with self.assertRaisesRegex(
                 DataModelError,
-                r"newer version.*schema version: 3.*supported version: 2",
+                r"newer version.*schema version: 4.*supported version: 3",
             ):
                 DataModel(RecordingEventEmitter(), database_file)
 
@@ -559,7 +559,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             self.assertEqual(model.get_snippet(2).weight, 1)
             self.assertEqual(
                 model._connection.execute("PRAGMA user_version").fetchone()[0],
-                2,
+                DataModel.SCHEMA_VERSION,
             )
 
     def test_version_one_database_is_migrated_to_category_tree(self):
@@ -599,7 +599,97 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             category = model.get_category(7)
             self.assertIsNone(category.parent_id)
             self.assertEqual(model.get_snippet(9).category_id, 7)
-            self.assertEqual(model._get_database_version(), 2)
+            self.assertEqual(model._get_database_version(), 3)
+
+    def test_version_two_database_gets_case_insensitive_snippet_constraint(self):
+        with ExitStack() as resources:
+            temporary_directory = resources.enter_context(
+                tempfile.TemporaryDirectory()
+            )
+            database_file = Path(temporary_directory) / "version-two.db"
+            connection = sqlite3.connect(database_file)
+            connection.execute(
+                "CREATE TABLE category ("
+                "id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, "
+                "name TEXT NOT NULL, FOREIGN KEY (parent_id) "
+                "REFERENCES category (id) ON DELETE CASCADE)"
+            )
+            connection.execute(
+                "CREATE TABLE snippet ("
+                "id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, "
+                "name TEXT NOT NULL, content TEXT NOT NULL, "
+                "weight INTEGER NOT NULL DEFAULT 1 CHECK (weight IN (1, 2, 3)), "
+                "UNIQUE (category_id, name), FOREIGN KEY (category_id) "
+                "REFERENCES category (id) ON DELETE CASCADE)"
+            )
+            connection.execute(
+                "INSERT INTO category (id, name) VALUES (1, 'Category')"
+            )
+            connection.execute(
+                "INSERT INTO snippet "
+                "(id, category_id, name, content, weight) "
+                "VALUES (2, 1, 'Snippet', 'Content', 1)"
+            )
+            connection.execute("PRAGMA user_version = 2")
+            connection.commit()
+            connection.close()
+
+            model = DataModel(RecordingEventEmitter(), database_file)
+            resources.callback(model.close)
+
+            self.assertEqual(model._get_database_version(), 3)
+            with self.assertRaises(sqlite3.IntegrityError):
+                model._connection.execute(
+                    "INSERT INTO snippet "
+                    "(category_id, name, content, weight) "
+                    "VALUES (1, 'SNIPPET', 'Other content', 1)"
+                )
+            model._connection.rollback()
+
+    def test_version_two_migration_rejects_case_insensitive_duplicates(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_file = Path(temporary_directory) / "duplicates.db"
+            connection = sqlite3.connect(database_file)
+            connection.execute(
+                "CREATE TABLE category ("
+                "id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, "
+                "name TEXT NOT NULL)"
+            )
+            connection.execute(
+                "CREATE TABLE snippet ("
+                "id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, "
+                "name TEXT NOT NULL, content TEXT NOT NULL, "
+                "weight INTEGER NOT NULL DEFAULT 1, "
+                "UNIQUE (category_id, name))"
+            )
+            connection.execute(
+                "INSERT INTO category (id, name) VALUES (1, 'Category')"
+            )
+            connection.executemany(
+                "INSERT INTO snippet "
+                "(category_id, name, content, weight) VALUES (1, ?, ?, 1)",
+                (("Snippet", "First"), ("SNIPPET", "Second")),
+            )
+            connection.execute("PRAGMA user_version = 2")
+            connection.commit()
+            connection.close()
+
+            with self.assertRaises(DataModelError) as context:
+                DataModel(RecordingEventEmitter(), database_file)
+
+            self.assertEqual(
+                context.exception.code,
+                "database_snippet_names_duplicate_case_insensitive",
+            )
+
+            connection = sqlite3.connect(database_file)
+            try:
+                self.assertEqual(
+                    connection.execute("PRAGMA user_version").fetchone()[0],
+                    2,
+                )
+            finally:
+                connection.close()
 
 
 if __name__ == "__main__":

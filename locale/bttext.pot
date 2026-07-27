@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-27 13:28+0200\n"
+"POT-Creation-Date: 2026-07-27 21:45+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -146,121 +146,127 @@ msgstr ""
 msgid "The database contains duplicate snippet names in a category."
 msgstr ""
 
+#. Translators: Fatal migration error when two snippets in one category have
+#. names that differ only in uppercase or lowercase letters.
+#: error_messages.py:120
+msgid "The database contains snippet names that differ only in letter case within the same category."
+msgstr ""
+
 #. Translators: Fatal startup error for snippets without an existing category.
-#: error_messages.py:119
+#: error_messages.py:125
 msgid "The database contains snippets without a category."
 msgstr ""
 
 #. Translators: Validation error when a sibling category already uses this
 #. name.
-#: error_messages.py:125
+#: error_messages.py:131
 msgid "A category with this name already exists at this level."
 msgstr ""
 
 #. Translators: Internal error for an unsaved category without a database ID.
-#: error_messages.py:129
+#: error_messages.py:135
 msgid "The category has no ID."
 msgstr ""
 
 #. Translators: Error when the intended parent category was deleted meanwhile.
-#: error_messages.py:133
+#: error_messages.py:139
 msgid "The parent category no longer exists."
 msgstr ""
 
 #. Translators: Validation error preventing a category being its own parent.
-#: error_messages.py:137
+#: error_messages.py:143
 msgid "A category cannot be its own parent."
 msgstr ""
 
 #. Translators: Validation error preventing a move into the category's subtree.
-#: error_messages.py:141
+#: error_messages.py:147
 msgid "A category cannot be moved below one of its descendants."
 msgstr ""
 
 #. Translators: Validation error preventing recursive copying into the same
 #. category subtree.
-#: error_messages.py:146
+#: error_messages.py:152
 msgid "A category cannot be copied into itself or one of its descendants."
 msgstr ""
 
 #. Translators: Validation error for an empty category or snippet name.
-#: error_messages.py:150
+#: error_messages.py:156
 msgid "The name must not be empty."
 msgstr ""
 
 #. Translators: Validation error when a snippet has no insertion text.
-#: error_messages.py:154
+#: error_messages.py:160
 msgid "The content must not be empty."
 msgstr ""
 
 #. Translators: Error when the snippet's selected category was deleted
 #. meanwhile.
-#: error_messages.py:158
+#: error_messages.py:164
 msgid "The selected category no longer exists."
 msgstr ""
 
 #. Translators: Validation error when a snippet name is already used in the
 #. same category.
-#: error_messages.py:163
+#: error_messages.py:169
 msgid "A snippet with this name already exists in this category."
 msgstr ""
 
 #. Translators: Validation error for a snippet search-ranking weight outside
 #. the allowed choices.
-#: error_messages.py:168
+#: error_messages.py:174
 msgid "The selected weight is not allowed."
 msgstr ""
 
 #. Translators: Internal error for an unsaved snippet without a database ID.
-#: error_messages.py:172
+#: error_messages.py:178
 msgid "The snippet has no ID."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut contains an
 #. unsupported keyboard key.
-#: error_messages.py:177
+#: error_messages.py:183
 msgid "The shortcut contains an unsupported key."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut has no Ctrl, Shift,
 #. Alt, or Windows modifier.
-#: error_messages.py:182
+#: error_messages.py:188
 msgid "The shortcut requires at least one modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut from settings cannot be
 #. parsed.
-#: error_messages.py:186
+#: error_messages.py:192
 msgid "The shortcut has an invalid format."
 msgstr ""
 
 #. Translators: Validation error when a shortcut repeats the same modifier.
-#: error_messages.py:190
+#: error_messages.py:196
 msgid "The shortcut contains a duplicate modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut has zero or multiple main
 #. keys.
-#: error_messages.py:194
+#: error_messages.py:200
 msgid "The shortcut must contain exactly one key."
 msgstr ""
 
 #. Translators: Validation error when a key cannot be used for a global
 #. shortcut.
-#: error_messages.py:198
+#: error_messages.py:204
 msgid "This key cannot be used as a shortcut."
 msgstr ""
 
 #. Translators: Settings error when the selected UI language has no installed
 #. gettext catalog.
-#: error_messages.py:203
+#: error_messages.py:209
 msgid "No translation catalog is available for the selected language."
 msgstr ""
 
 #. Translators: Startup warning after a damaged translation catalog forced
 #. btText to continue in English. {language} is a locale code such as de;
 #. {reason} is a technical catalog-loading error.
-#: error_messages.py:209
+#: error_messages.py:215
 #, python-brace-format
 msgid ""
 "The translation catalog for {language} could not be loaded. btText will continue in English.\n"
@@ -269,13 +275,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Settings error when the saved UI language code is malformed.
-#: error_messages.py:217
+#: error_messages.py:223
 msgid "The language setting has an invalid format."
 msgstr ""
 
 #. Translators: Safe fallback when no specific localized application-error
 #. message is available.
-#: error_messages.py:232
+#: error_messages.py:238
 msgid "An unexpected application error occurred."
 msgstr ""
 
