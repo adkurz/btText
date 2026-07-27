@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-26 21:46+0200\n"
+"POT-Creation-Date: 2026-07-27 12:46+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -490,8 +490,8 @@ msgstr "Textbausteine in der ausgewählten Kategorie"
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
 #: ui/main_frame.py:165 ui/main_frame.py:184 ui/main_frame.py:196
-#: ui/main_frame.py:407 ui/snippet_list.py:408 ui/snippet_list.py:438
-#: ui/snippet_list.py:478
+#: ui/main_frame.py:407 ui/snippet_list.py:415 ui/snippet_list.py:445
+#: ui/snippet_list.py:485
 msgid "Error"
 msgstr "Fehler"
 
@@ -549,7 +549,7 @@ msgstr "Es gibt kein vorheriges Fenster, in das der Textbaustein eingefügt werd
 
 #. Translators: Title of an error inserting a snippet externally.
 #. Translators: Title of an error while pasting copied or cut items.
-#: ui/main_frame.py:396 ui/main_frame.py:428 ui/snippet_list.py:345
+#: ui/main_frame.py:396 ui/main_frame.py:428 ui/snippet_list.py:352
 msgid "Paste error"
 msgstr "Fehler beim Einfügen"
 
@@ -833,9 +833,7 @@ msgid "Add snippet"
 msgstr "Textbaustein hinzufügen"
 
 #. Translators: Window title for changing an existing snippet.
-#. Translators: Snippet-list menu command that opens the selected
-#. snippet in the editor.
-#: ui/snippet_editor.py:27 ui/snippet_list.py:155
+#: ui/snippet_editor.py:27
 msgid "Edit snippet"
 msgstr "Textbaustein bearbeiten"
 
@@ -881,10 +879,10 @@ msgid "Weight number"
 msgstr "Gewichtungswert"
 
 #. Translators: Snippet-list menu command that opens the editor to create
-#. a snippet in the selected category.
+#. a snippet in the selected category. Keep Ctrl+N after "\t".
 #: ui/snippet_list.py:127
-msgid "New snippet"
-msgstr "Neuer Textbaustein"
+msgid "New snippet\tCtrl+N"
+msgstr "Neuer Textbaustein\tCtrl+N"
 
 #. Translators: Snippet-list menu command that pastes a copied or
 #. cut category into the current category. Keep Ctrl+V after "\t".
@@ -892,22 +890,29 @@ msgstr "Neuer Textbaustein"
 msgid "Paste into category\tCtrl+V"
 msgstr "In Kategorie einfügen\tCtrl+V"
 
-#. Translators: Snippet-list menu command that inserts the selected
-#. snippet into the previously active application.
-#: ui/snippet_list.py:143
-msgid "Insert snippet"
-msgstr "Textbaustein einfügen"
+#. Translators: Snippet-list menu command that inserts the
+#. selected snippet into the previously active application.
+#. Keep Enter after "\t".
+#: ui/snippet_list.py:146
+msgid "Insert snippet\tEnter"
+msgstr "Textbaustein einfügen\tEnter"
 
 #. Translators: Snippet-list menu command that copies the
 #. selected snippet's text to the Windows clipboard. Keep
 #. Ctrl+Shift+C after "\t".
-#: ui/snippet_list.py:150
+#: ui/snippet_list.py:154
 msgid "Copy text to clipboard\tCtrl+Shift+C"
 msgstr "Text in die Zwischenablage kopieren\tCtrl+Shift+C"
 
+#. Translators: Snippet-list menu command that opens the
+#. selected snippet in the editor. Keep F2 after "\t".
+#: ui/snippet_list.py:161
+msgid "Edit snippet\tF2"
+msgstr "Textbaustein bearbeiten\tF2"
+
 #. Translators: Snippet-list menu command that copies the selected
 #. snippet or snippets. Keep Ctrl+C after "\t".
-#: ui/snippet_list.py:164
+#: ui/snippet_list.py:171
 msgid "Copy snippet\tCtrl+C"
 msgid_plural "Copy snippets\tCtrl+C"
 msgstr[0] "Textbaustein kopieren\tCtrl+C"
@@ -915,7 +920,7 @@ msgstr[1] "Textbausteine kopieren\tCtrl+C"
 
 #. Translators: Snippet-list menu command that cuts the selected
 #. snippet or snippets. Keep Ctrl+X after "\t".
-#: ui/snippet_list.py:174
+#: ui/snippet_list.py:181
 msgid "Cut snippet\tCtrl+X"
 msgid_plural "Cut snippets\tCtrl+X"
 msgstr[0] "Textbaustein ausschneiden\tCtrl+X"
@@ -923,7 +928,7 @@ msgstr[1] "Textbausteine ausschneiden\tCtrl+X"
 
 #. Translators: Snippet-list menu command that deletes the selected
 #. snippet or snippets. The final "Delete" is the keyboard key.
-#: ui/snippet_list.py:194
+#: ui/snippet_list.py:201
 msgid "Delete snippet\tDelete"
 msgid_plural "Delete snippets\tDelete"
 msgstr[0] "Textbaustein löschen\tEntf"
@@ -931,19 +936,19 @@ msgstr[1] "Textbausteine löschen\tEntf"
 
 #. Translators: Title of an error copying snippet text to the
 #. Windows clipboard.
-#: ui/snippet_list.py:252
+#: ui/snippet_list.py:259
 msgid "Clipboard error"
 msgstr "Zwischenablagefehler"
 
 #. Translators: Status after a snippet's text was copied to the Windows
 #. clipboard.
-#: ui/snippet_list.py:259
+#: ui/snippet_list.py:266
 msgid "Text copied to clipboard."
 msgstr "Text in die Zwischenablage kopiert."
 
 #. Translators: Status after copying snippets; they are not pasted yet.
 #. {count} is the number copied, and Ctrl+V is the paste shortcut.
-#: ui/snippet_list.py:272
+#: ui/snippet_list.py:279
 #, python-brace-format
 msgid "Copied {count} snippet. Select a category and press Ctrl+V."
 msgid_plural "Copied {count} snippets. Select a category and press Ctrl+V."
@@ -952,7 +957,7 @@ msgstr[1] "{count} Textbausteine kopiert. Wählen Sie eine Kategorie aus und dr�
 
 #. Translators: Status after cutting snippets; they are not moved yet.
 #. {count} is the number cut, and Ctrl+V is the paste shortcut.
-#: ui/snippet_list.py:280
+#: ui/snippet_list.py:287
 #, python-brace-format
 msgid "Cut {count} snippet. Select a category and press Ctrl+V."
 msgid_plural "Cut {count} snippets. Select a category and press Ctrl+V."
@@ -961,19 +966,19 @@ msgstr[1] "{count} Textbausteine ausgeschnitten. Wählen Sie eine Kategorie aus 
 
 #. Translators: Explains that the top-level paste command only
 #. accepts a copied or cut category, not snippets.
-#: ui/snippet_list.py:301
+#: ui/snippet_list.py:308
 msgid "Only a category can be pasted as a top-level category."
 msgstr "Nur eine Kategorie kann auf der obersten Ebene eingefügt werden."
 
 #. Translators: Title of information about pasting a category
 #. at the category-tree root.
-#: ui/snippet_list.py:304
+#: ui/snippet_list.py:311
 msgid "Paste as top-level"
 msgstr "Auf oberster Ebene einfügen"
 
 #. Translators: Status after a pending copy or cut operation is pasted.
 #. {count} includes all transferred categories and snippets.
-#: ui/snippet_list.py:356
+#: ui/snippet_list.py:363
 #, python-brace-format
 msgid "Transferred {count} item."
 msgid_plural "Transferred {count} items."
@@ -982,19 +987,19 @@ msgstr[1] "{count} Elemente übertragen."
 
 #. Translators: Confirmation before permanently deleting one snippet.
 #. {name} is the snippet's name.
-#: ui/snippet_list.py:447
+#: ui/snippet_list.py:454
 #, python-brace-format
 msgid "Do you want to delete the snippet '{name}'?"
 msgstr "Möchten Sie den Textbaustein „{name}“ löschen?"
 
 #. Translators: Title of the confirmation for deleting one snippet.
-#: ui/snippet_list.py:450
+#: ui/snippet_list.py:457
 msgid "Delete snippet?"
 msgstr "Textbaustein löschen?"
 
 #. Translators: Confirmation before permanently deleting several
 #. selected snippets. {count} is the number selected.
-#: ui/snippet_list.py:455
+#: ui/snippet_list.py:462
 #, python-brace-format
 msgid "Do you want to delete {count} selected snippet?"
 msgid_plural "Do you want to delete {count} selected snippets?"
@@ -1002,14 +1007,14 @@ msgstr[0] "Möchten Sie {count} ausgewählten Textbaustein löschen?"
 msgstr[1] "Möchten Sie {count} ausgewählte Textbausteine löschen?"
 
 #. Translators: Title of the confirmation for deleting multiple snippets.
-#: ui/snippet_list.py:460
+#: ui/snippet_list.py:467
 msgid "Delete snippets?"
 msgstr "Textbausteine löschen?"
 
 # | msgid "Delete snippet?"
 #. Translators: Status after selected snippets were permanently deleted.
 #. {count} is the number deleted.
-#: ui/snippet_list.py:496
+#: ui/snippet_list.py:503
 #, python-brace-format
 msgid "Deleted {count} snippet."
 msgid_plural "Deleted {count} snippets."

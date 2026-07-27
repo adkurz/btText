@@ -123,8 +123,8 @@ class SnippetList(wx.ListView):
         """Show commands valid for the current row and transfer state."""
         menu = wx.Menu()
         # Translators: Snippet-list menu command that opens the editor to create
-        # a snippet in the selected category.
-        new_snippet = menu.Append(wx.ID_ANY, _("New snippet"))
+        # a snippet in the selected category. Keep Ctrl+N after "\t".
+        new_snippet = menu.Append(wx.ID_ANY, _("New snippet\tCtrl+N"))
         menu.Bind(wx.EVT_MENU, self.add_snippet, new_snippet)
         if self.selected_category_id is not None:
             paste_item = menu.Append(
@@ -138,9 +138,13 @@ class SnippetList(wx.ListView):
         selected_ids = self.get_selected_ids()
         if selected_ids:
             if len(selected_ids) == 1:
-                # Translators: Snippet-list menu command that inserts the selected
-                # snippet into the previously active application.
-                insert_snippet = menu.Append(wx.ID_ANY, _("Insert snippet"))
+                insert_snippet = menu.Append(
+                    wx.ID_ANY,
+                    # Translators: Snippet-list menu command that inserts the
+                    # selected snippet into the previously active application.
+                    # Keep Enter after "\t".
+                    _("Insert snippet\tEnter"),
+                )
                 menu.Bind(wx.EVT_MENU, self.insert_snippet, insert_snippet)
                 copy_text = menu.Append(
                     wx.ID_ANY,
@@ -150,9 +154,12 @@ class SnippetList(wx.ListView):
                     _("Copy text to clipboard\tCtrl+Shift+C"),
                 )
                 menu.Bind(wx.EVT_MENU, self.copy_text_to_clipboard, copy_text)
-                # Translators: Snippet-list menu command that opens the selected
-                # snippet in the editor.
-                edit_snippet = menu.Append(wx.ID_ANY, _("Edit snippet"))
+                edit_snippet = menu.Append(
+                    wx.ID_ANY,
+                    # Translators: Snippet-list menu command that opens the
+                    # selected snippet in the editor. Keep F2 after "\t".
+                    _("Edit snippet\tF2"),
+                )
                 menu.Bind(wx.EVT_MENU, self.edit_snippet, edit_snippet)
             menu.AppendSeparator()
             selected_count = len(selected_ids)
