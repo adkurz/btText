@@ -233,6 +233,7 @@ class AppSettings:
     allow_copied_text_cloud_upload: bool = True
     hotstrings_enabled: bool = True
     preserve_hotstring_boundary: bool = True
+    notify_hotstring_expansion: bool = False
 
 
 class SettingsStore:
@@ -284,6 +285,9 @@ class SettingsStore:
             preserve_hotstring_boundary = parser.getboolean(
                 "general", "preserve_hotstring_boundary", fallback=True
             )
+            notify_hotstring_expansion = parser.getboolean(
+                "general", "notify_hotstring_expansion", fallback=False
+            )
             return AppSettings(
                 toggle_window_hotkey=Hotkey.parse(value),
                 language=language,
@@ -293,6 +297,7 @@ class SettingsStore:
                 allow_copied_text_cloud_upload=allow_copied_text_cloud_upload,
                 hotstrings_enabled=hotstrings_enabled,
                 preserve_hotstring_boundary=preserve_hotstring_boundary,
+                notify_hotstring_expansion=notify_hotstring_expansion,
             )
         except (ConfigParserError, OSError, ValueError) as error:
             raise SettingsError(
@@ -324,6 +329,9 @@ class SettingsStore:
                 "hotstrings_enabled": str(settings.hotstrings_enabled),
                 "preserve_hotstring_boundary": str(
                     settings.preserve_hotstring_boundary
+                ),
+                "notify_hotstring_expansion": str(
+                    settings.notify_hotstring_expansion
                 ),
             }
             parser["hotkeys"] = {

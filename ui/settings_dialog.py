@@ -32,8 +32,9 @@ class SettingsDialog(wx.Dialog):
         allow_copied_text_cloud_upload: bool,
         hotstrings_enabled: bool,
         preserve_hotstring_boundary: bool,
+        notify_hotstring_expansion: bool,
         available_languages: tuple[str, ...],
-        apply_settings: Callable[[Hotkey, str, bool, bool, bool, bool], bool],
+        apply_settings: Callable[[Hotkey, str, bool, bool, bool, bool, bool], bool],
         begin_recording: Callable[[], None],
         end_recording: Callable[[], None],
     ):
@@ -64,6 +65,8 @@ class SettingsDialog(wx.Dialog):
         self._candidate_hotstrings_enabled = hotstrings_enabled
         self._current_preserve_hotstring_boundary = preserve_hotstring_boundary
         self._candidate_preserve_hotstring_boundary = preserve_hotstring_boundary
+        self._current_notify_hotstring_expansion = notify_hotstring_expansion
+        self._candidate_notify_hotstring_expansion = notify_hotstring_expansion
         self._available_languages = available_languages
         self._apply_settings = apply_settings
         self._begin_recording = begin_recording
@@ -245,6 +248,19 @@ class SettingsDialog(wx.Dialog):
             wx.EVT_CHECKBOX,
             self._on_preserve_hotstring_boundary_changed,
         )
+        self.notify_hotstring_expansion_checkbox = wx.CheckBox(
+            page,
+            # Translators: Hotstring setting that shows a Windows notification
+            # after a snippet was expanded. "&" marks the keyboard mnemonic.
+            label=_("Show a Windows &notification after expansion"),
+        )
+        self.notify_hotstring_expansion_checkbox.SetValue(
+            self._candidate_notify_hotstring_expansion
+        )
+        self.notify_hotstring_expansion_checkbox.Bind(
+            wx.EVT_CHECKBOX,
+            self._on_notify_hotstring_expansion_changed,
+        )
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(description, 0, wx.EXPAND | wx.ALL, 12)
         sizer.Add(
@@ -255,6 +271,12 @@ class SettingsDialog(wx.Dialog):
         )
         sizer.Add(
             self.preserve_hotstring_boundary_checkbox,
+            0,
+            wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            12,
+        )
+        sizer.Add(
+            self.notify_hotstring_expansion_checkbox,
             0,
             wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
             12,
@@ -295,6 +317,13 @@ class SettingsDialog(wx.Dialog):
         )
         self._update_apply_button()
 
+    def _on_notify_hotstring_expansion_changed(self, event: wx.CommandEvent):
+        """Store whether successful expansions should show a notification."""
+        self._candidate_notify_hotstring_expansion = (
+            self.notify_hotstring_expansion_checkbox.GetValue()
+        )
+        self._update_apply_button()
+
     def _update_apply_button(self):
         """Enable Apply whenever either setting differs from its saved value."""
         self.apply_button.Enable(
@@ -308,6 +337,8 @@ class SettingsDialog(wx.Dialog):
             != self._current_hotstrings_enabled
             or self._candidate_preserve_hotstring_boundary
             != self._current_preserve_hotstring_boundary
+            or self._candidate_notify_hotstring_expansion
+            != self._current_notify_hotstring_expansion
         )
 
     def _create_hotkey_page(self, notebook: wx.Notebook) -> wx.Panel:
@@ -652,6 +683,8 @@ class SettingsDialog(wx.Dialog):
             == self._current_hotstrings_enabled
             and self._candidate_preserve_hotstring_boundary
             == self._current_preserve_hotstring_boundary
+            and self._candidate_notify_hotstring_expansion
+            == self._current_notify_hotstring_expansion
         ):
             return True
         if not self._apply_settings(
@@ -661,6 +694,7 @@ class SettingsDialog(wx.Dialog):
             self._candidate_allow_copied_text_cloud_upload,
             self._candidate_hotstrings_enabled,
             self._candidate_preserve_hotstring_boundary,
+            self._candidate_notify_hotstring_expansion,
         ):
             return False
         self._current_hotkey = self._candidate_hotkey
@@ -674,6 +708,9 @@ class SettingsDialog(wx.Dialog):
         self._current_hotstrings_enabled = self._candidate_hotstrings_enabled
         self._current_preserve_hotstring_boundary = (
             self._candidate_preserve_hotstring_boundary
+        )
+        self._current_notify_hotstring_expansion = (
+            self._candidate_notify_hotstring_expansion
         )
         self.apply_button.Enable(False)
         # Translators: Status confirming that all pending application settings

@@ -6,6 +6,7 @@ import wx
 import wx.adv
 
 import app_paths
+import datamodel
 import info
 from i18n import _
 
@@ -55,3 +56,18 @@ class TrayIcon(wx.adv.TaskBarIcon):
         """Allow and request a real application shutdown."""
         self._frame.allow_close = True
         self._frame.Close()
+
+    def show_hotstring_notification(self, snippet: datamodel.Snippet) -> None:
+        """Confirm one automatic expansion through the Windows shell."""
+        self.ShowBalloon(
+            info.name,
+            # Translators: Windows notification after a hotstring expansion.
+            # {hotstring} is the typed abbreviation and {snippet} is the name of
+            # the inserted snippet; the snippet content is deliberately omitted.
+            _("Hotstring “{hotstring}” expanded to “{snippet}”.").format(
+                hotstring=snippet.hotstring,
+                snippet=snippet.name,
+            ),
+            3000,
+            wx.ICON_INFORMATION,
+        )

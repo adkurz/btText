@@ -352,6 +352,7 @@ class MainFrame(sc.SizedFrame):
         allow_copied_text_cloud_upload: bool,
         hotstrings_enabled: bool,
         preserve_hotstring_boundary: bool,
+        notify_hotstring_expansion: bool,
     ) -> bool:
         """Apply and persist settings, rolling the hotkey back on failure."""
         # Register before saving so an unusable shortcut is never persisted.
@@ -415,6 +416,7 @@ class MainFrame(sc.SizedFrame):
             allow_copied_text_cloud_upload=allow_copied_text_cloud_upload,
             hotstrings_enabled=hotstrings_enabled,
             preserve_hotstring_boundary=preserve_hotstring_boundary,
+            notify_hotstring_expansion=notify_hotstring_expansion,
         )
         try:
             self._settings_store.save(new_settings)
@@ -506,6 +508,8 @@ class MainFrame(sc.SizedFrame):
             pending,
             3,
         )
+        if self._settings.notify_hotstring_expansion:
+            self.tray_icon.show_hotstring_notification(snippet)
 
     def on_global_hotkey(self, event):
         """Toggle main-window visibility in response to the global shortcut."""
@@ -678,6 +682,7 @@ class MainFrame(sc.SizedFrame):
                 self._settings.allow_copied_text_cloud_upload,
                 self._settings.hotstrings_enabled,
                 self._settings.preserve_hotstring_boundary,
+                self._settings.notify_hotstring_expansion,
                 available_languages,
                 self._change_settings,
                 self._suspend_hotkey,

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-28 14:52+0200\n"
+"POT-Creation-Date: 2026-07-28 14:59+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -51,7 +51,7 @@ msgstr "Datenbankfehler"
 
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:58 ui/main_frame.py:446
+#: btText.py:58 ui/main_frame.py:448
 msgid "Settings error"
 msgstr "Einstellungsfehler"
 
@@ -541,7 +541,7 @@ msgstr "Textbausteine in der ausgewählten Kategorie"
 
 #. Translators: Title for a failure to monitor or expand a
 #. globally typed snippet hotstring.
-#: ui/main_frame.py:202 ui/main_frame.py:372 ui/main_frame.py:498
+#: ui/main_frame.py:202 ui/main_frame.py:373 ui/main_frame.py:500
 msgid "Hotstring error"
 msgstr "Hotstring-Fehler"
 
@@ -550,7 +550,7 @@ msgstr "Hotstring-Fehler"
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
 #: ui/main_frame.py:229 ui/main_frame.py:248 ui/main_frame.py:260
-#: ui/main_frame.py:567 ui/snippet_list.py:415 ui/snippet_list.py:445
+#: ui/main_frame.py:571 ui/snippet_list.py:415 ui/snippet_list.py:445
 #: ui/snippet_list.py:485
 msgid "Error"
 msgstr "Fehler"
@@ -577,45 +577,45 @@ msgstr "Die globale Tastenkombination {} wird bereits verwendet und konnte nicht
 #. Translators: Title of an error registering a global shortcut.
 #. Translators: Title of an error changing the global shortcut.
 #. Translators: Title of an error restoring a global shortcut.
-#: ui/main_frame.py:284 ui/main_frame.py:401 ui/main_frame.py:439
+#: ui/main_frame.py:284 ui/main_frame.py:402 ui/main_frame.py:441
 msgid "Hotkey error"
 msgstr "Fehler bei der Tastenkombination"
 
 #. Translators: Settings error: the requested global shortcut is
 #. occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
-#: ui/main_frame.py:388
+#: ui/main_frame.py:389
 #, python-brace-format
 msgid "The selected hotkey {} is already in use. The previous hotkey has been restored."
 msgstr "Die ausgewählte Tastenkombination {} wird bereits verwendet. Die vorherige Tastenkombination wurde wiederhergestellt."
 
 #. Translators: Settings error: the requested shortcut is occupied
 #. and restoring the old one also failed. {} is such as Ctrl+Alt+T.
-#: ui/main_frame.py:395
+#: ui/main_frame.py:396
 #, python-brace-format
 msgid "The selected hotkey {} is already in use and the previous hotkey could not be restored. No global hotkey is active."
 msgstr "Die ausgewählte Tastenkombination {} wird bereits verwendet, und die vorherige Tastenkombination konnte nicht wiederhergestellt werden. Es ist keine globale Tastenkombination aktiv."
 
 #. Translators: Error after cancelling settings when btText
 #. could not restore the previously active global shortcut.
-#: ui/main_frame.py:435
+#: ui/main_frame.py:437
 msgid "The previous hotkey could not be restored. No global hotkey is active."
 msgstr "Die vorherige Tastenkombination konnte nicht wiederhergestellt werden. Es ist keine globale Tastenkombination aktiv."
 
 #. Translators: Error when no previously active external window is
 #. available as the destination for inserting a snippet.
-#: ui/main_frame.py:554
+#: ui/main_frame.py:558
 msgid "There is no previous window to insert the snippet into."
 msgstr "Es gibt kein vorheriges Fenster, in das der Textbaustein eingefügt werden kann."
 
 #. Translators: Title of an error inserting a snippet externally.
 #. Translators: Title of an error while pasting copied or cut items.
-#: ui/main_frame.py:556 ui/main_frame.py:588 ui/snippet_list.py:352
+#: ui/main_frame.py:560 ui/main_frame.py:592 ui/snippet_list.py:352
 msgid "Paste error"
 msgstr "Fehler beim Einfügen"
 
 #. Translators: Error after inserting a snippet when restoring the
 #. user's old clipboard repeatedly failed. {} is a technical error.
-#: ui/main_frame.py:624
+#: ui/main_frame.py:628
 #, python-brace-format
 msgid ""
 "The previous clipboard contents could not be restored after multiple attempts. The clipboard may still contain the inserted snippet.\n"
@@ -628,42 +628,42 @@ msgstr ""
 
 #. Translators: Title of an error restoring the user's clipboard
 #. after a snippet was inserted.
-#: ui/main_frame.py:630
+#: ui/main_frame.py:634
 msgid "Clipboard restore error"
 msgstr "Fehler beim Wiederherstellen der Zwischenablage"
 
 #. Translators: Edit-menu command that opens the snippet search
 #. dialog. "&" marks the mnemonic; keep F3 after "\t".
-#: ui/main_frame.py:643
+#: ui/main_frame.py:647
 msgid "&Search...\tF3"
 msgstr "&Suchen...\tF3"
 
 #. Translators: Edit-menu command that opens the settings dialog.
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
-#: ui/main_frame.py:650
+#: ui/main_frame.py:654
 msgid "&Settings...\tCtrl+,"
 msgstr "&Einstellungen...\tCtrl+,"
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:654
+#: ui/main_frame.py:658
 msgid "&Edit"
 msgstr "&Bearbeiten"
 
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:657
+#: ui/main_frame.py:661
 msgid "About"
 msgstr "Über btText"
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:661
+#: ui/main_frame.py:665
 msgid "&Help"
 msgstr "&Hilfe"
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:695
+#: ui/main_frame.py:700
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr "F3: Textbausteine suchen    Eingabetaste: Ausgewählten Textbaustein einfügen"
 
@@ -719,7 +719,7 @@ msgstr "&Textbaustein anzeigen"
 #. Translators: Settings-dialog button that discards pending changes and
 #. closes the dialog. "&" marks the keyboard mnemonic.
 #. Translators: Snippet-editor button that discards unsaved changes and
-#: ui/search_dialog.py:60 ui/settings_dialog.py:92 ui/snippet_editor.py:109
+#: ui/search_dialog.py:60 ui/settings_dialog.py:95 ui/snippet_editor.py:109
 msgid "&Cancel"
 msgstr "&Abbrechen"
 
@@ -729,98 +729,104 @@ msgid "Search error"
 msgstr "Suchfehler"
 
 #. Translators: Window title for application settings.
-#: ui/settings_dialog.py:44
+#: ui/settings_dialog.py:45
 msgid "Settings"
 msgstr "Einstellungen"
 
 #. Translators: Tab for general application settings such as language.
 #. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:77
+#: ui/settings_dialog.py:80
 msgid "&General"
 msgstr "All&gemein"
 
 #. Translators: Tab for configuring automatic snippet hotstrings.
 #. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:81
+#: ui/settings_dialog.py:84
 msgid "&Hotstrings"
 msgstr "&Hotstrings"
 
 #. Translators: Tab for configuring the global keyboard shortcut.
 #. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:85
+#: ui/settings_dialog.py:88
 msgid "&Keyboard"
 msgstr "&Tastatur"
 
 #. Translators: Settings-dialog button that saves pending changes and
 #. closes the dialog. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:89
+#: ui/settings_dialog.py:92
 msgid "&OK"
 msgstr "&OK"
 
 #. Translators: Settings-dialog button that saves and activates pending
 #. changes without closing the dialog. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:95
+#: ui/settings_dialog.py:98
 msgid "&Apply"
 msgstr "Ü&bernehmen"
 
 #. Translators: Label for the user-interface language selector.
 #. "&" marks the keyboard mnemonic for the adjacent choice control.
-#: ui/settings_dialog.py:126
+#: ui/settings_dialog.py:129
 msgid "&Language"
 msgstr "&Sprache"
 
 #. Translators: Explains that a newly selected interface language is
 #. loaded the next time the application starts.
-#: ui/settings_dialog.py:148
+#: ui/settings_dialog.py:151
 msgid "Language changes take effect after restarting btText."
 msgstr "Sprachänderungen werden nach einem Neustart von btText wirksam."
 
 #. Translators: General setting that controls whether text copied from
 #. a snippet is added to the Windows clipboard history. "&" marks the
 #. keyboard mnemonic.
-#: ui/settings_dialog.py:158
+#: ui/settings_dialog.py:161
 msgid "Include copied snippet &text in the Windows clipboard history"
 msgstr "Kopierten Textbaustein im Windows-&Zwischenablageverlauf speichern"
 
 #. Translators: General setting that controls whether copied snippet
 #. text may be synchronized through the Windows cloud clipboard.
 #. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:174
+#: ui/settings_dialog.py:177
 msgid "Allow copied snippet text to be stored in the Windows &cloud"
 msgstr "Kopierte Textbausteine in der Windows-&Cloud speichern"
 
 #. Translators: Explanation on the hotstring settings page.
-#: ui/settings_dialog.py:220
+#: ui/settings_dialog.py:223
 msgid "Hotstrings expand a snippet after its abbreviation is followed by Space, Enter, Tab, or punctuation."
 msgstr "Hotstrings erweitern einen Textbaustein, wenn auf sein Kürzel Leertaste, Eingabetaste, Tab oder ein Satzzeichen folgt."
 
 #. Translators: Setting that enables automatic expansion of snippet
 #. hotstrings. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:229
+#: ui/settings_dialog.py:232
 msgid "&Enable hotstrings"
 msgstr "Hotstrings &aktivieren"
 
 #. Translators: Hotstring setting that keeps the typed Space, Enter,
 #. Tab, or punctuation after the expanded snippet.
-#: ui/settings_dialog.py:239
+#: ui/settings_dialog.py:242
 msgid "&Keep the ending character after expansion"
 msgstr "&Endezeichen nach der Erweiterung erhalten"
 
+#. Translators: Hotstring setting that shows a Windows notification
+#. after a snippet was expanded. "&" marks the keyboard mnemonic.
+#: ui/settings_dialog.py:255
+msgid "Show a Windows &notification after expansion"
+msgstr "Nach der Erweiterung eine Windows-&Benachrichtigung anzeigen"
+
 #. Translators: Settings-page explanation of the global shortcut and
 #. its required modifier keys.
-#: ui/settings_dialog.py:321
+#: ui/settings_dialog.py:352
 msgid "Configure the global shortcut used to show or hide the main window. A shortcut must contain Ctrl, Shift, Alt or the Windows key."
 msgstr "Legen Sie die globale Tastenkombination zum Ein- oder Ausblenden des Hauptfensters fest. Sie muss Strg, Umschalt, Alt oder die Windows-Taste enthalten."
 
 #. Translators: Label for the currently configured global shortcut.
 #. "&" marks the keyboard mnemonic for the adjacent read-only field.
-#: ui/settings_dialog.py:330
+#: ui/settings_dialog.py:361
 msgid "Current &hotkey"
 msgstr "Aktuelle Tasten&kombination"
 
 #. Translators: Accessible name for the read-only field displaying
 #. the currently configured global show-or-hide shortcut.
-#: ui/settings_dialog.py:338
+#: ui/settings_dialog.py:369
 msgid "Current show or hide window shortcut"
 msgstr "Aktuelle Tastenkombination zum Ein- oder Ausblenden des Hauptfensters"
 
@@ -828,85 +834,85 @@ msgstr "Aktuelle Tastenkombination zum Ein- oder Ausblenden des Hauptfensters"
 #. shortcut. "&" marks the keyboard mnemonic.
 #. Translators: Button label restored after shortcut recording ends; it
 #. starts listening for another shortcut. "&" marks the mnemonic.
-#: ui/settings_dialog.py:345 ui/settings_dialog.py:441
+#: ui/settings_dialog.py:376 ui/settings_dialog.py:472
 msgid "&Record new shortcut"
 msgstr "&Neue Tastenkombination aufzeichnen"
 
 #. Translators: Button that stops the current shortcut recording
 #. without accepting it. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:352
+#: ui/settings_dialog.py:383
 msgid "Cancel &recording"
 msgstr "Auf&zeichnung abbrechen"
 
 #. Translators: Button that selects btText's default global shortcut as
 #. the pending setting. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:361
+#: ui/settings_dialog.py:392
 msgid "Use &default"
 msgstr "Stan&dard verwenden"
 
 #. Translators: Initial status before shortcut recording starts.
-#: ui/settings_dialog.py:368
+#: ui/settings_dialog.py:399
 msgid "Recording is not active."
 msgstr "Die Aufzeichnung ist nicht aktiv."
 
 #. Translators: Accessible name for the text that reports shortcut
 #. recording instructions and results.
-#: ui/settings_dialog.py:372
+#: ui/settings_dialog.py:403
 msgid "Shortcut recording status"
 msgstr "Status der Tastenkombinationsaufzeichnung"
 
 #. Translators: Temporary button label while btText waits for the user to
 #. press a new global shortcut.
-#: ui/settings_dialog.py:407
+#: ui/settings_dialog.py:438
 msgid "Press shortcut now"
 msgstr "Tastenkombination jetzt drücken"
 
 #. Translators: Accessible name while btText is waiting for a shortcut;
 #. Escape cancels and Tab leaves the recording control.
-#: ui/settings_dialog.py:412
+#: ui/settings_dialog.py:443
 msgid "Recording shortcut. Press Escape to cancel or Tab to leave recording."
 msgstr "Tastenkombination wird aufgezeichnet. Drücken Sie Esc zum Abbrechen oder die Tabulatortaste, um die Aufzeichnung zu verlassen."
 
 #. Translators: Instructions shown while recording a new global
 #. shortcut. Keep Escape, Tab, and Shift+Tab recognizable key names.
-#: ui/settings_dialog.py:421
+#: ui/settings_dialog.py:452
 msgid "Press one shortcut now. Escape cancels; Tab and Shift+Tab remain available."
 msgstr "Drücken Sie jetzt eine Tastenkombination. Esc bricht ab; Tab und Umschalt+Tab bleiben verfügbar."
 
 #. Translators: Status after the user cancels shortcut recording.
-#: ui/settings_dialog.py:433
+#: ui/settings_dialog.py:464
 msgid "Shortcut recording cancelled."
 msgstr "Aufzeichnung der Tastenkombination abgebrochen."
 
 #. Translators: Accessible button name restored after recording ends; the
 #. button starts recording another global shortcut.
-#: ui/settings_dialog.py:444
+#: ui/settings_dialog.py:475
 msgid "Record new shortcut"
 msgstr "Neue Tastenkombination aufzeichnen"
 
 #. Translators: Status announced after an invalid shortcut ends
 #. recording. {error} explains why the key was rejected.
-#: ui/settings_dialog.py:491
+#: ui/settings_dialog.py:522
 #, python-brace-format
 msgid "Shortcut not accepted: {error}. Recording has stopped."
 msgstr "Tastenkombination nicht akzeptiert: {error}. Die Aufzeichnung wurde beendet."
 
 #. Translators: Status after recording succeeds. The shortcut is not
 #. active until Apply or OK saves it. {shortcut} is such as Ctrl+Alt+T.
-#: ui/settings_dialog.py:503
+#: ui/settings_dialog.py:534
 #, python-brace-format
 msgid "Shortcut {shortcut} recorded. Choose Apply or OK to activate it."
 msgstr "Tastenkombination {shortcut} aufgezeichnet. Wählen Sie „Übernehmen“ oder „OK“, um sie zu aktivieren."
 
 #. Translators: Status after selecting btText's default shortcut; it
 #. is only activated when Apply or OK saves the setting.
-#: ui/settings_dialog.py:637
+#: ui/settings_dialog.py:668
 msgid "Default shortcut selected. Choose Apply or OK to activate it."
 msgstr "Standardtastenkombination ausgewählt. Wählen Sie „Übernehmen“ oder „OK“, um sie zu aktivieren."
 
 #. Translators: Status confirming that all pending application settings
 #. were saved and activated where possible.
-#: ui/settings_dialog.py:681
+#: ui/settings_dialog.py:718
 msgid "The settings have been applied."
 msgstr "Die Einstellungen wurden übernommen."
 
@@ -1118,21 +1124,29 @@ msgstr[1] "{count} Textbausteine gelöscht."
 # | msgid "{app_name} {app_version}"
 #. Translators: Notification-area tooltip identifying the running
 #. application. Keep the application name and version placeholders.
-#: ui/tray_icon.py:27
+#: ui/tray_icon.py:28
 #, python-brace-format
 msgid "{app_name} {app_version}"
 msgstr "{app_name} {app_version}"
 
 #. Translators: Notification-area menu command that restores and focuses
 #. btText's main window.
-#: ui/tray_icon.py:39
+#: ui/tray_icon.py:40
 msgid "Show snippets"
 msgstr "Textbausteine anzeigen"
 
 #. Translators: Notification-area menu command that closes btText.
-#: ui/tray_icon.py:42
+#: ui/tray_icon.py:43
 msgid "Exit"
 msgstr "Beenden"
+
+#. Translators: Windows notification after a hotstring expansion.
+#. {hotstring} is the typed abbreviation and {snippet} is the name of
+#. the inserted snippet; the snippet content is deliberately omitted.
+#: ui/tray_icon.py:67
+#, python-brace-format
+msgid "Hotstring “{hotstring}” expanded to “{snippet}”."
+msgstr "Hotstring „{hotstring}“ als „{snippet}“ erweitert."
 
 #. Translators: Lowest search-ranking weight assigned to a snippet.
 #: ui/utils.py:21
