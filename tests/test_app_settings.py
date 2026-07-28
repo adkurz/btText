@@ -141,15 +141,19 @@ class SettingsStoreTestCase(unittest.TestCase):
                 settings_file.read_text(encoding="utf-8"),
             )
             self.assertIn(
-                "hotstrings_enabled = False",
+                "[hotstrings]",
                 settings_file.read_text(encoding="utf-8"),
             )
             self.assertIn(
-                "preserve_hotstring_boundary = False",
+                "enabled = False",
                 settings_file.read_text(encoding="utf-8"),
             )
             self.assertIn(
-                "notify_hotstring_expansion = True",
+                "preserve_boundary = False",
+                settings_file.read_text(encoding="utf-8"),
+            )
+            self.assertIn(
+                "notify_expansion = True",
                 settings_file.read_text(encoding="utf-8"),
             )
 
@@ -166,6 +170,23 @@ class SettingsStoreTestCase(unittest.TestCase):
             self.assertEqual(settings.language, "system")
             self.assertTrue(settings.include_copied_text_in_clipboard_history)
             self.assertTrue(settings.allow_copied_text_cloud_upload)
+            self.assertTrue(settings.hotstrings_enabled)
+            self.assertTrue(settings.preserve_hotstring_boundary)
+            self.assertFalse(settings.notify_hotstring_expansion)
+
+    def test_obsolete_general_hotstring_keys_are_not_migrated(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            settings_file = Path(temporary_directory) / "settings.ini"
+            settings_file.write_text(
+                "[general]\n"
+                "hotstrings_enabled = false\n"
+                "preserve_hotstring_boundary = false\n"
+                "notify_hotstring_expansion = true\n",
+                encoding="utf-8",
+            )
+
+            settings = SettingsStore(settings_file).load()
+
             self.assertTrue(settings.hotstrings_enabled)
             self.assertTrue(settings.preserve_hotstring_boundary)
             self.assertFalse(settings.notify_hotstring_expansion)

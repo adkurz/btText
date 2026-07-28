@@ -280,13 +280,13 @@ class SettingsStore:
                 fallback=True,
             )
             hotstrings_enabled = parser.getboolean(
-                "general", "hotstrings_enabled", fallback=True
+                "hotstrings", "enabled", fallback=True
             )
             preserve_hotstring_boundary = parser.getboolean(
-                "general", "preserve_hotstring_boundary", fallback=True
+                "hotstrings", "preserve_boundary", fallback=True
             )
             notify_hotstring_expansion = parser.getboolean(
-                "general", "notify_hotstring_expansion", fallback=False
+                "hotstrings", "notify_expansion", fallback=False
             )
             return AppSettings(
                 toggle_window_hotkey=Hotkey.parse(value),
@@ -326,13 +326,13 @@ class SettingsStore:
                 "allow_copied_text_cloud_upload": str(
                     settings.allow_copied_text_cloud_upload
                 ),
-                "hotstrings_enabled": str(settings.hotstrings_enabled),
-                "preserve_hotstring_boundary": str(
+            }
+            parser["hotstrings"] = {
+                "enabled": str(settings.hotstrings_enabled),
+                "preserve_boundary": str(
                     settings.preserve_hotstring_boundary
                 ),
-                "notify_hotstring_expansion": str(
-                    settings.notify_hotstring_expansion
-                ),
+                "notify_expansion": str(settings.notify_hotstring_expansion),
             }
             parser["hotkeys"] = {
                 "toggle_window": str(settings.toggle_window_hotkey),
