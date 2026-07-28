@@ -30,8 +30,9 @@ class SettingsDialog(wx.Dialog):
         current_language: str,
         include_copied_text_in_clipboard_history: bool,
         allow_copied_text_cloud_upload: bool,
+        hotstrings_enabled: bool,
         available_languages: tuple[str, ...],
-        apply_settings: Callable[[Hotkey, str, bool, bool], bool],
+        apply_settings: Callable[[Hotkey, str, bool, bool, bool], bool],
         begin_recording: Callable[[], None],
         end_recording: Callable[[], None],
     ):
@@ -58,6 +59,8 @@ class SettingsDialog(wx.Dialog):
         self._candidate_allow_copied_text_cloud_upload = (
             allow_copied_text_cloud_upload
         )
+        self._current_hotstrings_enabled = hotstrings_enabled
+        self._candidate_hotstrings_enabled = hotstrings_enabled
         self._available_languages = available_languages
         self._apply_settings = apply_settings
         self._begin_recording = begin_recording
@@ -171,6 +174,16 @@ class SettingsDialog(wx.Dialog):
             wx.EVT_CHECKBOX,
             self._on_cloud_clipboard_changed,
         )
+        self.hotstrings_checkbox = wx.CheckBox(
+            page,
+            # Translators: General setting that enables automatic expansion of
+            # snippet hotstrings. "&" marks the keyboard mnemonic.
+            label=_("&Enable hotstrings"),
+        )
+        self.hotstrings_checkbox.SetValue(self._candidate_hotstrings_enabled)
+        self.hotstrings_checkbox.Bind(
+            wx.EVT_CHECKBOX, self._on_hotstrings_changed
+        )
 
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(language_label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 12)
@@ -194,6 +207,12 @@ class SettingsDialog(wx.Dialog):
         )
         sizer.Add(
             self.cloud_clipboard_checkbox,
+            0,
+            wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            12,
+        )
+        sizer.Add(
+            self.hotstrings_checkbox,
             0,
             wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
             12,
@@ -222,6 +241,11 @@ class SettingsDialog(wx.Dialog):
         )
         self._update_apply_button()
 
+    def _on_hotstrings_changed(self, event: wx.CommandEvent):
+        """Store whether automatic hotstring expansion is enabled."""
+        self._candidate_hotstrings_enabled = self.hotstrings_checkbox.GetValue()
+        self._update_apply_button()
+
     def _update_apply_button(self):
         """Enable Apply whenever either setting differs from its saved value."""
         self.apply_button.Enable(
@@ -231,6 +255,8 @@ class SettingsDialog(wx.Dialog):
             != self._current_include_copied_text_in_clipboard_history
             or self._candidate_allow_copied_text_cloud_upload
             != self._current_allow_copied_text_cloud_upload
+            or self._candidate_hotstrings_enabled
+            != self._current_hotstrings_enabled
         )
 
     def _create_hotkey_page(self, notebook: wx.Notebook) -> wx.Panel:
@@ -571,6 +597,8 @@ class SettingsDialog(wx.Dialog):
             == self._current_include_copied_text_in_clipboard_history
             and self._candidate_allow_copied_text_cloud_upload
             == self._current_allow_copied_text_cloud_upload
+            and self._candidate_hotstrings_enabled
+            == self._current_hotstrings_enabled
         ):
             return True
         if not self._apply_settings(
@@ -578,6 +606,7 @@ class SettingsDialog(wx.Dialog):
             self._candidate_language,
             self._candidate_include_copied_text_in_clipboard_history,
             self._candidate_allow_copied_text_cloud_upload,
+            self._candidate_hotstrings_enabled,
         ):
             return False
         self._current_hotkey = self._candidate_hotkey
@@ -588,6 +617,7 @@ class SettingsDialog(wx.Dialog):
         self._current_allow_copied_text_cloud_upload = (
             self._candidate_allow_copied_text_cloud_upload
         )
+        self._current_hotstrings_enabled = self._candidate_hotstrings_enabled
         self.apply_button.Enable(False)
         # Translators: Status confirming that all pending application settings
         # were saved and activated where possible.

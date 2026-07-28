@@ -203,6 +203,16 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "snippet_weight_invalid": lambda parameters: _(
         "The selected weight is not allowed."
     ),
+    # Translators: Validation error when a hotstring contains a space, tab, or
+    # another whitespace character.
+    "snippet_hotstring_whitespace": lambda parameters: _(
+        "The hotstring must not contain whitespace."
+    ),
+    # Translators: Validation error when another snippet already uses the same
+    # global hotstring.
+    "snippet_hotstring_duplicate": lambda parameters: _(
+        "This hotstring is already assigned to another snippet."
+    ),
     # Translators: Internal error for an unsaved snippet without a database ID.
     "snippet_id_missing": lambda parameters: _(
         "The snippet has no ID."

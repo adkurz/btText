@@ -36,6 +36,7 @@ class Snippet:
     category_id: int
     weight: int = 1
     id: int|None = None
+    hotstring: str|None = None
 
 @dataclasses.dataclass
 class Category:
@@ -60,11 +61,12 @@ class DataModel:
     """
 
     WEIGHTS = (1, 2, 3)
-    SCHEMA_VERSION = 3
+    SCHEMA_VERSION = 4
     MIGRATIONS = (
         "_migrate_from_0_to_1",
         "_migrate_from_1_to_2",
         "_migrate_from_2_to_3",
+        "_migrate_from_3_to_4",
     )
 
     def __init__(self, ee: pymitter.EventEmitter, db_file: str | Path):
@@ -137,6 +139,7 @@ class DataModel:
                 "char(9) || char(10) || char(11) || char(12) || "
                 "char(13) || ' ')) > 0), "
                 "content TEXT NOT NULL CHECK (length(content) > 0), "
+                "hotstring TEXT CHECK (hotstring IS NULL OR length(hotstring) > 0), "
                 "weight INTEGER NOT NULL DEFAULT 1 "
                 "CHECK (weight IN (1, 2, 3)), "
                 "UNIQUE (category_id, name), "
@@ -145,7 +148,10 @@ class DataModel:
             )
             self._create_category_indexes(c)
             self._create_snippet_indexes(c)
-            c.execute("PRAGMA user_version = 3")
+            c.execute("CREATE UNIQUE INDEX snippet_hotstring_unique "
+                      "ON snippet(hotstring COLLATE NOCASE) "
+                      "WHERE hotstring IS NOT NULL")
+            c.execute("PRAGMA user_version = 4")
 
     def _migrate_database(self) -> None:
         """Apply each schema migration exactly once and in version order."""
@@ -415,6 +421,17 @@ class DataModel:
             self._create_snippet_indexes(c)
             c.execute("PRAGMA user_version = 3")
 
+    def _migrate_from_3_to_4(self) -> None:
+        """Add optional globally unique hotstrings to snippets."""
+        with self._connection as c:
+            c.execute("ALTER TABLE snippet ADD COLUMN hotstring TEXT")
+            c.execute(
+                "CREATE UNIQUE INDEX snippet_hotstring_unique "
+                "ON snippet(hotstring COLLATE NOCASE) "
+                "WHERE hotstring IS NOT NULL"
+            )
+            c.execute("PRAGMA user_version = 4")
+
     @staticmethod
     def _create_category_indexes(connection) -> None:
         """Create indexes that enforce unique category names per tree level."""
@@ -562,7 +579,7 @@ class DataModel:
     def get_snippets(self, category_id: int):
         """Yield snippets ordered by weight, name, and ID."""
         sql = (
-            "SELECT id, category_id, name, weight, content FROM snippet "
+            "SELECT id, category_id, name, weight, content, hotstring FROM snippet "
             "WHERE category_id = ? "
             "ORDER BY weight DESC, name COLLATE NOCASE, id"
         )
@@ -573,6 +590,7 @@ class DataModel:
                 name=snippet["name"],
                 content=snippet["content"],
                 weight=snippet["weight"],
+                hotstring=snippet["hotstring"],
             )
 
     def search_snippets(self, term: str):
@@ -581,7 +599,7 @@ class DataModel:
             return  # An empty query deliberately yields no results.
         sql = (
             "SELECT s.id, s.category_id, c.name AS category_name, s.name, "
-            "s.weight, s.content FROM snippet s "
+            "s.weight, s.content, s.hotstring FROM snippet s "
             "INNER JOIN category c ON s.category_id = c.id "
             "WHERE s.name LIKE :term ESCAPE '\\' "
             "OR s.content LIKE :term ESCAPE '\\' "
@@ -597,12 +615,14 @@ class DataModel:
                 name=snippet["name"],
                 content=snippet["content"],
                 weight=snippet["weight"],
+                hotstring=snippet["hotstring"],
             )
 
     def get_snippet(self, id: int) -> Snippet:
         """Return one snippet or raise :class:`EntityNotFoundError`."""
         result = self._connection.execute(
-            "SELECT id, category_id, name, weight, content FROM snippet WHERE id = ?",
+            "SELECT id, category_id, name, weight, content, hotstring "
+            "FROM snippet WHERE id = ?",
             (id,),
         )
         snippet = result.fetchone()
@@ -618,6 +638,7 @@ class DataModel:
             name=snippet["name"],
             content=snippet["content"],
             weight=snippet["weight"],
+            hotstring=snippet["hotstring"],
         )
 
     def category_exist(
@@ -862,6 +883,7 @@ class DataModel:
                 content=source.content,
                 category_id=category_id,
                 weight=source.weight,
+                hotstring=None,
             )
             self.validate_snippet(snippet)
             snippets.append(snippet)
@@ -916,6 +938,21 @@ class DataModel:
                 "snippet_weight_invalid",
                 "The weight isn't in the allowed range.",
             )
+        if snippet.hotstring is not None:
+            snippet.hotstring = snippet.hotstring.strip()
+            if not snippet.hotstring:
+                snippet.hotstring = None
+            elif any(character.isspace() for character in snippet.hotstring):
+                raise SnippetValidationError(
+                    "snippet_hotstring_whitespace",
+                    "The hotstring must not contain whitespace",
+                )
+            existing_id = self.hotstring_exist(snippet.hotstring)
+            if existing_id is not None and existing_id != snippet.id:
+                raise SnippetValidationError(
+                    "snippet_hotstring_duplicate",
+                    "This hotstring is already assigned to another snippet",
+                )
 
     def add_snippet(self, snippet: Snippet) -> Snippet:
         """Validate, persist, and publish a new snippet."""
@@ -924,12 +961,14 @@ class DataModel:
             with self._connection as c:
                 result = c.execute(
                     "INSERT INTO snippet "
-                    "(name, category_id, weight, content) VALUES (?, ?, ?, ?)",
+                    "(name, category_id, weight, content, hotstring) "
+                    "VALUES (?, ?, ?, ?, ?)",
                     (
                         snippet.name,
                         snippet.category_id,
                         snippet.weight,
-                        snippet.content
+                        snippet.content,
+                        snippet.hotstring,
                     )
                 )
         except sqlite3.IntegrityError as error:
@@ -952,12 +991,13 @@ class DataModel:
             with self._connection as c:
                 c.execute(
                     "UPDATE snippet SET name = ?, category_id = ?, "
-                    "weight = ?, content = ? WHERE id = ?",
+                    "weight = ?, content = ?, hotstring = ? WHERE id = ?",
                     (
                         snippet.name,
                         snippet.category_id,
                         snippet.weight,
                         snippet.content,
+                        snippet.hotstring,
                         snippet.id
                     )
                 )
@@ -969,6 +1009,33 @@ class DataModel:
     def delete_snippet(self, id: int) -> Snippet:
         """Delete and return an existing snippet."""
         return self.delete_snippets((id,))[0]
+
+    def hotstring_exist(self, hotstring: str) -> int | None:
+        """Return the snippet ID assigned to ``hotstring``, if any."""
+        row = self._connection.execute(
+            "SELECT id FROM snippet WHERE hotstring = ? COLLATE NOCASE",
+            (hotstring,),
+        ).fetchone()
+        return row["id"] if row is not None else None
+
+    def get_hotstring_snippets(self) -> tuple[Snippet, ...]:
+        """Return all snippets that have an expansion hotstring."""
+        rows = self._connection.execute(
+            "SELECT id, category_id, name, weight, content, hotstring "
+            "FROM snippet WHERE hotstring IS NOT NULL "
+            "ORDER BY length(hotstring) DESC, id"
+        )
+        return tuple(
+            Snippet(
+                id=row["id"],
+                category_id=row["category_id"],
+                name=row["name"],
+                weight=row["weight"],
+                content=row["content"],
+                hotstring=row["hotstring"],
+            )
+            for row in rows
+        )
 
     def delete_snippets(
         self,
@@ -1022,6 +1089,11 @@ class DataModel:
         """Translate expected snippet constraints into domain errors."""
         error_code = getattr(error, "sqlite_errorcode", None)
         if error_code == sqlite3.SQLITE_CONSTRAINT_UNIQUE:
+            if "hotstring" in str(error).lower():
+                raise SnippetValidationError(
+                    "snippet_hotstring_duplicate",
+                    "This hotstring is already assigned to another snippet",
+                ) from error
             raise SnippetValidationError(
                 "snippet_name_duplicate",
                 "There is already a snippet with this name in this category",

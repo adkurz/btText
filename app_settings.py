@@ -231,6 +231,7 @@ class AppSettings:
     language: str = i18n.SYSTEM_LANGUAGE
     include_copied_text_in_clipboard_history: bool = True
     allow_copied_text_cloud_upload: bool = True
+    hotstrings_enabled: bool = True
 
 
 class SettingsStore:
@@ -276,6 +277,9 @@ class SettingsStore:
                 "allow_copied_text_cloud_upload",
                 fallback=True,
             )
+            hotstrings_enabled = parser.getboolean(
+                "general", "hotstrings_enabled", fallback=True
+            )
             return AppSettings(
                 toggle_window_hotkey=Hotkey.parse(value),
                 language=language,
@@ -283,6 +287,7 @@ class SettingsStore:
                     include_copied_text_in_clipboard_history
                 ),
                 allow_copied_text_cloud_upload=allow_copied_text_cloud_upload,
+                hotstrings_enabled=hotstrings_enabled,
             )
         except (ConfigParserError, OSError, ValueError) as error:
             raise SettingsError(
@@ -311,6 +316,7 @@ class SettingsStore:
                 "allow_copied_text_cloud_upload": str(
                     settings.allow_copied_text_cloud_upload
                 ),
+                "hotstrings_enabled": str(settings.hotstrings_enabled),
             }
             parser["hotkeys"] = {
                 "toggle_window": str(settings.toggle_window_hotkey),

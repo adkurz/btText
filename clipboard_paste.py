@@ -515,6 +515,20 @@ def _send_ctrl_v() -> None:
         raise PasteError("The Ctrl+V keystroke could not be sent.")
 
 
+def _send_virtual_key(key: int, repetitions: int = 1) -> None:
+    """Send balanced presses of one virtual key to the foreground window."""
+    values = []
+    for _index in range(repetitions):
+        for flags in (0, KEYEVENTF_KEYUP):
+            value = INPUT()
+            value.type = INPUT_KEYBOARD
+            value.ki = KEYBDINPUT(key, 0, flags, 0, 0)
+            values.append(value)
+    inputs = (INPUT * len(values))(*values)
+    if user32.SendInput(len(inputs), inputs, ctypes.sizeof(INPUT)) != len(inputs):
+        raise PasteError("A keyboard input could not be sent.")
+
+
 class PendingPaste:
     """A paste whose complete previous clipboard can be restored later."""
 
@@ -562,6 +576,30 @@ def paste_text(target_window: int, text: str) -> PendingPaste:
         raise PasteError("The previously active window could not be activated.")
     try:
         _send_ctrl_v()
+    except Exception:
+        pending.restore_clipboard()
+        raise
+    return pending
+
+
+def expand_hotstring(
+    target_window: int,
+    text: str,
+    hotstring_length: int,
+    boundary_key: int,
+) -> PendingPaste:
+    """Replace a typed hotstring and replay its swallowed boundary key."""
+    if not target_window or not user32.IsWindow(target_window):
+        raise PasteError("The active window no longer exists.")
+    marker = uuid.uuid4().bytes
+    pending = PendingPaste(_replace_clipboard(text, marker), marker, text)
+    if not activate_window(target_window):
+        pending.restore_clipboard()
+        raise PasteError("The active window could not be activated.")
+    try:
+        _send_virtual_key(0x08, hotstring_length)  # VK_BACK
+        _send_ctrl_v()
+        _send_virtual_key(boundary_key)
     except Exception:
         pending.restore_clipboard()
         raise

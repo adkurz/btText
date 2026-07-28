@@ -31,7 +31,7 @@ class SnippetEditor(wx.Dialog):
         self.pane = wx.Panel(self)
         form_sizer = wx.FlexGridSizer(cols=2, vgap=self.FromDIP(10), hgap=self.FromDIP(12))
         form_sizer.AddGrowableCol(1, 1)
-        form_sizer.AddGrowableRow(3, 1)
+        form_sizer.AddGrowableRow(4, 1)
 
         # Create fields.
         # Translators: Label for the editable snippet name. "&" marks the
@@ -72,6 +72,14 @@ class SnippetEditor(wx.Dialog):
                 for weight in self._model.WEIGHTS
             ],
         )
+        # Translators: Label for the optional abbreviation that expands after
+        # the user types a boundary key. "&" marks the keyboard mnemonic.
+        self.hotstring_label = wx.StaticText(self.pane, label=_("&Hotstring"))
+        self.hotstring_input = wx.TextCtrl(self.pane)
+        self.hotstring_input.SetHint(
+            # Translators: Hint explaining when an optional hotstring expands.
+            _("Optional; expands after Space, Enter, Tab, or punctuation")
+        )
         # Translators: Label for the snippet text that will be inserted.
         # "&" marks the mnemonic for the adjacent multiline editor.
         self.content_label = wx.StaticText(self.pane, label=_("C&ontent"))
@@ -82,6 +90,8 @@ class SnippetEditor(wx.Dialog):
         form_sizer.Add(self.category_input, 0, wx.EXPAND)
         form_sizer.AddSpacer(0)
         form_sizer.Add(self.weight_input, 0, wx.EXPAND)
+        form_sizer.Add(self.hotstring_label, 0, wx.ALIGN_CENTER_VERTICAL)
+        form_sizer.Add(self.hotstring_input, 0, wx.EXPAND)
         form_sizer.Add(self.content_label, 0, wx.ALIGN_TOP)
         form_sizer.Add(self.content_input, 0, wx.EXPAND)
         pane_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -132,6 +142,7 @@ class SnippetEditor(wx.Dialog):
         self.name_input.SetValue(s.name)
         self.weight_input.SetSelection(s.weight - 1)
         self.content_input.SetValue(s.content)
+        self.hotstring_input.SetValue(s.hotstring or "")
 
     def save(self, event):
         """Validate controls and persist the edited snippet."""
@@ -146,7 +157,14 @@ class SnippetEditor(wx.Dialog):
             return
         snippet_weight = self.weight_input.GetSelection() + 1
         snippet_content = self.content_input.GetValue()
-        snippet = datamodel.Snippet(name=snippet_name, category_id=snippet_category_id, weight=snippet_weight, content=snippet_content)
+        snippet_hotstring = self.hotstring_input.GetValue()
+        snippet = datamodel.Snippet(
+            name=snippet_name,
+            category_id=snippet_category_id,
+            weight=snippet_weight,
+            content=snippet_content,
+            hotstring=snippet_hotstring or None,
+        )
         try:
             if self._snippet is None: # Add new snippet
                 self._model.add_snippet(snippet)

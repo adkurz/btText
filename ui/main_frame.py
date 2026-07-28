@@ -10,6 +10,7 @@ import wx.lib.sized_controls as sc
 
 import clipboard_paste
 import datamodel
+import hotstrings
 import i18n
 import info
 from app_settings import AppSettings, Hotkey, SettingsError, SettingsStore
@@ -71,6 +72,15 @@ class MainFrame(sc.SizedFrame):
         self._model = model
         self._settings_store = settings_store
         self._settings = settings
+        self._hotstring_hook = hotstrings.KeyboardHook(
+            self._queue_hotstring_expansion,
+            lambda: clipboard_paste.is_external_window(
+                clipboard_paste.get_foreground_window()
+            ),
+        )
+        self._ee.on("snippet.added", self._refresh_hotstrings)
+        self._ee.on("snippet.edited", self._refresh_hotstrings)
+        self._ee.on("snippet.deleted", self._refresh_hotstrings)
         self._hotkey_id = 1
         self._registered_hotkey = None
         self._hotkey_suspended = False
@@ -180,6 +190,19 @@ class MainFrame(sc.SizedFrame):
         self._create_statusbar()
         self._create_tray_icon()
         self._register_hotkey(self._settings.toggle_window_hotkey)
+        self._refresh_hotstrings()
+        if self._settings.hotstrings_enabled:
+            try:
+                self._hotstring_hook.start()
+            except OSError as error:
+                wx.MessageBox(
+                    str(error),
+                    # Translators: Title for a failure to monitor or expand a
+                    # globally typed snippet hotstring.
+                    _("Hotstring error"),
+                    wx.OK | wx.ICON_ERROR,
+                    self,
+                )
         self.SetMinSize(self.FromDIP((760, 480)))
         self.SetClientSize(self.FromDIP((1040, 680)))
         self.Centre()
@@ -327,12 +350,29 @@ class MainFrame(sc.SizedFrame):
         language: str,
         include_copied_text_in_clipboard_history: bool,
         allow_copied_text_cloud_upload: bool,
+        hotstrings_enabled: bool,
     ) -> bool:
         """Apply and persist settings, rolling the hotkey back on failure."""
         # Register before saving so an unusable shortcut is never persisted.
         # Every failure path attempts to restore the previous binding.
         old_hotkey = self._settings.toggle_window_hotkey
         hotkey_changed = hotkey != old_hotkey
+        hotstrings_were_enabled = self._settings.hotstrings_enabled
+        hotstrings_started = False
+        if hotstrings_enabled and not hotstrings_were_enabled:
+            try:
+                self._hotstring_hook.start()
+                hotstrings_started = True
+            except OSError as error:
+                wx.MessageBox(
+                    str(error),
+                    # Translators: Title for a failure to monitor or expand a
+                    # globally typed snippet hotstring.
+                    _("Hotstring error"),
+                    wx.OK | wx.ICON_ERROR,
+                    self,
+                )
+                return False
         if hotkey_changed:
             self._unregister_hotkey()
         if hotkey_changed and not self._register_hotkey(
@@ -361,6 +401,8 @@ class MainFrame(sc.SizedFrame):
                 wx.OK | wx.ICON_ERROR,
                 self,
             )
+            if hotstrings_started:
+                self._hotstring_hook.stop()
             return False
 
         new_settings = AppSettings(
@@ -370,10 +412,13 @@ class MainFrame(sc.SizedFrame):
                 include_copied_text_in_clipboard_history
             ),
             allow_copied_text_cloud_upload=allow_copied_text_cloud_upload,
+            hotstrings_enabled=hotstrings_enabled,
         )
         try:
             self._settings_store.save(new_settings)
         except SettingsError as error:
+            if hotstrings_started:
+                self._hotstring_hook.stop()
             if hotkey_changed:
                 self._unregister_hotkey()
             restored = (
@@ -402,7 +447,59 @@ class MainFrame(sc.SizedFrame):
             )
             return False
         self._settings = new_settings
+        if not hotstrings_enabled:
+            self._hotstring_hook.stop()
         return True
+
+    def _refresh_hotstrings(self, *_arguments):
+        """Reload active hotstrings after any snippet mutation."""
+        self._hotstring_hook.update(self._model.get_hotstring_snippets())
+
+    def _queue_hotstring_expansion(
+        self, snippet: datamodel.Snippet, boundary_key: int
+    ) -> bool:
+        """Queue expansion only when the foreground window is external."""
+        target_window = clipboard_paste.get_foreground_window()
+        if not clipboard_paste.is_external_window(target_window):
+            return False
+        wx.CallAfter(
+            self._expand_hotstring,
+            target_window,
+            snippet,
+            boundary_key,
+        )
+        return True
+
+    def _expand_hotstring(
+        self,
+        target_window: int,
+        snippet: datamodel.Snippet,
+        boundary_key: int,
+    ):
+        """Replace a recognized hotstring through the clipboard paste path."""
+        try:
+            pending = clipboard_paste.expand_hotstring(
+                target_window,
+                snippet.content,
+                len(snippet.hotstring or ""),
+                boundary_key,
+            )
+        except clipboard_paste.PasteError as error:
+            wx.MessageBox(
+                str(error),
+                # Translators: Title for a failure to monitor or expand a
+                # globally typed snippet hotstring.
+                _("Hotstring error"),
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return
+        wx.CallLater(
+            CLIPBOARD_RESTORE_DELAY_MS,
+            self._restore_clipboard,
+            pending,
+            3,
+        )
 
     def on_global_hotkey(self, event):
         """Toggle main-window visibility in response to the global shortcut."""
@@ -573,6 +670,7 @@ class MainFrame(sc.SizedFrame):
                 self._settings.language,
                 self._settings.include_copied_text_in_clipboard_history,
                 self._settings.allow_copied_text_cloud_upload,
+                self._settings.hotstrings_enabled,
                 available_languages,
                 self._change_settings,
                 self._suspend_hotkey,
@@ -613,6 +711,7 @@ class MainFrame(sc.SizedFrame):
         if self.allow_close:
             self._hotkey_layout_timer.Stop()
             self._unregister_hotkey()
+            self._hotstring_hook.stop()
             self.tray_icon.RemoveIcon()
             self.tray_icon.Destroy()
             event.Skip()

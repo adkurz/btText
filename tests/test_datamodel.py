@@ -202,6 +202,64 @@ class DataModelTestCase(unittest.TestCase):
             Snippet("Unique snippet", "Allowed here", other_category.id)
         )
 
+    def test_hotstring_is_persisted_and_globally_unique(self):
+        first_category = self.model.add_category(Category("First"))
+        second_category = self.model.add_category(Category("Second"))
+        snippet = self.model.add_snippet(
+            Snippet(
+                "Greeting",
+                "Kind regards",
+                first_category.id,
+                hotstring="MfG",
+            )
+        )
+
+        self.assertEqual(self.model.get_snippet(snippet.id).hotstring, "MfG")
+        self.assertEqual(
+            self.model.get_hotstring_snippets()[0].id,
+            snippet.id,
+        )
+        with self.assertRaises(SnippetValidationError) as context:
+            self.model.add_snippet(
+                Snippet(
+                    "Other",
+                    "Other content",
+                    second_category.id,
+                    hotstring="mfg",
+                )
+            )
+        self.assertEqual(context.exception.code, "snippet_hotstring_duplicate")
+
+    def test_hotstring_whitespace_is_rejected_and_empty_value_is_disabled(self):
+        category = self.model.add_category(Category("Category"))
+        with self.assertRaises(SnippetValidationError) as context:
+            self.model.add_snippet(
+                Snippet("Invalid", "Content", category.id, hotstring="m fg")
+            )
+        self.assertEqual(context.exception.code, "snippet_hotstring_whitespace")
+
+        snippet = self.model.add_snippet(
+            Snippet("Disabled", "Content", category.id, hotstring="   ")
+        )
+        self.assertIsNone(self.model.get_snippet(snippet.id).hotstring)
+
+    def test_copy_does_not_duplicate_hotstring(self):
+        source_category = self.model.add_category(Category("Source"))
+        target_category = self.model.add_category(Category("Target"))
+        source = self.model.add_snippet(
+            Snippet(
+                "Greeting",
+                "Content",
+                source_category.id,
+                hotstring="greet",
+            )
+        )
+
+        copied = self.model.copy_snippet(source.id, target_category.id)
+
+        self.assertIsNone(copied.hotstring)
+        self.assertEqual(self.model.get_snippet(source.id).hotstring, "greet")
+
     def test_category_unique_constraint_is_translated_to_domain_error(self):
         self.model.add_category(Category("Existing"))
         self.model.category_exist = Mock(return_value=None)
@@ -672,7 +730,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
 
             with self.assertRaisesRegex(
                 DataModelError,
-                r"newer version.*schema version: 4.*supported version: 3",
+                r"newer version.*schema version: 5.*supported version: 4",
             ):
                 DataModel(RecordingEventEmitter(), database_file)
 
@@ -802,7 +860,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             category = model.get_category(7)
             self.assertIsNone(category.parent_id)
             self.assertEqual(model.get_snippet(9).category_id, 7)
-            self.assertEqual(model._get_database_version(), 3)
+            self.assertEqual(model._get_database_version(), 4)
 
     def test_version_two_database_gets_case_insensitive_snippet_constraint(self):
         with ExitStack() as resources:
@@ -840,7 +898,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             model = DataModel(RecordingEventEmitter(), database_file)
             resources.callback(model.close)
 
-            self.assertEqual(model._get_database_version(), 3)
+            self.assertEqual(model._get_database_version(), 4)
             with self.assertRaises(sqlite3.IntegrityError):
                 model._connection.execute(
                     "INSERT INTO snippet "
