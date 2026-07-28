@@ -2,7 +2,7 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from app_settings import DEFAULT_TOGGLE_HOTKEY
+from core.app_settings import DEFAULT_TOGGLE_HOTKEY
 from ui.main_frame import MainFrame
 
 

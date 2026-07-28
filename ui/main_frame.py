@@ -8,13 +8,13 @@ import wx
 import wx.adv
 import wx.lib.sized_controls as sc
 
-import clipboard_paste
-import datamodel
-import hotstrings
+from platform_support import clipboard_paste
+from core import datamodel
+from platform_support import hotstrings
 import i18n
 import info
-from app_settings import AppSettings, Hotkey, SettingsError, SettingsStore
-from error_messages import format_user_error
+from core.app_settings import AppSettings, Hotkey, SettingsError, SettingsStore
+from core.error_messages import format_user_error
 from i18n import _
 from ui import utils
 from ui.category_tree import CategoryTree

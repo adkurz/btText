@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import Mock, patch
 
-import clipboard_paste
-from clipboard_paste import (
+from platform_support import clipboard_paste
+from platform_support.clipboard_paste import (
     PendingPaste,
     _ClipboardFormatCopy,
     _ClipboardSnapshot,

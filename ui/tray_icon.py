@@ -5,8 +5,8 @@ from typing import TYPE_CHECKING
 import wx
 import wx.adv
 
-import app_paths
-import datamodel
+from platform_support import app_paths
+from core import datamodel
 import info
 from i18n import _
 

@@ -3,15 +3,15 @@
 import wx
 import pymitter
 
-import app_paths
-import datamodel
-from app_settings import AppSettings, SettingsError, SettingsStore
-from error_messages import format_user_error
+from platform_support import app_paths
+from core import datamodel
+from core.app_settings import AppSettings, SettingsError, SettingsStore
+from core.error_messages import format_user_error
 import i18n
 from i18n import _
 import info
 import ui
-from datamodel import DataModel
+from core.datamodel import DataModel
 
 def main():
     """Initialize the wx application and release resources on shutdown."""

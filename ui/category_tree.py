@@ -3,8 +3,8 @@
 import pymitter
 import wx
 
-import datamodel
-from error_messages import format_user_error
+from core import datamodel
+from core.error_messages import format_user_error
 from i18n import _
 from ui import utils
 from ui.transfer import TransferBuffer

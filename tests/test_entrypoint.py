@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 import btText
-from app_settings import AppSettings
+from core.app_settings import AppSettings
 
 
 class SingleInstanceTestCase(unittest.TestCase):

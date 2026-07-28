@@ -8,7 +8,7 @@ from configparser import ConfigParser, Error as ConfigParserError
 from pathlib import Path
 
 import i18n
-from user_errors import UserFacingError
+from core.user_errors import UserFacingError
 
 
 class SettingsError(UserFacingError):

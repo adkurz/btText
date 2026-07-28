@@ -5,9 +5,9 @@ from collections.abc import Callable
 import pymitter
 import wx
 
-import clipboard_paste
-import datamodel
-from error_messages import format_user_error
+from platform_support import clipboard_paste
+from core import datamodel
+from core.error_messages import format_user_error
 from i18n import _, ngettext
 from ui import utils
 from ui.snippet_editor import SnippetEditor

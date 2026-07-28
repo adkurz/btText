@@ -3,7 +3,7 @@ from unittest.mock import Mock
 
 import wx
 
-from datamodel import Snippet
+from core.datamodel import Snippet
 from ui.tray_icon import TrayIcon
 
 

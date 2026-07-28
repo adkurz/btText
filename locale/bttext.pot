@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-28 21:03+0200\n"
+"POT-Creation-Date: 2026-07-28 23:59+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -16,31 +16,6 @@ msgstr ""
 "Content-Type: text/plain; charset=utf-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
-
-#. Translators: Abbreviated Control-key name in a displayed shortcut,
-#. for example "Ctrl+Alt+T".
-#: app_settings.py:191
-msgctxt "hotkey modifier"
-msgid "Ctrl"
-msgstr ""
-
-#. Translators: Shift-key name in a displayed keyboard shortcut.
-#: app_settings.py:194
-msgctxt "hotkey modifier"
-msgid "Shift"
-msgstr ""
-
-#. Translators: Alt-key name in a displayed keyboard shortcut.
-#: app_settings.py:197
-msgctxt "hotkey modifier"
-msgid "Alt"
-msgstr ""
-
-#. Translators: Abbreviated Windows-key name in a displayed shortcut.
-#: app_settings.py:200
-msgctxt "hotkey modifier"
-msgid "Win"
-msgstr ""
 
 #. Translators: Information shown when the user tries to start
 #. the application while it is already running.
@@ -66,261 +41,286 @@ msgstr ""
 msgid "Language error"
 msgstr ""
 
+#. Translators: Abbreviated Control-key name in a displayed shortcut,
+#. for example "Ctrl+Alt+T".
+#: core/app_settings.py:191
+msgctxt "hotkey modifier"
+msgid "Ctrl"
+msgstr ""
+
+#. Translators: Shift-key name in a displayed keyboard shortcut.
+#: core/app_settings.py:194
+msgctxt "hotkey modifier"
+msgid "Shift"
+msgstr ""
+
+#. Translators: Alt-key name in a displayed keyboard shortcut.
+#: core/app_settings.py:197
+msgctxt "hotkey modifier"
+msgid "Alt"
+msgstr ""
+
+#. Translators: Abbreviated Windows-key name in a displayed shortcut.
+#: core/app_settings.py:200
+msgctxt "hotkey modifier"
+msgid "Win"
+msgstr ""
+
 #. Translators: Startup error when the snippet database cannot be opened.
 #. {reason} is a technical SQLite or operating-system message.
-#: error_messages.py:23
+#: core/error_messages.py:23
 #, python-brace-format
 msgid "The database could not be opened: {reason}"
 msgstr ""
 
 #. Translators: Startup error for a damaged or incomplete snippet database.
 #. {missing_tables} is a comma-separated list of technical table names.
-#: error_messages.py:32
+#: core/error_messages.py:32
 #, python-brace-format
 msgid "The database schema is incomplete. Missing table(s): {missing_tables}."
 msgstr ""
 
 #. Translators: Startup error when the database comes from a newer btText and
 #. cannot be safely read. Both placeholders are integer schema versions.
-#: error_messages.py:41
+#: core/error_messages.py:41
 #, python-brace-format
 msgid "The database was created by a newer version of btText and cannot be opened. Database schema version: {database_version}; supported version: {supported_version}."
 msgstr ""
 
 #. Translators: Startup error when btText cannot upgrade an older database.
 #. {database_version} is its integer schema version.
-#: error_messages.py:51
+#: core/error_messages.py:51
 #, python-brace-format
 msgid "No database migration is available from schema version {database_version}."
 msgstr ""
 
 #. Translators: Startup error when a database upgrade did not reach its target
 #. version. The migration name is technical; both versions are integers.
-#: error_messages.py:60
+#: core/error_messages.py:60
 #, python-brace-format
 msgid "Database migration {migration_name} did not advance the schema from version {old_version} to version {new_version}."
 msgstr ""
 
 #. Translators: Error after a category disappeared before an operation could
 #. finish. {id} is its internal integer database ID.
-#: error_messages.py:68
+#: core/error_messages.py:68
 #, python-brace-format
 msgid "The category with ID {id} no longer exists."
 msgstr ""
 
 #. Translators: Error after a snippet disappeared before an operation could
 #. finish. {id} is its internal integer database ID.
-#: error_messages.py:74
+#: core/error_messages.py:74
 #, python-brace-format
 msgid "The snippet with ID {id} no longer exists."
 msgstr ""
 
 #. Translators: Startup error when btText cannot load its settings file.
 #. {reason} is a localized validation or operating-system error.
-#: error_messages.py:80
+#: core/error_messages.py:80
 #, python-brace-format
 msgid "The settings file could not be read: {reason}"
 msgstr ""
 
 #. Translators: Error when btText cannot persist changed settings.
 #. {reason} is a localized validation or operating-system error.
-#: error_messages.py:88
+#: core/error_messages.py:88
 #, python-brace-format
 msgid "The settings file could not be saved: {reason}"
 msgstr ""
 
 #. Translators: Fatal startup error when SQLite cannot enforce relationships
 #. between categories and snippets.
-#: error_messages.py:98
+#: core/error_messages.py:98
 msgid "SQLite foreign-key support could not be enabled."
 msgstr ""
 
 #. Translators: Fatal startup error when stored records refer to missing
 #. categories or otherwise violate a database foreign-key relationship.
-#: error_messages.py:103
+#: core/error_messages.py:103
 msgid "The database contains records with invalid relationships."
 msgstr ""
 
 #. Translators: Fatal startup error when category parent relationships form
 #. a loop instead of a valid tree.
-#: error_messages.py:108
+#: core/error_messages.py:108
 msgid "The database contains a cycle in the category hierarchy."
 msgstr ""
 
 #. Translators: Fatal startup error describing category records without names.
-#: error_messages.py:116
+#: core/error_messages.py:116
 msgid "The database contains categories without a name."
 msgstr ""
 
 #. Translators: Fatal migration error for category names that are empty or
 #. consist only of spaces.
-#: error_messages.py:121
+#: core/error_messages.py:121
 msgid "The database contains categories with an empty name."
 msgstr ""
 
 #. Translators: Fatal migration error when a category refers to itself as
 #. its parent.
-#: error_messages.py:126
+#: core/error_messages.py:126
 msgid "The database contains a category that is its own parent."
 msgstr ""
 
 #. Translators: Fatal migration error for snippet names that are empty or
 #. consist only of spaces.
-#: error_messages.py:131
+#: core/error_messages.py:131
 msgid "The database contains snippets with an empty name."
 msgstr ""
 
 #. Translators: Fatal migration error for snippets whose reusable text is
 #. empty.
-#: error_messages.py:136
+#: core/error_messages.py:136
 msgid "The database contains snippets with empty content."
 msgstr ""
 
 #. Translators: Fatal startup error for snippet records whose numeric
 #. search-ranking weight is outside the supported range.
-#: error_messages.py:141
+#: core/error_messages.py:141
 msgid "The database contains snippets with an invalid weight."
 msgstr ""
 
 #. Translators: Fatal startup error for duplicate snippet names in one
 #. category.
-#: error_messages.py:145
+#: core/error_messages.py:145
 msgid "The database contains duplicate snippet names in a category."
 msgstr ""
 
 #. Translators: Fatal migration error when two snippets in one category have
 #. names that differ only in uppercase or lowercase letters.
-#: error_messages.py:150
+#: core/error_messages.py:150
 msgid "The database contains snippet names that differ only in letter case within the same category."
 msgstr ""
 
 #. Translators: Fatal startup error for snippets without an existing category.
-#: error_messages.py:155
+#: core/error_messages.py:155
 msgid "The database contains snippets without a category."
 msgstr ""
 
 #. Translators: Validation error when a sibling category already uses this
 #. name.
-#: error_messages.py:161
+#: core/error_messages.py:161
 msgid "A category with this name already exists at this level."
 msgstr ""
 
 #. Translators: Internal error for an unsaved category without a database ID.
-#: error_messages.py:165
+#: core/error_messages.py:165
 msgid "The category has no ID."
 msgstr ""
 
 #. Translators: Error when the intended parent category was deleted meanwhile.
-#: error_messages.py:169
+#: core/error_messages.py:169
 msgid "The parent category no longer exists."
 msgstr ""
 
 #. Translators: Validation error preventing a category being its own parent.
-#: error_messages.py:173
+#: core/error_messages.py:173
 msgid "A category cannot be its own parent."
 msgstr ""
 
 #. Translators: Validation error preventing a move into the category's subtree.
-#: error_messages.py:177
+#: core/error_messages.py:177
 msgid "A category cannot be moved below one of its descendants."
 msgstr ""
 
 #. Translators: Validation error preventing recursive copying into the same
 #. category subtree.
-#: error_messages.py:182
+#: core/error_messages.py:182
 msgid "A category cannot be copied into itself or one of its descendants."
 msgstr ""
 
 #. Translators: Validation error for an empty category or snippet name.
-#: error_messages.py:186
+#: core/error_messages.py:186
 msgid "The name must not be empty."
 msgstr ""
 
 #. Translators: Validation error when a snippet has no insertion text.
-#: error_messages.py:190
+#: core/error_messages.py:190
 msgid "The content must not be empty."
 msgstr ""
 
 #. Translators: Error when the snippet's selected category was deleted
 #. meanwhile.
-#: error_messages.py:194
+#: core/error_messages.py:194
 msgid "The selected category no longer exists."
 msgstr ""
 
 #. Translators: Validation error when a snippet name is already used in the
 #. same category.
-#: error_messages.py:199
+#: core/error_messages.py:199
 msgid "A snippet with this name already exists in this category."
 msgstr ""
 
 #. Translators: Validation error for a snippet search-ranking weight outside
 #. the allowed choices.
-#: error_messages.py:204
+#: core/error_messages.py:204
 msgid "The selected weight is not allowed."
 msgstr ""
 
 #. Translators: Validation error when a hotstring contains a space, tab, or
 #. another whitespace character.
-#: error_messages.py:209
+#: core/error_messages.py:209
 msgid "The hotstring must not contain whitespace."
 msgstr ""
 
 #. Translators: Validation error when another snippet already uses the same
 #. global hotstring.
-#: error_messages.py:214
+#: core/error_messages.py:214
 msgid "This hotstring is already assigned to another snippet."
 msgstr ""
 
 #. Translators: Internal error for an unsaved snippet without a database ID.
-#: error_messages.py:218
+#: core/error_messages.py:218
 msgid "The snippet has no ID."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut contains an
 #. unsupported keyboard key.
-#: error_messages.py:223
+#: core/error_messages.py:223
 msgid "The shortcut contains an unsupported key."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut has no Ctrl, Shift,
 #. Alt, or Windows modifier.
-#: error_messages.py:228
+#: core/error_messages.py:228
 msgid "The shortcut requires at least one modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut from settings cannot be
 #. parsed.
-#: error_messages.py:232
+#: core/error_messages.py:232
 msgid "The shortcut has an invalid format."
 msgstr ""
 
 #. Translators: Validation error when a shortcut repeats the same modifier.
-#: error_messages.py:236
+#: core/error_messages.py:236
 msgid "The shortcut contains a duplicate modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut has zero or multiple main
 #. keys.
-#: error_messages.py:240
+#: core/error_messages.py:240
 msgid "The shortcut must contain exactly one key."
 msgstr ""
 
 #. Translators: Validation error when a key cannot be used for a global
 #. shortcut.
-#: error_messages.py:244
+#: core/error_messages.py:244
 msgid "This key cannot be used as a shortcut."
 msgstr ""
 
 #. Translators: Settings error when the selected UI language has no installed
 #. gettext catalog.
-#: error_messages.py:249
+#: core/error_messages.py:249
 msgid "No translation catalog is available for the selected language."
 msgstr ""
 
 #. Translators: Startup warning after a damaged translation catalog forced
 #. btText to continue in English. {language} is a locale code such as de;
 #. {reason} is a technical catalog-loading error.
-#: error_messages.py:255
+#: core/error_messages.py:255
 #, python-brace-format
 msgid ""
 "The translation catalog for {language} could not be loaded. btText will continue in English.\n"
@@ -329,13 +329,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Settings error when the saved UI language code is malformed.
-#: error_messages.py:263
+#: core/error_messages.py:263
 msgid "The language setting has an invalid format."
 msgstr ""
 
 #. Translators: Safe fallback when no specific localized application-error
 #. message is available.
-#: error_messages.py:278
+#: core/error_messages.py:278
 msgid "An unexpected application error occurred."
 msgstr ""
 

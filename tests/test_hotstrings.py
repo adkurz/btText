@@ -3,8 +3,8 @@ import ctypes
 from types import SimpleNamespace
 from unittest.mock import patch
 
-import hotstrings
-from hotstrings import HotstringMatcher, KeyboardHook
+from platform_support import hotstrings
+from platform_support.hotstrings import HotstringMatcher, KeyboardHook
 
 
 class HotstringMatcherTestCase(unittest.TestCase):

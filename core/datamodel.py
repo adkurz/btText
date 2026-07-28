@@ -6,7 +6,7 @@ from pathlib import Path
 
 import pymitter
 
-from user_errors import UserFacingError
+from core.user_errors import UserFacingError
 
 
 class DataModelError(UserFacingError):

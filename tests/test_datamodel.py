@@ -18,7 +18,7 @@ except ModuleNotFoundError:
         EventEmitter=_PymitterEventEmitter
     )
 
-from datamodel import (
+from core.datamodel import (
     Category,
     CategorySummary,
     CategoryValidationError,

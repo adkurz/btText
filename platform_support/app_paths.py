@@ -4,11 +4,14 @@ import sys
 from pathlib import Path
 
 
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+
+
 def get_application_directory() -> Path:
     """Return the directory that contains the portable application."""
     if getattr(sys, "frozen", False):
         return Path(sys.executable).resolve().parent
-    return Path(__file__).resolve().parent
+    return PROJECT_ROOT
 
 
 def get_resource_directory() -> Path:
@@ -16,7 +19,7 @@ def get_resource_directory() -> Path:
     bundle_directory = getattr(sys, "_MEIPASS", None)
     if getattr(sys, "frozen", False) and bundle_directory is not None:
         return Path(bundle_directory).resolve()
-    return Path(__file__).resolve().parent
+    return PROJECT_ROOT
 
 
 def get_database_file() -> Path:

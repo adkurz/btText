@@ -4,7 +4,7 @@ from collections.abc import Callable
 from typing import Any
 
 from i18n import _
-from user_errors import UserFacingError
+from core.user_errors import UserFacingError
 
 
 ErrorFormatter = Callable[[dict[str, Any]], str]

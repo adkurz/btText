@@ -7,7 +7,7 @@ import struct
 from pathlib import Path
 from typing import Any
 
-from user_errors import UserFacingError
+from core.user_errors import UserFacingError
 
 
 DOMAIN = "bttext"

@@ -3,9 +3,9 @@
 import wx
 import pymitter
 
-import datamodel
+from core import datamodel
 import ui.validators as validators
-from error_messages import format_user_error
+from core.error_messages import format_user_error
 from i18n import _
 from ui import utils
 

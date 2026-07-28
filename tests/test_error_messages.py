@@ -5,10 +5,10 @@ import unittest
 from pathlib import Path
 
 import i18n
-from app_settings import SettingsError, SettingsStore
-from datamodel import CategoryValidationError, EntityNotFoundError
-from error_messages import _FORMATTERS, format_user_error
-from user_errors import UserFacingError
+from core.app_settings import SettingsError, SettingsStore
+from core.datamodel import CategoryValidationError, EntityNotFoundError
+from core.error_messages import _FORMATTERS, format_user_error
+from core.user_errors import UserFacingError
 
 
 class MappingTranslations(gettext.NullTranslations):
@@ -119,7 +119,11 @@ class ErrorMessagesTestCase(unittest.TestCase):
         }
         declared_codes = set()
         project_root = Path(__file__).resolve().parents[1]
-        for relative_file in ("app_settings.py", "datamodel.py", "i18n.py"):
+        for relative_file in (
+            "core/app_settings.py",
+            "core/datamodel.py",
+            "i18n.py",
+        ):
             tree = ast.parse(
                 (project_root / relative_file).read_text(encoding="utf-8")
             )

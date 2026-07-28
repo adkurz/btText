@@ -3,7 +3,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from app_settings import (
+from core.app_settings import (
     AppSettings,
     DEFAULT_TOGGLE_HOTKEY,
     Hotkey,

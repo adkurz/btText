@@ -5,8 +5,8 @@ import sys
 
 import wx
 
-from app_settings import DEFAULT_TOGGLE_HOTKEY, Hotkey
-from error_messages import format_user_error
+from core.app_settings import DEFAULT_TOGGLE_HOTKEY, Hotkey
+from core.error_messages import format_user_error
 from i18n import SYSTEM_LANGUAGE, _, get_language_display_name
 
 
