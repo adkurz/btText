@@ -80,6 +80,21 @@ try {
         throw "PyInstaller did not create btText.exe."
     }
 
+    $ApplicationCatalogs = Get-ChildItem `
+        -LiteralPath (Join-Path $ProjectRoot "locale") `
+        -Filter "bttext.mo" `
+        -Recurse `
+        -File
+    foreach ($Catalog in $ApplicationCatalogs) {
+        $Language = $Catalog.Directory.Parent.Name
+        $WxCatalog = Join-Path $ApplicationDirectory (
+            "_internal\wx\locale\{0}\LC_MESSAGES\wxstd.mo" -f $Language
+        )
+        if (-not (Test-Path -LiteralPath $WxCatalog -PathType Leaf)) {
+            throw "The application bundle is missing the wxWidgets catalog: $WxCatalog"
+        }
+    }
+
     $ForbiddenNames = @("data.db", "settings.ini", "settings.ini.tmp")
     $ForbiddenFiles = Get-ChildItem `
         -LiteralPath $ApplicationDirectory `

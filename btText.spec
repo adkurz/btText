@@ -12,6 +12,7 @@ from PyInstaller.utils.win32.versioninfo import (
     VarStruct,
     VSVersionInfo,
 )
+from PyInstaller.utils.hooks import collect_data_files
 
 
 project_root = Path(SPECPATH)
@@ -63,13 +64,25 @@ version_resource = VSVersionInfo(
     ],
 )
 
+application_catalogs = sorted(
+    (project_root / "locale").glob("*/LC_MESSAGES/*.mo")
+)
 data_files = [
     (str(project_root / "assets" / "icon.png"), "assets"),
 ]
 data_files.extend(
     (str(catalog), str(catalog.parent.relative_to(project_root)))
-    for catalog in sorted(
-        (project_root / "locale").glob("*/LC_MESSAGES/*.mo")
+    for catalog in application_catalogs
+)
+data_files.extend(
+    collect_data_files(
+        "wx",
+        includes=[
+            "locale/{}/LC_MESSAGES/wxstd.mo".format(
+                catalog.parent.parent.name
+            )
+            for catalog in application_catalogs
+        ],
     )
 )
 
