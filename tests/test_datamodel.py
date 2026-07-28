@@ -202,7 +202,7 @@ class DataModelTestCase(unittest.TestCase):
             Snippet("Unique snippet", "Allowed here", other_category.id)
         )
 
-    def test_hotstring_is_persisted_and_globally_unique(self):
+    def test_hotstring_is_persisted_and_exact_values_are_globally_unique(self):
         first_category = self.model.add_category(Category("First"))
         second_category = self.model.add_category(Category("Second"))
         snippet = self.model.add_snippet(
@@ -219,13 +219,23 @@ class DataModelTestCase(unittest.TestCase):
             self.model.get_hotstring_snippets()[0].id,
             snippet.id,
         )
+        differently_cased = self.model.add_snippet(
+            Snippet(
+                "Other",
+                "Other content",
+                second_category.id,
+                hotstring="mfg",
+            )
+        )
+        self.assertEqual(differently_cased.hotstring, "mfg")
+
         with self.assertRaises(SnippetValidationError) as context:
             self.model.add_snippet(
                 Snippet(
-                    "Other",
-                    "Other content",
+                    "Duplicate",
+                    "Duplicate content",
                     second_category.id,
-                    hotstring="mfg",
+                    hotstring="MfG",
                 )
             )
         self.assertEqual(context.exception.code, "snippet_hotstring_duplicate")
@@ -730,7 +740,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
 
             with self.assertRaisesRegex(
                 DataModelError,
-                r"newer version.*schema version: 5.*supported version: 4",
+                r"newer version.*schema version: 6.*supported version: 5",
             ):
                 DataModel(RecordingEventEmitter(), database_file)
 
@@ -860,7 +870,55 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             category = model.get_category(7)
             self.assertIsNone(category.parent_id)
             self.assertEqual(model.get_snippet(9).category_id, 7)
-            self.assertEqual(model._get_database_version(), 4)
+            self.assertEqual(model._get_database_version(), 5)
+
+    def test_version_four_hotstring_index_becomes_case_sensitive(self):
+        with ExitStack() as resources:
+            temporary_directory = resources.enter_context(
+                tempfile.TemporaryDirectory()
+            )
+            database_file = Path(temporary_directory) / "version-four.db"
+            model = DataModel(RecordingEventEmitter(), database_file)
+            category = model.add_category(Category("Category"))
+            model.add_snippet(
+                Snippet(
+                    "First",
+                    "First content",
+                    category.id,
+                    hotstring="MfG",
+                )
+            )
+            model._connection.execute("DROP INDEX snippet_hotstring_unique")
+            model._connection.execute(
+                "CREATE UNIQUE INDEX snippet_hotstring_unique "
+                "ON snippet(hotstring COLLATE NOCASE) "
+                "WHERE hotstring IS NOT NULL"
+            )
+            model._connection.execute("PRAGMA user_version = 4")
+            model.close()
+
+            migrated = DataModel(RecordingEventEmitter(), database_file)
+            resources.callback(migrated.close)
+            second = migrated.add_snippet(
+                Snippet(
+                    "Second",
+                    "Second content",
+                    category.id,
+                    hotstring="mfg",
+                )
+            )
+
+            self.assertEqual(migrated._get_database_version(), 5)
+            self.assertEqual(second.hotstring, "mfg")
+            with self.assertRaises(SnippetValidationError):
+                migrated.add_snippet(
+                    Snippet(
+                        "Duplicate",
+                        "Duplicate content",
+                        category.id,
+                        hotstring="MfG",
+                    )
+                )
 
     def test_version_two_database_gets_case_insensitive_snippet_constraint(self):
         with ExitStack() as resources:
@@ -898,7 +956,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             model = DataModel(RecordingEventEmitter(), database_file)
             resources.callback(model.close)
 
-            self.assertEqual(model._get_database_version(), 4)
+            self.assertEqual(model._get_database_version(), 5)
             with self.assertRaises(sqlite3.IntegrityError):
                 model._connection.execute(
                     "INSERT INTO snippet "

@@ -61,12 +61,13 @@ class DataModel:
     """
 
     WEIGHTS = (1, 2, 3)
-    SCHEMA_VERSION = 4
+    SCHEMA_VERSION = 5
     MIGRATIONS = (
         "_migrate_from_0_to_1",
         "_migrate_from_1_to_2",
         "_migrate_from_2_to_3",
         "_migrate_from_3_to_4",
+        "_migrate_from_4_to_5",
     )
 
     def __init__(self, ee: pymitter.EventEmitter, db_file: str | Path):
@@ -149,9 +150,9 @@ class DataModel:
             self._create_category_indexes(c)
             self._create_snippet_indexes(c)
             c.execute("CREATE UNIQUE INDEX snippet_hotstring_unique "
-                      "ON snippet(hotstring COLLATE NOCASE) "
+                      "ON snippet(hotstring) "
                       "WHERE hotstring IS NOT NULL")
-            c.execute("PRAGMA user_version = 4")
+            c.execute("PRAGMA user_version = 5")
 
     def _migrate_database(self) -> None:
         """Apply each schema migration exactly once and in version order."""
@@ -431,6 +432,16 @@ class DataModel:
                 "WHERE hotstring IS NOT NULL"
             )
             c.execute("PRAGMA user_version = 4")
+
+    def _migrate_from_4_to_5(self) -> None:
+        """Make hotstring uniqueness case-sensitive."""
+        with self._connection as c:
+            c.execute("DROP INDEX snippet_hotstring_unique")
+            c.execute(
+                "CREATE UNIQUE INDEX snippet_hotstring_unique "
+                "ON snippet(hotstring) WHERE hotstring IS NOT NULL"
+            )
+            c.execute("PRAGMA user_version = 5")
 
     @staticmethod
     def _create_category_indexes(connection) -> None:
@@ -1013,7 +1024,7 @@ class DataModel:
     def hotstring_exist(self, hotstring: str) -> int | None:
         """Return the snippet ID assigned to ``hotstring``, if any."""
         row = self._connection.execute(
-            "SELECT id FROM snippet WHERE hotstring = ? COLLATE NOCASE",
+            "SELECT id FROM snippet WHERE hotstring = ?",
             (hotstring,),
         ).fetchone()
         return row["id"] if row is not None else None
