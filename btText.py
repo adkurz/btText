@@ -16,10 +16,15 @@ from datamodel import DataModel
 def main():
     """Initialize the wx application and release resources on shutdown."""
     ee = pymitter.EventEmitter()
+    instance_checker = None
     model = None
     try:
         app = wx.App()
         app.SetAppName(info.name)
+        instance_checker = wx.SingleInstanceChecker(
+            f"{info.name}-{wx.GetUserId()}"
+        )
+        another_instance_running = instance_checker.IsAnotherRunning()
         settings_store = SettingsStore(
             app_paths.get_settings_file(),
             app_paths.get_locale_directory(),
@@ -39,6 +44,15 @@ def main():
             )
         except i18n.LanguageError as error:
             language_error = error
+        if another_instance_running:
+            wx.MessageBox(
+                # Translators: Information shown when the user tries to start
+                # the application while it is already running.
+                _("btText is already running."),
+                info.name,
+                wx.OK | wx.ICON_INFORMATION,
+            )
+            return
         try:
             model = DataModel(ee, app_paths.get_database_file())
         except datamodel.DataModelError as error:

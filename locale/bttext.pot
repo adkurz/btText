@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-28 18:54+0200\n"
+"POT-Creation-Date: 2026-07-28 21:03+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -42,21 +42,27 @@ msgctxt "hotkey modifier"
 msgid "Win"
 msgstr ""
 
+#. Translators: Information shown when the user tries to start
+#. the application while it is already running.
+#: btText.py:51
+msgid "btText is already running."
+msgstr ""
+
 #. Translators: Title of a fatal startup error concerning the
 #. snippet database.
-#: btText.py:49
+#: btText.py:63
 msgid "Database error"
 msgstr ""
 
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:58 ui/main_frame.py:448
+#: btText.py:72 ui/main_frame.py:448
 msgid "Settings error"
 msgstr ""
 
 #. Translators: Title of a startup warning after a translation
 #. catalog could not be loaded.
-#: btText.py:67
+#: btText.py:81
 msgid "Language error"
 msgstr ""
 
