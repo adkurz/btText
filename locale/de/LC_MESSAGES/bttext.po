@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-28 14:59+0200\n"
+"POT-Creation-Date: 2026-07-28 18:54+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -632,38 +632,56 @@ msgstr ""
 msgid "Clipboard restore error"
 msgstr "Fehler beim Wiederherstellen der Zwischenablage"
 
+#. Translators: File-menu command that hides the main window while
+#. keeping btText available in the notification area.
+#: ui/main_frame.py:645
+msgid "&Close"
+msgstr "&Schließen"
+
+#. Translators: File-menu command that exits btText completely,
+#. including its notification-area icon.
+#: ui/main_frame.py:650
+msgid "E&xit"
+msgstr "&Beenden"
+
+#. Translators: Main-window menu containing window-close and full-exit
+#. commands. "&" marks the keyboard mnemonic.
+#: ui/main_frame.py:654
+msgid "&File"
+msgstr "&Datei"
+
 #. Translators: Edit-menu command that opens the snippet search
 #. dialog. "&" marks the mnemonic; keep F3 after "\t".
-#: ui/main_frame.py:647
+#: ui/main_frame.py:660
 msgid "&Search...\tF3"
 msgstr "&Suchen...\tF3"
 
 #. Translators: Edit-menu command that opens the settings dialog.
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
-#: ui/main_frame.py:654
+#: ui/main_frame.py:667
 msgid "&Settings...\tCtrl+,"
 msgstr "&Einstellungen...\tCtrl+,"
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:658
+#: ui/main_frame.py:671
 msgid "&Edit"
 msgstr "&Bearbeiten"
 
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:661
+#: ui/main_frame.py:674
 msgid "About"
 msgstr "Über btText"
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:665
+#: ui/main_frame.py:678
 msgid "&Help"
 msgstr "&Hilfe"
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:700
+#: ui/main_frame.py:722
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr "F3: Textbausteine suchen    Eingabetaste: Ausgewählten Textbaustein einfügen"
 
@@ -1143,7 +1161,7 @@ msgstr "Beenden"
 #. Translators: Windows notification after a hotstring expansion.
 #. {hotstring} is the typed abbreviation and {snippet} is the name of
 #. the inserted snippet; the snippet content is deliberately omitted.
-#: ui/tray_icon.py:67
+#: ui/tray_icon.py:66
 #, python-brace-format
 msgid "Hotstring “{hotstring}” expanded to “{snippet}”."
 msgstr "Hotstring „{hotstring}“ als „{snippet}“ erweitert."

@@ -32,5 +32,16 @@ class TrayIconNotificationTestCase(unittest.TestCase):
         self.assertEqual(icon, wx.ICON_INFORMATION)
 
 
+class TrayIconExitTestCase(unittest.TestCase):
+    def test_exit_uses_main_frame_shutdown_command(self):
+        tray_icon = Mock()
+        tray_icon._frame = Mock()
+        event = Mock()
+
+        TrayIcon.on_exit(tray_icon, event)
+
+        tray_icon._frame.on_exit_application.assert_called_once_with(event)
+
+
 if __name__ == "__main__":
     unittest.main()

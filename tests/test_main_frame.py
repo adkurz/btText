@@ -6,6 +6,23 @@ from app_settings import DEFAULT_TOGGLE_HOTKEY
 from ui.main_frame import MainFrame
 
 
+class ApplicationMenuTestCase(unittest.TestCase):
+    def test_close_command_keeps_application_running(self):
+        frame = SimpleNamespace(Close=Mock())
+
+        MainFrame.on_hide_window(frame, Mock())
+
+        frame.Close.assert_called_once_with()
+
+    def test_exit_command_allows_complete_shutdown(self):
+        frame = SimpleNamespace(allow_close=False, Close=Mock())
+
+        MainFrame.on_exit_application(frame, Mock())
+
+        self.assertTrue(frame.allow_close)
+        frame.Close.assert_called_once_with()
+
+
 class HotkeyLayoutChangeTestCase(unittest.TestCase):
     @patch("ui.main_frame._activate_keyboard_layout")
     @patch(

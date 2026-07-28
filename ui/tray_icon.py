@@ -54,8 +54,7 @@ class TrayIcon(wx.adv.TaskBarIcon):
 
     def on_exit(self, event):
         """Allow and request a real application shutdown."""
-        self._frame.allow_close = True
-        self._frame.Close()
+        self._frame.on_exit_application(event)
 
     def show_hotstring_notification(self, snippet: datamodel.Snippet) -> None:
         """Confirm one automatic expansion through the Windows shell."""

@@ -639,6 +639,19 @@ class MainFrame(sc.SizedFrame):
     def _create_menubar(self):
         """Create application menus and bind their commands."""
         menubar = wx.MenuBar()
+        file_menu = wx.Menu()
+        # Translators: File-menu command that hides the main window while
+        # keeping btText available in the notification area.
+        close_item = file_menu.Append(wx.ID_CLOSE, _("&Close"))
+        self.Bind(wx.EVT_MENU, self.on_hide_window, close_item)
+        file_menu.AppendSeparator()
+        # Translators: File-menu command that exits btText completely,
+        # including its notification-area icon.
+        exit_item = file_menu.Append(wx.ID_EXIT, _("E&xit"))
+        self.Bind(wx.EVT_MENU, self.on_exit_application, exit_item)
+        # Translators: Main-window menu containing window-close and full-exit
+        # commands. "&" marks the keyboard mnemonic.
+        menubar.Append(file_menu, _("&File"))
         edit_menu = wx.Menu()
         edit_menu.Append(
             int(self._search_command_id),
@@ -664,6 +677,15 @@ class MainFrame(sc.SizedFrame):
         # "&" marks the keyboard mnemonic.
         menubar.Append(help_menu, _("&Help"))
         self.SetMenuBar(menubar)
+
+    def on_hide_window(self, event: wx.CommandEvent):
+        """Hide the main window while keeping the application running."""
+        self.Close()
+
+    def on_exit_application(self, event: wx.CommandEvent):
+        """Request a complete application shutdown."""
+        self.allow_close = True
+        self.Close()
 
     def on_settings(self, event: wx.CommandEvent):
         """Open the settings dialog."""
