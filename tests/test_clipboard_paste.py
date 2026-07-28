@@ -233,5 +233,45 @@ class CopyTextTestCase(unittest.TestCase):
         )
 
 
+class HotstringExpansionTestCase(unittest.TestCase):
+    def _expand(self, boundary_key):
+        snapshot = RecordingClipboardSnapshot()
+        with (
+            patch.object(
+                clipboard_paste.user32, "IsWindow", return_value=True
+            ),
+            patch.object(
+                clipboard_paste, "_replace_clipboard", return_value=snapshot
+            ),
+            patch.object(
+                clipboard_paste, "activate_window", return_value=True
+            ),
+            patch.object(clipboard_paste, "_send_ctrl_v") as send_ctrl_v,
+            patch.object(
+                clipboard_paste, "_send_virtual_key"
+            ) as send_virtual_key,
+        ):
+            pending = clipboard_paste.expand_hotstring(
+                123, "Expanded", 3, boundary_key
+            )
+        return pending, send_ctrl_v, send_virtual_key
+
+    def test_boundary_key_is_replayed_when_requested(self):
+        pending, send_ctrl_v, send_virtual_key = self._expand(0x20)
+
+        self.assertIsInstance(pending, PendingPaste)
+        send_ctrl_v.assert_called_once_with()
+        self.assertEqual(
+            send_virtual_key.call_args_list,
+            [unittest.mock.call(0x08, 3), unittest.mock.call(0x20)],
+        )
+
+    def test_boundary_key_can_be_discarded(self):
+        _pending, send_ctrl_v, send_virtual_key = self._expand(None)
+
+        send_ctrl_v.assert_called_once_with()
+        send_virtual_key.assert_called_once_with(0x08, 3)
+
+
 if __name__ == "__main__":
     unittest.main()

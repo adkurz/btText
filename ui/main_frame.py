@@ -351,6 +351,7 @@ class MainFrame(sc.SizedFrame):
         include_copied_text_in_clipboard_history: bool,
         allow_copied_text_cloud_upload: bool,
         hotstrings_enabled: bool,
+        preserve_hotstring_boundary: bool,
     ) -> bool:
         """Apply and persist settings, rolling the hotkey back on failure."""
         # Register before saving so an unusable shortcut is never persisted.
@@ -413,6 +414,7 @@ class MainFrame(sc.SizedFrame):
             ),
             allow_copied_text_cloud_upload=allow_copied_text_cloud_upload,
             hotstrings_enabled=hotstrings_enabled,
+            preserve_hotstring_boundary=preserve_hotstring_boundary,
         )
         try:
             self._settings_store.save(new_settings)
@@ -482,7 +484,11 @@ class MainFrame(sc.SizedFrame):
                 target_window,
                 snippet.content,
                 len(snippet.hotstring or ""),
-                boundary_key,
+                (
+                    boundary_key
+                    if self._settings.preserve_hotstring_boundary
+                    else None
+                ),
             )
         except clipboard_paste.PasteError as error:
             wx.MessageBox(
@@ -671,6 +677,7 @@ class MainFrame(sc.SizedFrame):
                 self._settings.include_copied_text_in_clipboard_history,
                 self._settings.allow_copied_text_cloud_upload,
                 self._settings.hotstrings_enabled,
+                self._settings.preserve_hotstring_boundary,
                 available_languages,
                 self._change_settings,
                 self._suspend_hotkey,

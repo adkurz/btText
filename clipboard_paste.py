@@ -586,9 +586,9 @@ def expand_hotstring(
     target_window: int,
     text: str,
     hotstring_length: int,
-    boundary_key: int,
+    boundary_key: int | None,
 ) -> PendingPaste:
-    """Replace a typed hotstring and replay its swallowed boundary key."""
+    """Replace a typed hotstring and optionally replay its boundary key."""
     if not target_window or not user32.IsWindow(target_window):
         raise PasteError("The active window no longer exists.")
     marker = uuid.uuid4().bytes
@@ -599,7 +599,8 @@ def expand_hotstring(
     try:
         _send_virtual_key(0x08, hotstring_length)  # VK_BACK
         _send_ctrl_v()
-        _send_virtual_key(boundary_key)
+        if boundary_key is not None:
+            _send_virtual_key(boundary_key)
     except Exception:
         pending.restore_clipboard()
         raise
