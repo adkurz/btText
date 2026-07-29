@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-29 21:14+0200\n"
+"POT-Creation-Date: 2026-07-29 21:19+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,7 +20,7 @@ msgstr ""
 #. Translators: Title for an error opening a selected snippet
 #. database.
 #. Translators: Title for a failed database selection or creation.
-#: btText.py:54 ui/database_selection.py:92 ui/main_frame.py:501
+#: btText.py:54 ui/database_selection.py:92 ui/main_frame.py:374
 msgid "Database error"
 msgstr ""
 
@@ -28,9 +28,7 @@ msgstr ""
 #. database path in the application settings.
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#. Translators: Title for an error saving the selected database
-#. path in the application settings.
-#: btText.py:73 btText.py:128 ui/main_frame.py:374 ui/main_frame.py:521
+#: btText.py:73 btText.py:128 ui/settings_controller.py:196
 msgid "Settings error"
 msgstr ""
 
@@ -333,7 +331,7 @@ msgstr ""
 
 #. Translators: Root label of the main window's category tree.
 #. Translators: Accessible name for the main window's category tree.
-#: ui/category_tree.py:67 ui/main_frame.py:101
+#: ui/category_tree.py:67 ui/main_frame.py:104
 msgid "Categories"
 msgstr ""
 
@@ -578,19 +576,19 @@ msgstr ""
 
 #. Translators: Heading for the tree used to select a category.
 #. "&" marks the keyboard mnemonic for the category tree.
-#: ui/main_frame.py:91
+#: ui/main_frame.py:94
 msgid "&Categories"
 msgstr ""
 
 #. Translators: Heading for the list of snippets in the selected
 #. category. "&" marks the keyboard mnemonic for the snippet list.
-#: ui/main_frame.py:106
+#: ui/main_frame.py:109
 msgid "&Snippets"
 msgstr ""
 
 #. Translators: Accessible name for the main window list showing snippets
 #. from the selected category.
-#: ui/main_frame.py:119
+#: ui/main_frame.py:128
 msgid "Snippets in the selected category"
 msgstr ""
 
@@ -598,7 +596,7 @@ msgstr ""
 #. Translators: Generic title for a failed snippet operation.
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
-#: ui/main_frame.py:202 ui/main_frame.py:221 ui/main_frame.py:233
+#: ui/main_frame.py:211 ui/main_frame.py:230 ui/main_frame.py:242
 #: ui/paste_controller.py:62 ui/snippet_list.py:415 ui/snippet_list.py:445
 #: ui/snippet_list.py:485
 msgid "Error"
@@ -606,117 +604,83 @@ msgstr ""
 
 #. Translators: Error shown when a selected snippet points to a
 #. category that was deleted meanwhile.
-#: ui/main_frame.py:219
+#: ui/main_frame.py:228
 msgid "The category of the selected snippet no longer exists."
 msgstr ""
 
 #. Translators: Error shown when the selected snippet was deleted
 #. before it could be displayed or inserted.
-#: ui/main_frame.py:231
+#: ui/main_frame.py:240
 msgid "The selected snippet no longer exists."
-msgstr ""
-
-#. Translators: Startup error shown when btText cannot claim its
-#. global shortcut. {} is a shortcut such as Ctrl+Alt+T.
-#: ui/main_frame.py:273
-#, python-brace-format
-msgid "The global hotkey {} is already in use and could not be registered."
-msgstr ""
-
-#. Translators: Title of an error registering a global shortcut.
-#. Translators: Title of an error changing the global shortcut.
-#. Translators: Title of an error restoring a global shortcut.
-#: ui/main_frame.py:277 ui/main_frame.py:327 ui/main_frame.py:367
-msgid "Hotkey error"
-msgstr ""
-
-#. Translators: Settings error: the requested global shortcut is
-#. occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
-#: ui/main_frame.py:314
-#, python-brace-format
-msgid "The selected hotkey {} is already in use. The previous hotkey has been restored."
-msgstr ""
-
-#. Translators: Settings error: the requested shortcut is occupied
-#. and restoring the old one also failed. {} is such as Ctrl+Alt+T.
-#: ui/main_frame.py:321
-#, python-brace-format
-msgid "The selected hotkey {} is already in use and the previous hotkey could not be restored. No global hotkey is active."
-msgstr ""
-
-#. Translators: Error after cancelling settings when btText
-#. could not restore the previously active global shortcut.
-#: ui/main_frame.py:363
-msgid "The previous hotkey could not be restored. No global hotkey is active."
 msgstr ""
 
 #. Translators: File-menu command for selecting another snippet
 #. database. The selection is used after restarting btText.
-#: ui/main_frame.py:434
+#: ui/main_frame.py:307
 msgid "Change &database..."
 msgstr ""
 
 #. Translators: File-menu command that hides the main window while
 #. keeping btText available in the notification area.
-#: ui/main_frame.py:439
+#: ui/main_frame.py:312
 msgid "&Close"
 msgstr ""
 
 #. Translators: File-menu command that exits btText completely,
 #. including its notification-area icon.
-#: ui/main_frame.py:444
+#: ui/main_frame.py:317
 msgid "E&xit"
 msgstr ""
 
 #. Translators: Main-window menu containing window-close and full-exit
 #. commands. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:448
+#: ui/main_frame.py:321
 msgid "&File"
 msgstr ""
 
 #. Translators: Edit-menu command that opens the snippet search
 #. dialog. "&" marks the mnemonic; keep F3 after "\t".
-#: ui/main_frame.py:454
+#: ui/main_frame.py:327
 msgid "&Search...\tF3"
 msgstr ""
 
 #. Translators: Edit-menu command that opens the settings dialog.
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
-#: ui/main_frame.py:461
+#: ui/main_frame.py:334
 msgid "&Settings...\tCtrl+,"
 msgstr ""
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:465
+#: ui/main_frame.py:338
 msgid "&Edit"
 msgstr ""
 
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:468
+#: ui/main_frame.py:341
 msgid "About"
 msgstr ""
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:472
+#: ui/main_frame.py:345
 msgid "&Help"
 msgstr ""
 
 #. Translators: Confirmation after choosing the database that btText
 #. should open following its next restart.
-#: ui/main_frame.py:530
+#: ui/main_frame.py:390
 msgid "The selected database will be used the next time btText starts."
 msgstr ""
 
 #. Translators: Title confirming that another database was selected.
-#: ui/main_frame.py:532
+#: ui/main_frame.py:392
 msgid "Database selected"
 msgstr ""
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:569
+#: ui/main_frame.py:430
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr ""
 
@@ -798,6 +762,41 @@ msgstr ""
 #. Translators: Title of an error while searching snippets.
 #: ui/search_dialog.py:168
 msgid "Search error"
+msgstr ""
+
+#. Translators: Startup error shown when btText cannot claim its
+#. global shortcut. {} is a shortcut such as Ctrl+Alt+T.
+#: ui/settings_controller.py:63
+#, python-brace-format
+msgid "The global hotkey {} is already in use and could not be registered."
+msgstr ""
+
+#. Translators: Title of an error registering a global shortcut.
+#. Translators: Title of an error changing the global shortcut.
+#. Translators: Title of an error restoring a global shortcut.
+#: ui/settings_controller.py:67 ui/settings_controller.py:115
+#: ui/settings_controller.py:155
+msgid "Hotkey error"
+msgstr ""
+
+#. Translators: Settings error: the requested global shortcut is
+#. occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
+#: ui/settings_controller.py:102
+#, python-brace-format
+msgid "The selected hotkey {} is already in use. The previous hotkey has been restored."
+msgstr ""
+
+#. Translators: Settings error: the requested shortcut is occupied
+#. and restoring the old one also failed. {} is such as Ctrl+Alt+T.
+#: ui/settings_controller.py:109
+#, python-brace-format
+msgid "The selected hotkey {} is already in use and the previous hotkey could not be restored. No global hotkey is active."
+msgstr ""
+
+#. Translators: Error after cancelling settings when btText
+#. could not restore the previously active global shortcut.
+#: ui/settings_controller.py:151
+msgid "The previous hotkey could not be restored. No global hotkey is active."
 msgstr ""
 
 #. Translators: Window title for application settings.

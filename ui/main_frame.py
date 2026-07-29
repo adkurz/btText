@@ -1,7 +1,5 @@
 """Main-window coordination for navigation, hotkeys, and external paste."""
 
-import dataclasses
-
 import pymitter
 import wx
 import wx.adv
@@ -10,9 +8,8 @@ import wx.lib.sized_controls as sc
 from core import datamodel
 import i18n
 import info
-from core.app_settings import AppSettings, SettingsError, SettingsStore
+from core.app_settings import AppSettings, SettingsStore
 from core.error_messages import format_user_error
-from core.shortcuts import Hotkey
 from i18n import _
 from ui import utils
 from ui.category_tree import CategoryTree
@@ -21,7 +18,7 @@ from ui.global_hotkey import WxGlobalHotkeyBinding
 from ui.hotstring_controller import HotstringController
 from ui.paste_controller import PasteController
 from ui.search_dialog import SearchDialog
-from ui.shortcut_display import format_hotkey
+from ui.settings_controller import SettingsController
 from ui.settings_dialog import SettingsDialog
 from ui.snippet_list import SnippetList
 from ui.tray_icon import TrayIcon
@@ -43,7 +40,6 @@ class MainFrame(sc.SizedFrame):
         self._ee = ee
         self._model = model
         self._settings_store = settings_store
-        self._settings = settings
         self._global_hotkey = WxGlobalHotkeyBinding(self, hotkey_id=1)
         self._hotkey_layout_timer = wx.Timer(self)
         self.Bind(
@@ -62,11 +58,18 @@ class MainFrame(sc.SizedFrame):
             self,
             ee,
             model,
-            lambda: self._settings,
+            lambda: self._settings_controller.settings,
             self._paste_controller.schedule_restore,
             lambda snippet: self.tray_icon.show_hotstring_notification(
                 snippet
             ),
+        )
+        self._settings_controller = SettingsController(
+            self,
+            settings_store,
+            settings,
+            self._global_hotkey,
+            self._hotstring_controller,
         )
         self._ee.on(
             "snippet.insert_requested",
@@ -111,8 +114,14 @@ class MainFrame(sc.SizedFrame):
             ee,
             model,
             self.transfer_buffer,
-            lambda: self._settings.include_copied_text_in_clipboard_history,
-            lambda: self._settings.allow_copied_text_cloud_upload,
+            lambda: (
+                self._settings_controller.settings
+                .include_copied_text_in_clipboard_history
+            ),
+            lambda: (
+                self._settings_controller.settings
+                .allow_copied_text_cloud_upload
+            ),
         )
         # Translators: Accessible name for the main window list showing snippets
         # from the selected category.
@@ -172,9 +181,9 @@ class MainFrame(sc.SizedFrame):
         self._create_menubar()
         self._create_statusbar()
         self._create_tray_icon()
-        self._register_hotkey(self._settings.toggle_window_hotkey)
+        self._settings_controller.register_initial_hotkey()
         self._hotstring_controller.refresh()
-        if self._settings.hotstrings_enabled:
+        if self._settings_controller.settings.hotstrings_enabled:
             self._hotstring_controller.start()
         self.SetMinSize(self.FromDIP((760, 480)))
         self.SetClientSize(self.FromDIP((1040, 680)))
@@ -237,149 +246,13 @@ class MainFrame(sc.SizedFrame):
             return
         self.snippet_list.SetFocus()
 
-    def _register_hotkey(self, hotkey: Hotkey, show_error: bool = True) -> bool:
-        """Register the global toggle hotkey with Windows."""
-        success = self._global_hotkey.register(hotkey)
-        if not success and show_error:
-            self._show_hotkey_registration_error(hotkey)
-        return success
-
-    def _unregister_hotkey(self):
-        """Release the currently registered global hotkey."""
-        self._global_hotkey.unregister()
-
-    def _suspend_hotkey(self):
-        """Temporarily release the hotkey while the settings dialog records."""
-        self._global_hotkey.suspend()
-
-    def _resume_hotkey(self):
-        """Re-register a hotkey after temporary suspension."""
-        hotkey = self._settings.toggle_window_hotkey
-        if not self._global_hotkey.resume(hotkey):
-            self._show_hotkey_registration_error(hotkey)
-
     def _on_hotkey_layout_timer(self, event: wx.TimerEvent):
         """Re-register the global hotkey after the input layout changes."""
         failed_hotkey = self._global_hotkey.refresh_keyboard_layout()
         if failed_hotkey is not None:
-            self._show_hotkey_registration_error(failed_hotkey)
-
-    def _show_hotkey_registration_error(self, hotkey: Hotkey) -> None:
-        """Show the standard error for a global hotkey registration failure."""
-        wx.MessageBox(
-            # Translators: Startup error shown when btText cannot claim its
-            # global shortcut. {} is a shortcut such as Ctrl+Alt+T.
-            _(
-                "The global hotkey {} is already in use and could not "
-                "be registered."
-            ).format(format_hotkey(hotkey)),
-            # Translators: Title of an error registering a global shortcut.
-            _("Hotkey error"),
-            wx.OK | wx.ICON_ERROR,
-            self,
-        )
-
-    def _change_settings(
-        self,
-        hotkey: Hotkey,
-        language: str,
-        include_copied_text_in_clipboard_history: bool,
-        allow_copied_text_cloud_upload: bool,
-        hotstrings_enabled: bool,
-        preserve_hotstring_boundary: bool,
-        notify_hotstring_expansion: bool,
-    ) -> bool:
-        """Apply and persist settings, rolling the hotkey back on failure."""
-        # Register before saving so an unusable shortcut is never persisted.
-        # Every failure path attempts to restore the previous binding.
-        old_hotkey = self._settings.toggle_window_hotkey
-        hotkey_changed = hotkey != old_hotkey
-        hotstrings_were_enabled = self._settings.hotstrings_enabled
-        hotstrings_started = False
-        if hotstrings_enabled and not hotstrings_were_enabled:
-            if not self._hotstring_controller.start():
-                return False
-            hotstrings_started = True
-        if hotkey_changed:
-            self._unregister_hotkey()
-        if hotkey_changed and not self._register_hotkey(
-            hotkey,
-            show_error=False,
-        ):
-            restored = self._register_hotkey(old_hotkey, show_error=False)
-            if restored:
-                # Translators: Settings error: the requested global shortcut is
-                # occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
-                message = _(
-                    "The selected hotkey {} is already in use. "
-                    "The previous hotkey has been restored."
-                ).format(format_hotkey(hotkey))
-            else:
-                # Translators: Settings error: the requested shortcut is occupied
-                # and restoring the old one also failed. {} is such as Ctrl+Alt+T.
-                message = _(
-                    "The selected hotkey {} is already in use and the previous "
-                    "hotkey could not be restored. No global hotkey is active."
-                ).format(format_hotkey(hotkey))
-            wx.MessageBox(
-                message,
-                # Translators: Title of an error changing the global shortcut.
-                _("Hotkey error"),
-                wx.OK | wx.ICON_ERROR,
-                self,
+            self._settings_controller.show_hotkey_registration_error(
+                failed_hotkey
             )
-            if hotstrings_started:
-                self._hotstring_controller.stop()
-            return False
-
-        new_settings = AppSettings(
-            database_file=self._settings.database_file,
-            toggle_window_hotkey=hotkey,
-            language=language,
-            include_copied_text_in_clipboard_history=(
-                include_copied_text_in_clipboard_history
-            ),
-            allow_copied_text_cloud_upload=allow_copied_text_cloud_upload,
-            hotstrings_enabled=hotstrings_enabled,
-            preserve_hotstring_boundary=preserve_hotstring_boundary,
-            notify_hotstring_expansion=notify_hotstring_expansion,
-        )
-        try:
-            self._settings_store.save(new_settings)
-        except SettingsError as error:
-            if hotstrings_started:
-                self._hotstring_controller.stop()
-            if hotkey_changed:
-                self._unregister_hotkey()
-            restored = (
-                not hotkey_changed
-                or self._register_hotkey(old_hotkey, show_error=False)
-            )
-            if hotkey_changed and not restored:
-                wx.MessageBox(
-                    # Translators: Error after cancelling settings when btText
-                    # could not restore the previously active global shortcut.
-                    _(
-                        "The previous hotkey could not be restored. No global "
-                        "hotkey is active."
-                    ),
-                    # Translators: Title of an error restoring a global shortcut.
-                    _("Hotkey error"),
-                    wx.OK | wx.ICON_ERROR,
-                    self,
-                )
-            wx.MessageBox(
-                format_user_error(error),
-                # Translators: Title of an error saving or applying settings.
-                _("Settings error"),
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
-            return False
-        self._settings = new_settings
-        if not hotstrings_enabled:
-            self._hotstring_controller.stop()
-        return True
 
     def on_global_hotkey(self, event):
         """Toggle main-window visibility in response to the global shortcut."""
@@ -507,23 +380,10 @@ class MainFrame(sc.SizedFrame):
             if candidate is not None:
                 candidate.close()
 
-        new_settings = dataclasses.replace(
-            self._settings,
-            database_file=str(selection.path),
-        )
-        try:
-            self._settings_store.save(new_settings)
-        except SettingsError as error:
-            wx.MessageBox(
-                format_user_error(error),
-                # Translators: Title for an error saving the selected database
-                # path in the application settings.
-                _("Settings error"),
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
+        if not self._settings_controller.save_database_file(
+            str(selection.path)
+        ):
             return
-        self._settings = new_settings
         wx.MessageBox(
             # Translators: Confirmation after choosing the database that btText
             # should open following its next restart.
@@ -537,6 +397,7 @@ class MainFrame(sc.SizedFrame):
     def on_settings(self, event: wx.CommandEvent):
         """Open the settings dialog."""
         locale_directory = self._settings_store.locale_directory
+        settings = self._settings_controller.settings
         available_languages = (
             i18n.get_available_languages(locale_directory)
             if locale_directory is not None
@@ -545,17 +406,17 @@ class MainFrame(sc.SizedFrame):
         with utils.managed_dialog(
             SettingsDialog(
                 self,
-                self._settings.toggle_window_hotkey,
-                self._settings.language,
-                self._settings.include_copied_text_in_clipboard_history,
-                self._settings.allow_copied_text_cloud_upload,
-                self._settings.hotstrings_enabled,
-                self._settings.preserve_hotstring_boundary,
-                self._settings.notify_hotstring_expansion,
+                settings.toggle_window_hotkey,
+                settings.language,
+                settings.include_copied_text_in_clipboard_history,
+                settings.allow_copied_text_cloud_upload,
+                settings.hotstrings_enabled,
+                settings.preserve_hotstring_boundary,
+                settings.notify_hotstring_expansion,
                 available_languages,
-                self._change_settings,
-                self._suspend_hotkey,
-                self._resume_hotkey,
+                self._settings_controller.apply,
+                self._settings_controller.suspend_hotkey,
+                self._settings_controller.resume_hotkey,
             )
         ) as dialog:
             dialog.ShowModal()
@@ -591,7 +452,7 @@ class MainFrame(sc.SizedFrame):
         """Hide normally, or release resources during an explicit exit."""
         if self.allow_close:
             self._hotkey_layout_timer.Stop()
-            self._unregister_hotkey()
+            self._settings_controller.unregister_hotkey()
             self._hotstring_controller.stop()
             self.tray_icon.RemoveIcon()
             self.tray_icon.Destroy()
