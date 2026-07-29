@@ -7,13 +7,7 @@ import wx
 import wx.adv
 import wx.lib.sized_controls as sc
 
-from platform_support import (
-    clipboard,
-    hotstring_expansion,
-    windows,
-)
 from core import datamodel
-from platform_support import hotstrings
 import i18n
 import info
 from core.app_settings import AppSettings, SettingsError, SettingsStore
@@ -24,6 +18,7 @@ from ui import utils
 from ui.category_tree import CategoryTree
 from ui.database_selection import select_database
 from ui.global_hotkey import WxGlobalHotkeyBinding
+from ui.hotstring_controller import HotstringController
 from ui.paste_controller import PasteController
 from ui.search_dialog import SearchDialog
 from ui.shortcut_display import format_hotkey
@@ -49,15 +44,6 @@ class MainFrame(sc.SizedFrame):
         self._model = model
         self._settings_store = settings_store
         self._settings = settings
-        self._hotstring_hook = hotstrings.KeyboardHook(
-            self._queue_hotstring_expansion,
-            lambda: windows.is_external_window(
-                windows.get_foreground_window()
-            ),
-        )
-        self._ee.on("snippet.added", self._refresh_hotstrings)
-        self._ee.on("snippet.edited", self._refresh_hotstrings)
-        self._ee.on("snippet.deleted", self._refresh_hotstrings)
         self._global_hotkey = WxGlobalHotkeyBinding(self, hotkey_id=1)
         self._hotkey_layout_timer = wx.Timer(self)
         self.Bind(
@@ -71,6 +57,16 @@ class MainFrame(sc.SizedFrame):
             model,
             self._prepare_external_paste,
             self._reveal_after_paste_error,
+        )
+        self._hotstring_controller = HotstringController(
+            self,
+            ee,
+            model,
+            lambda: self._settings,
+            self._paste_controller.schedule_restore,
+            lambda snippet: self.tray_icon.show_hotstring_notification(
+                snippet
+            ),
         )
         self._ee.on(
             "snippet.insert_requested",
@@ -177,19 +173,9 @@ class MainFrame(sc.SizedFrame):
         self._create_statusbar()
         self._create_tray_icon()
         self._register_hotkey(self._settings.toggle_window_hotkey)
-        self._refresh_hotstrings()
+        self._hotstring_controller.refresh()
         if self._settings.hotstrings_enabled:
-            try:
-                self._hotstring_hook.start()
-            except OSError as error:
-                wx.MessageBox(
-                    str(error),
-                    # Translators: Title for a failure to monitor or expand a
-                    # globally typed snippet hotstring.
-                    _("Hotstring error"),
-                    wx.OK | wx.ICON_ERROR,
-                    self,
-                )
+            self._hotstring_controller.start()
         self.SetMinSize(self.FromDIP((760, 480)))
         self.SetClientSize(self.FromDIP((1040, 680)))
         self.Centre()
@@ -311,19 +297,9 @@ class MainFrame(sc.SizedFrame):
         hotstrings_were_enabled = self._settings.hotstrings_enabled
         hotstrings_started = False
         if hotstrings_enabled and not hotstrings_were_enabled:
-            try:
-                self._hotstring_hook.start()
-                hotstrings_started = True
-            except OSError as error:
-                wx.MessageBox(
-                    str(error),
-                    # Translators: Title for a failure to monitor or expand a
-                    # globally typed snippet hotstring.
-                    _("Hotstring error"),
-                    wx.OK | wx.ICON_ERROR,
-                    self,
-                )
+            if not self._hotstring_controller.start():
                 return False
+            hotstrings_started = True
         if hotkey_changed:
             self._unregister_hotkey()
         if hotkey_changed and not self._register_hotkey(
@@ -353,7 +329,7 @@ class MainFrame(sc.SizedFrame):
                 self,
             )
             if hotstrings_started:
-                self._hotstring_hook.stop()
+                self._hotstring_controller.stop()
             return False
 
         new_settings = AppSettings(
@@ -372,7 +348,7 @@ class MainFrame(sc.SizedFrame):
             self._settings_store.save(new_settings)
         except SettingsError as error:
             if hotstrings_started:
-                self._hotstring_hook.stop()
+                self._hotstring_controller.stop()
             if hotkey_changed:
                 self._unregister_hotkey()
             restored = (
@@ -402,66 +378,8 @@ class MainFrame(sc.SizedFrame):
             return False
         self._settings = new_settings
         if not hotstrings_enabled:
-            self._hotstring_hook.stop()
+            self._hotstring_controller.stop()
         return True
-
-    def _refresh_hotstrings(self, *_arguments):
-        """Reload active hotstrings after any snippet mutation."""
-        snippets = self._model.get_hotstring_snippets()
-        self._hotstring_hook.update(
-            {
-                snippet.hotstring: snippet
-                for snippet in snippets
-                if snippet.hotstring
-            }
-        )
-
-    def _queue_hotstring_expansion(
-        self, snippet: datamodel.Snippet, boundary_key: int
-    ) -> bool:
-        """Queue expansion only when the foreground window is external."""
-        target_window = windows.get_foreground_window()
-        if not windows.is_external_window(target_window):
-            return False
-        wx.CallAfter(
-            self._expand_hotstring,
-            target_window,
-            snippet,
-            boundary_key,
-        )
-        return True
-
-    def _expand_hotstring(
-        self,
-        target_window: int,
-        snippet: datamodel.Snippet,
-        boundary_key: int,
-    ):
-        """Replace a recognized hotstring through the clipboard paste path."""
-        try:
-            pending = hotstring_expansion.expand_hotstring(
-                target_window,
-                snippet.content,
-                len(snippet.hotstring or ""),
-                (
-                    boundary_key
-                    if self._settings.preserve_hotstring_boundary
-                    else None
-                ),
-            )
-        except clipboard.ClipboardError as error:
-            wx.MessageBox(
-                str(error),
-                # Translators: Title for a failure to monitor or expand a
-                # globally typed snippet hotstring.
-                _("Hotstring error"),
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
-            return
-        self._paste_controller.schedule_restore(pending)
-        if self._settings.notify_hotstring_expansion:
-            self.tray_icon.show_hotstring_notification(snippet)
 
     def on_global_hotkey(self, event):
         """Toggle main-window visibility in response to the global shortcut."""
@@ -674,7 +592,7 @@ class MainFrame(sc.SizedFrame):
         if self.allow_close:
             self._hotkey_layout_timer.Stop()
             self._unregister_hotkey()
-            self._hotstring_hook.stop()
+            self._hotstring_controller.stop()
             self.tray_icon.RemoveIcon()
             self.tray_icon.Destroy()
             event.Skip()

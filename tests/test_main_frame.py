@@ -121,7 +121,7 @@ class SettingsChangeTestCase(unittest.TestCase):
         frame = SimpleNamespace(
             _settings=old_settings,
             _settings_store=store,
-            _hotstring_hook=Mock(),
+            _hotstring_controller=Mock(),
             _register_hotkey=Mock(side_effect=(True, True)),
             _unregister_hotkey=Mock(),
         )
@@ -152,18 +152,14 @@ class SettingsChangeTestCase(unittest.TestCase):
         self.assertEqual(frame._unregister_hotkey.call_count, 2)
         message_box.assert_called_once()
 
-    @patch("ui.main_frame.wx.MessageBox")
-    def test_hotstring_start_failure_leaves_settings_unchanged(
-        self,
-        message_box,
-    ):
+    def test_hotstring_start_failure_leaves_settings_unchanged(self):
         old_settings = AppSettings(hotstrings_enabled=False)
-        hook = Mock()
-        hook.start.side_effect = OSError("hook unavailable")
+        controller = Mock()
+        controller.start.return_value = False
         frame = SimpleNamespace(
             _settings=old_settings,
             _settings_store=Mock(),
-            _hotstring_hook=hook,
+            _hotstring_controller=controller,
             _register_hotkey=Mock(),
             _unregister_hotkey=Mock(),
         )
@@ -184,14 +180,13 @@ class SettingsChangeTestCase(unittest.TestCase):
         frame._settings_store.save.assert_not_called()
         frame._register_hotkey.assert_not_called()
         frame._unregister_hotkey.assert_not_called()
-        message_box.assert_called_once()
 
     def test_disabling_hotstrings_stops_hook_after_settings_are_saved(self):
         old_settings = AppSettings(hotstrings_enabled=True)
         frame = SimpleNamespace(
             _settings=old_settings,
             _settings_store=Mock(),
-            _hotstring_hook=Mock(),
+            _hotstring_controller=Mock(),
             _register_hotkey=Mock(),
             _unregister_hotkey=Mock(),
         )
@@ -210,7 +205,7 @@ class SettingsChangeTestCase(unittest.TestCase):
         self.assertTrue(changed)
         self.assertFalse(frame._settings.hotstrings_enabled)
         frame._settings_store.save.assert_called_once_with(frame._settings)
-        frame._hotstring_hook.stop.assert_called_once_with()
+        frame._hotstring_controller.stop.assert_called_once_with()
 
 
 class ShutdownTestCase(unittest.TestCase):
@@ -220,7 +215,7 @@ class ShutdownTestCase(unittest.TestCase):
             allow_close=True,
             _hotkey_layout_timer=Mock(),
             _unregister_hotkey=Mock(),
-            _hotstring_hook=Mock(),
+            _hotstring_controller=Mock(),
             tray_icon=Mock(),
         )
 
@@ -228,7 +223,7 @@ class ShutdownTestCase(unittest.TestCase):
 
         frame._hotkey_layout_timer.Stop.assert_called_once_with()
         frame._unregister_hotkey.assert_called_once_with()
-        frame._hotstring_hook.stop.assert_called_once_with()
+        frame._hotstring_controller.stop.assert_called_once_with()
         frame.tray_icon.RemoveIcon.assert_called_once_with()
         frame.tray_icon.Destroy.assert_called_once_with()
         event.Skip.assert_called_once_with()
