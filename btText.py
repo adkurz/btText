@@ -29,6 +29,9 @@ def _open_database(ee, settings_store, settings):
         allow_create = False
         persist_path = True
     else:
+        # Do not search other locations or move data automatically. In
+        # particular, an installed build cannot reliably identify which
+        # portable directory (if any) the user previously used.
         initial_path = None
         allow_create = False
         persist_path = False

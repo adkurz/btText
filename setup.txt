@@ -94,9 +94,31 @@ To select the Python installation used to create `.venv`:
 
 ---
 
-## First-run behaviour
+## Data locations and first-run behaviour
 
-On first launch, the program automatically creates a `data.db` SQLite database file next to `btText.py` or the packaged executable. Configurable settings are stored in `settings.ini` in the same directory. This keeps the application portable. No further configuration is required.
+When run from source or from the portable archive, btText stores
+`settings.ini` and its default `data.db` beside the script or executable.
+
+An installed build stores both files in the current user's roaming application
+data directory:
+
+```text
+%APPDATA%\btText
+```
+
+If the active data directory does not already contain `data.db` and no database
+is configured, btText asks whether to create a new database or open an existing
+one. It does not search other folders, move a portable database, or delete the
+original file automatically.
+
+To continue using a database from a portable copy, choose **Open existing
+database** on first start and select that copy's `data.db`. btText keeps the
+database in its original location and stores its absolute path in the installed
+settings.
+
+Alternatively, before the first installed start, copy the portable `data.db`
+to `%APPDATA%\btText\data.db`. btText then adopts it as the installed default
+database and records it relatively as `data.db`.
 
 ---
 

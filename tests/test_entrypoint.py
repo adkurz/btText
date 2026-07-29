@@ -8,6 +8,7 @@ from unittest.mock import Mock, patch
 import btText
 from core.app_settings import AppSettings, SettingsStore
 from platform_support import app_paths
+from ui.database_selection import DatabaseSelection
 
 
 class SingleInstanceTestCase(unittest.TestCase):
@@ -110,6 +111,68 @@ class DatabaseStartupTestCase(unittest.TestCase):
                 )
                 self.assertIn(
                     "database_file = data.db",
+                    store.settings_file.read_text(encoding="utf-8"),
+                )
+
+    @patch("btText.select_database")
+    @patch("btText.DataModel")
+    def test_installed_first_start_keeps_selected_portable_database_external(
+        self,
+        data_model,
+        select_database,
+    ):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            installed_bundle = root / "installed" / "_internal"
+            installed_bundle.mkdir(parents=True)
+            (installed_bundle / app_paths.INSTALL_MODE_MARKER).touch()
+            portable_database = root / "portable" / "data.db"
+            portable_database.parent.mkdir()
+            portable_database.touch()
+            appdata = root / "AppData" / "Roaming"
+            select_database.return_value = DatabaseSelection(
+                portable_database,
+                False,
+            )
+            with (
+                patch.object(sys, "frozen", True, create=True),
+                patch.object(
+                    sys,
+                    "executable",
+                    str(root / "installed" / "btText.exe"),
+                ),
+                patch.object(
+                    sys,
+                    "_MEIPASS",
+                    str(installed_bundle),
+                    create=True,
+                ),
+                patch.dict(os.environ, {"APPDATA": str(appdata)}),
+            ):
+                store = SettingsStore(app_paths.get_settings_file())
+
+                model, updated = btText._open_database(
+                    Mock(),
+                    store,
+                    AppSettings(),
+                )
+
+                self.assertIs(model, data_model.return_value)
+                select_database.assert_called_once_with(
+                    None,
+                    first_start=True,
+                )
+                data_model.assert_called_once_with(
+                    unittest.mock.ANY,
+                    portable_database,
+                    allow_create=False,
+                )
+                self.assertEqual(
+                    updated.database_file,
+                    str(portable_database.resolve()),
+                )
+                self.assertIn(
+                    f"database_file = {portable_database.resolve()}",
                     store.settings_file.read_text(encoding="utf-8"),
                 )
 
