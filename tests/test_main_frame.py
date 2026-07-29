@@ -3,7 +3,8 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from core.app_settings import AppSettings, DEFAULT_TOGGLE_HOTKEY
+from core.app_settings import AppSettings
+from core.shortcuts import DEFAULT_TOGGLE_HOTKEY
 from ui.main_frame import MainFrame
 
 

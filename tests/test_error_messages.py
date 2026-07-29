@@ -122,6 +122,7 @@ class ErrorMessagesTestCase(unittest.TestCase):
         for relative_file in (
             "core/app_settings.py",
             "core/datamodel.py",
+            "core/shortcuts.py",
             "i18n.py",
         ):
             tree = ast.parse(
