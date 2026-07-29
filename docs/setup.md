@@ -113,8 +113,10 @@ that directory, so back up the database first.
 
 ## Run from source
 
-Running from source is intended for development. It requires Python 3.12 or
-newer; a 64-bit Python installation is recommended.
+Running from source is intended for development. It requires 64-bit Python
+3.14. Earlier Python versions are not supported. The project targets the
+current Python version as soon as its dependencies support it and does not add
+compatibility layers for older interpreters.
 
 Create a virtual environment and install the runtime dependencies:
 
@@ -178,4 +180,4 @@ Select the Python interpreter used when creating a missing `.venv`:
 ```
 
 An existing `.venv` is reused. Recreate it before using `-Python` to switch the
-build environment to another Python version.
+build environment to Python 3.14.
