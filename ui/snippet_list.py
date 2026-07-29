@@ -5,7 +5,7 @@ from collections.abc import Callable
 import pymitter
 import wx
 
-from platform_support import clipboard_paste
+from platform_support import clipboard, clipboard_paste
 from core import datamodel
 from core.error_messages import format_user_error
 from i18n import _, ngettext
@@ -244,14 +244,14 @@ class SnippetList(wx.ListView):
             return
         try:
             snippet = self._model.get_snippet(snippet_ids[0])
-            clipboard_paste.copy_text(
+            clipboard.copy_text(
                 snippet.content,
                 include_in_history=(
                     self._include_copied_text_in_clipboard_history()
                 ),
                 allow_cloud_upload=self._allow_copied_text_cloud_upload(),
             )
-        except (datamodel.DataModelError, clipboard_paste.PasteError) as error:
+        except (datamodel.DataModelError, clipboard.ClipboardError) as error:
             wx.MessageBox(
                 format_user_error(error),
                 # Translators: Title of an error copying snippet text to the
