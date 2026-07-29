@@ -40,6 +40,29 @@ class MainFrame(sc.SizedFrame):
         self._ee = ee
         self._model = model
         self._settings_store = settings_store
+        self._create_process_integrations(
+            ee,
+            model,
+            settings_store,
+            settings,
+        )
+        self._bind_application_events()
+        self._create_primary_views(ee, model)
+        self._bind_application_commands()
+        self._create_menubar()
+        self._create_statusbar()
+        self._create_tray_icon()
+        self._start_process_integrations()
+        self._configure_frame_geometry()
+
+    def _create_process_integrations(
+        self,
+        ee: pymitter.EventEmitter,
+        model: datamodel.DataModel,
+        settings_store: SettingsStore,
+        settings: AppSettings,
+    ) -> None:
+        """Create controllers for process-wide operating-system features."""
         self._global_hotkey = WxGlobalHotkeyBinding(self, hotkey_id=1)
         self._hotkey_layout_timer = wx.Timer(self)
         self.Bind(
@@ -71,6 +94,9 @@ class MainFrame(sc.SizedFrame):
             self._global_hotkey,
             self._hotstring_controller,
         )
+
+    def _bind_application_events(self) -> None:
+        """Bind cross-view and process-wide application events."""
         self._ee.on(
             "snippet.insert_requested",
             self._paste_controller.insert_snippet,
@@ -82,6 +108,13 @@ class MainFrame(sc.SizedFrame):
             self.on_global_hotkey,
             id=self._global_hotkey.hotkey_id,
         )
+
+    def _create_primary_views(
+        self,
+        ee: pymitter.EventEmitter,
+        model: datamodel.DataModel,
+    ) -> None:
+        """Create and lay out the category and snippet views."""
         self.pane = self.GetContentsPane()
         self.transfer_buffer = TransferBuffer()
         layout_panel = wx.Panel(self.pane)
@@ -160,6 +193,9 @@ class MainFrame(sc.SizedFrame):
         main_sizer.AddGrowableCol(1, 2)
         layout_panel.SetSizer(main_sizer)
         self._last_focused_control: wx.Window | None = None
+
+    def _bind_application_commands(self) -> None:
+        """Create command identifiers and bind their menu handlers."""
         self._search_command_id = wx.NewIdRef()
         self._settings_command_id = wx.NewIdRef()
         self._database_command_id = wx.NewIdRef()
@@ -178,13 +214,16 @@ class MainFrame(sc.SizedFrame):
             self.on_select_database,
             id=int(self._database_command_id),
         )
-        self._create_menubar()
-        self._create_statusbar()
-        self._create_tray_icon()
+
+    def _start_process_integrations(self) -> None:
+        """Activate configured hotkeys and hotstring monitoring."""
         self._settings_controller.register_initial_hotkey()
         self._hotstring_controller.refresh()
         if self._settings_controller.settings.hotstrings_enabled:
             self._hotstring_controller.start()
+
+    def _configure_frame_geometry(self) -> None:
+        """Apply initial frame size constraints and screen placement."""
         self.SetMinSize(self.FromDIP((760, 480)))
         self.SetClientSize(self.FromDIP((1040, 680)))
         self.Centre()
