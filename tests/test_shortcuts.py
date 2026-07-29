@@ -1,4 +1,6 @@
+import ast
 import unittest
+from pathlib import Path
 
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY, Hotkey
 
@@ -9,10 +11,6 @@ class HotkeyTestCase(unittest.TestCase):
 
         self.assertEqual(hotkey, DEFAULT_TOGGLE_HOTKEY)
         self.assertEqual(str(hotkey), "CTRL+SHIFT+ALT+T")
-        self.assertEqual(
-            hotkey.to_display_string(),
-            "Ctrl+Shift+Alt+T",
-        )
 
     def test_function_key_is_supported(self):
         hotkey = Hotkey.parse("CTRL+F12")
@@ -89,3 +87,22 @@ class HotkeyTestCase(unittest.TestCase):
             with self.subTest(value=value):
                 with self.assertRaises(ValueError):
                     Hotkey.parse(value)
+
+    def test_model_has_no_platform_or_localization_imports(self):
+        source_file = Path(__file__).resolve().parents[1] / "core" / "shortcuts.py"
+        tree = ast.parse(source_file.read_text(encoding="utf-8"))
+        imported_roots = {
+            alias.name.split(".", 1)[0]
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Import)
+            for alias in node.names
+        }
+        imported_roots.update(
+            node.module.split(".", 1)[0]
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ImportFrom) and node.module
+        )
+
+        self.assertTrue({"ctypes", "i18n", "platform_support", "sys"}.isdisjoint(
+            imported_roots
+        ))

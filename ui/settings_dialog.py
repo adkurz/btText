@@ -8,6 +8,7 @@ import wx
 from core.error_messages import format_user_error
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY, Hotkey
 from i18n import SYSTEM_LANGUAGE, _, get_language_display_name
+from ui.shortcut_display import format_hotkey
 
 
 class FocusableReadOnlyTextCtrl(wx.TextCtrl):
@@ -361,7 +362,7 @@ class SettingsDialog(wx.Dialog):
         hotkey_label = wx.StaticText(page, label=_("Current &hotkey"))
         self.hotkey_display = FocusableReadOnlyTextCtrl(
             page,
-            value=self._candidate_hotkey.to_display_string(),
+            value=format_hotkey(self._candidate_hotkey),
         )
         self.hotkey_display.SetName(
             # Translators: Accessible name for the read-only field displaying
@@ -525,7 +526,7 @@ class SettingsDialog(wx.Dialog):
             return
 
         self._candidate_hotkey = hotkey
-        self.hotkey_display.SetValue(hotkey.to_display_string())
+        self.hotkey_display.SetValue(format_hotkey(hotkey))
         self._update_apply_button()
         self._finish_recording(
             # Translators: Status after recording succeeds. The shortcut is not
@@ -533,7 +534,7 @@ class SettingsDialog(wx.Dialog):
             _(
                 "Shortcut {shortcut} recorded. Choose Apply or OK to activate "
                 "it."
-            ).format(shortcut=hotkey.to_display_string())
+            ).format(shortcut=format_hotkey(hotkey))
         )
 
     def _handle_hotkey_display_navigation(self, event: wx.KeyEvent) -> bool:
@@ -658,7 +659,7 @@ class SettingsDialog(wx.Dialog):
         self._cancel_recording()
         self._candidate_hotkey = DEFAULT_TOGGLE_HOTKEY
         self.hotkey_display.SetValue(
-            self._candidate_hotkey.to_display_string()
+            format_hotkey(self._candidate_hotkey)
         )
         self._update_apply_button()
         self.recording_status.SetLabel(

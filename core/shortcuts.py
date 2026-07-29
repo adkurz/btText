@@ -2,10 +2,7 @@
 
 import dataclasses
 import re
-import sys
-from ctypes import create_unicode_buffer, windll
 
-import i18n
 from core.user_errors import UserFacingError
 
 
@@ -159,42 +156,6 @@ class Hotkey:
         if self.key in SPECIAL_KEY_CODES:
             return SPECIAL_KEY_CODES[self.key]
         return int(self.key[3:], 16)
-
-    def get_key_label(self) -> str:
-        """Return the localized Windows label used only for presentation."""
-        if not self.key.startswith("VK_"):
-            return self.key
-        if sys.platform == "win32":
-            scan_code = windll.user32.MapVirtualKeyW(
-                self.key_code,
-                4,  # MAPVK_VK_TO_VSC_EX
-            )
-            key_data = (scan_code & 0xFF) << 16
-            if scan_code & 0xFF00 in (0xE000, 0xE100):
-                key_data |= 1 << 24
-            buffer = create_unicode_buffer(64)
-            if windll.user32.GetKeyNameTextW(key_data, buffer, 64):
-                return buffer.value
-        return self.key
-
-    def to_display_string(self) -> str:
-        """Return a localized label suitable for the settings UI."""
-        parts = []
-        if self.control:
-            # Translators: Abbreviated Control-key name in a displayed shortcut,
-            # for example "Ctrl+Alt+T".
-            parts.append(i18n.pgettext("hotkey modifier", "Ctrl"))
-        if self.shift:
-            # Translators: Shift-key name in a displayed keyboard shortcut.
-            parts.append(i18n.pgettext("hotkey modifier", "Shift"))
-        if self.alt:
-            # Translators: Alt-key name in a displayed keyboard shortcut.
-            parts.append(i18n.pgettext("hotkey modifier", "Alt"))
-        if self.windows:
-            # Translators: Abbreviated Windows-key name in a displayed shortcut.
-            parts.append(i18n.pgettext("hotkey modifier", "Win"))
-        parts.append(self.get_key_label())
-        return "+".join(parts)
 
     def __str__(self) -> str:
         """Return the stable representation written to the settings file."""

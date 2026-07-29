@@ -22,6 +22,7 @@ from ui import utils
 from ui.category_tree import CategoryTree
 from ui.database_selection import select_database
 from ui.search_dialog import SearchDialog
+from ui.shortcut_display import format_hotkey
 from ui.settings_dialog import SettingsDialog
 from ui.snippet_list import SnippetList
 from ui.tray_icon import TrayIcon
@@ -288,7 +289,7 @@ class MainFrame(sc.SizedFrame):
                     _(
                         "The global hotkey {} is already in use and could not "
                         "be registered."
-                    ).format(hotkey.to_display_string()),
+                    ).format(format_hotkey(hotkey)),
                     # Translators: Title of an error registering a global shortcut.
                     _("Hotkey error"),
                     wx.OK | wx.ICON_ERROR,
@@ -397,14 +398,14 @@ class MainFrame(sc.SizedFrame):
                 message = _(
                     "The selected hotkey {} is already in use. "
                     "The previous hotkey has been restored."
-                ).format(hotkey.to_display_string())
+                ).format(format_hotkey(hotkey))
             else:
                 # Translators: Settings error: the requested shortcut is occupied
                 # and restoring the old one also failed. {} is such as Ctrl+Alt+T.
                 message = _(
                     "The selected hotkey {} is already in use and the previous "
                     "hotkey could not be restored. No global hotkey is active."
-                ).format(hotkey.to_display_string())
+                ).format(format_hotkey(hotkey))
             wx.MessageBox(
                 message,
                 # Translators: Title of an error changing the global shortcut.
