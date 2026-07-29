@@ -102,9 +102,13 @@ class HotstringExpansionTestCase(unittest.TestCase):
             patch.object(
                 clipboard_paste, "activate_window", return_value=True
             ),
-            patch.object(clipboard_paste, "_send_ctrl_v") as send_ctrl_v,
             patch.object(
-                clipboard_paste, "_send_virtual_key"
+                clipboard_paste.keyboard_input,
+                "send_ctrl_v",
+            ) as send_ctrl_v,
+            patch.object(
+                clipboard_paste.keyboard_input,
+                "send_virtual_key",
             ) as send_virtual_key,
         ):
             pending = clipboard_paste.expand_hotstring(

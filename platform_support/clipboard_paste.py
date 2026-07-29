@@ -7,6 +7,7 @@ from ctypes import wintypes
 import os
 import uuid
 
+from platform_support import keyboard_input
 from platform_support.clipboard import (
     CF_UNICODETEXT,
     ClipboardError,
@@ -18,11 +19,7 @@ from platform_support.clipboard import (
 )
 from platform_support.clipboard_snapshot import ClipboardSnapshot
 
-INPUT_KEYBOARD = 1
-KEYEVENTF_KEYUP = 0x0002
 SW_RESTORE = 9
-VK_CONTROL = 0x11
-VK_V = 0x56
 
 
 PasteError = ClipboardError
@@ -38,53 +35,6 @@ user32.IsWindow.restype = wintypes.BOOL
 user32.SetForegroundWindow.argtypes = (wintypes.HWND,)
 user32.SetForegroundWindow.restype = wintypes.BOOL
 user32.ShowWindow.argtypes = (wintypes.HWND, ctypes.c_int)
-
-
-class KEYBDINPUT(ctypes.Structure):
-    """Windows keyboard-input payload used by ``SendInput``."""
-    _fields_ = (
-        ("wVk", wintypes.WORD),
-        ("wScan", wintypes.WORD),
-        ("dwFlags", wintypes.DWORD),
-        ("time", wintypes.DWORD),
-        ("dwExtraInfo", ctypes.c_size_t),
-    )
-
-
-class MOUSEINPUT(ctypes.Structure):
-    """Windows mouse-input payload required by the ``INPUT`` union."""
-    _fields_ = (
-        ("dx", wintypes.LONG),
-        ("dy", wintypes.LONG),
-        ("mouseData", wintypes.DWORD),
-        ("dwFlags", wintypes.DWORD),
-        ("time", wintypes.DWORD),
-        ("dwExtraInfo", ctypes.c_size_t),
-    )
-
-
-class HARDWAREINPUT(ctypes.Structure):
-    """Windows hardware-input payload required by the ``INPUT`` union."""
-    _fields_ = (
-        ("uMsg", wintypes.DWORD),
-        ("wParamL", wintypes.WORD),
-        ("wParamH", wintypes.WORD),
-    )
-
-
-class _INPUTUNION(ctypes.Union):
-    """Union of the native input payload variants."""
-    _fields_ = (("mi", MOUSEINPUT), ("ki", KEYBDINPUT), ("hi", HARDWAREINPUT))
-
-
-class INPUT(ctypes.Structure):
-    """Native input event passed to the Windows ``SendInput`` API."""
-    _anonymous_ = ("data",)
-    _fields_ = (("type", wintypes.DWORD), ("data", _INPUTUNION))
-
-
-user32.SendInput.argtypes = (wintypes.UINT, ctypes.POINTER(INPUT), ctypes.c_int)
-user32.SendInput.restype = wintypes.UINT
 
 
 _MARKER_FORMAT = user32.RegisterClipboardFormatW("BTText.PasteMarker")
@@ -161,39 +111,6 @@ def _replace_clipboard(text: str, marker: bytes) -> ClipboardSnapshot:
         raise
 
 
-def _send_ctrl_v() -> None:
-    """Send one balanced Ctrl+V key sequence to the foreground window."""
-    def keyboard_input(key: int, flags: int = 0) -> INPUT:
-        """Build one native keyboard event."""
-        value = INPUT()
-        value.type = INPUT_KEYBOARD
-        value.ki = KEYBDINPUT(key, 0, flags, 0, 0)
-        return value
-
-    keys = (INPUT * 4)(
-        keyboard_input(VK_CONTROL),
-        keyboard_input(VK_V),
-        keyboard_input(VK_V, KEYEVENTF_KEYUP),
-        keyboard_input(VK_CONTROL, KEYEVENTF_KEYUP),
-    )
-    if user32.SendInput(len(keys), keys, ctypes.sizeof(INPUT)) != len(keys):
-        raise PasteError("The Ctrl+V keystroke could not be sent.")
-
-
-def _send_virtual_key(key: int, repetitions: int = 1) -> None:
-    """Send balanced presses of one virtual key to the foreground window."""
-    values = []
-    for _index in range(repetitions):
-        for flags in (0, KEYEVENTF_KEYUP):
-            value = INPUT()
-            value.type = INPUT_KEYBOARD
-            value.ki = KEYBDINPUT(key, 0, flags, 0, 0)
-            values.append(value)
-    inputs = (INPUT * len(values))(*values)
-    if user32.SendInput(len(inputs), inputs, ctypes.sizeof(INPUT)) != len(inputs):
-        raise PasteError("A keyboard input could not be sent.")
-
-
 class PendingPaste:
     """A paste whose complete previous clipboard can be restored later."""
 
@@ -240,7 +157,7 @@ def paste_text(target_window: int, text: str) -> PendingPaste:
         pending.restore_clipboard()
         raise PasteError("The previously active window could not be activated.")
     try:
-        _send_ctrl_v()
+        keyboard_input.send_ctrl_v()
     except Exception:
         pending.restore_clipboard()
         raise
@@ -262,10 +179,10 @@ def expand_hotstring(
         pending.restore_clipboard()
         raise PasteError("The active window could not be activated.")
     try:
-        _send_virtual_key(0x08, hotstring_length)  # VK_BACK
-        _send_ctrl_v()
+        keyboard_input.send_virtual_key(0x08, hotstring_length)  # VK_BACK
+        keyboard_input.send_ctrl_v()
         if boundary_key is not None:
-            _send_virtual_key(boundary_key)
+            keyboard_input.send_virtual_key(boundary_key)
     except Exception:
         pending.restore_clipboard()
         raise
