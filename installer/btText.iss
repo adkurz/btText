@@ -26,6 +26,7 @@ AppPublisher={#MyAppPublisher}
 DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
+DirExistsWarning=no
 PrivilegesRequired=lowest
 SetupArchitecture=x64
 OutputDir={#MyOutputDir}
@@ -69,19 +70,18 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
 [CustomMessages]
 english.RemoveUserDataPrompt=Do you also want to permanently delete all btText settings and databases stored in {userappdata}\btText? External databases will not be deleted. This cannot be undone.
 german.RemoveUserDataPrompt=Möchten Sie zusätzlich alle btText-Einstellungen und Datenbanken unter {userappdata}\btText dauerhaft löschen? Externe Datenbanken werden nicht gelöscht. Dies kann nicht rückgängig gemacht werden.
-
-[UninstallDelete]
-Type: filesandordirs; Name: "{userappdata}\btText"; \
-    Check: ShouldRemoveUserData
+english.RemoveUserDataFailed=Not all btText user data could be removed. Please delete {userappdata}\btText manually.
+german.RemoveUserDataFailed=Nicht alle btText-Nutzerdaten konnten entfernt werden. Bitte löschen Sie {userappdata}\btText manuell.
 
 [Code]
 var
-  UserDataChoiceMade: Boolean;
   RemoveUserData: Boolean;
 
-function ShouldRemoveUserData(): Boolean;
+procedure CurUninstallStepChanged(
+  CurUninstallStep: TUninstallStep
+);
 begin
-  if not UserDataChoiceMade then
+  if CurUninstallStep = usUninstall then
   begin
     RemoveUserData :=
       SuppressibleMsgBox(
@@ -90,7 +90,22 @@ begin
         MB_YESNO,
         IDNO
       ) = IDYES;
-    UserDataChoiceMade := True;
   end;
-  Result := RemoveUserData;
+  if (CurUninstallStep = usPostUninstall) and RemoveUserData then
+  begin
+    if not DelTree(
+      ExpandConstant('{userappdata}\btText'),
+      True,
+      True,
+      True
+    ) then
+    begin
+      SuppressibleMsgBox(
+        ExpandConstant(CustomMessage('RemoveUserDataFailed')),
+        mbError,
+        MB_OK,
+        IDOK
+      );
+    end;
+  end;
 end;

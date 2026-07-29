@@ -21,6 +21,7 @@ class InstallerDefinitionTests(unittest.TestCase):
     def test_installer_is_per_user_and_non_elevated(self):
         self.assertIn("PrivilegesRequired=lowest", self.script)
         self.assertIn("SetupArchitecture=x64", self.script)
+        self.assertIn("DirExistsWarning=no", self.script)
         self.assertIn(
             r"DefaultDirName={localappdata}\Programs\{#MyAppName}",
             self.script,
@@ -44,14 +45,16 @@ class InstallerDefinitionTests(unittest.TestCase):
         )
 
     def test_user_data_removal_is_optional_and_defaults_to_keep(self):
-        self.assertIn("[UninstallDelete]", self.script)
+        self.assertNotIn("[UninstallDelete]", self.script)
+        self.assertIn("procedure CurUninstallStepChanged(", self.script)
+        self.assertIn("CurUninstallStep = usUninstall", self.script)
         self.assertIn(
-            r'Type: filesandordirs; Name: "{userappdata}\btText"',
+            "CurUninstallStep = usPostUninstall",
             self.script,
         )
-        self.assertIn("Check: ShouldRemoveUserData", self.script)
         self.assertIn("SuppressibleMsgBox(", self.script)
         self.assertIn("IDNO", self.script)
+        self.assertIn("DelTree(", self.script)
         self.assertIn(
             "External databases will not be deleted.",
             self.script,
@@ -60,6 +63,7 @@ class InstallerDefinitionTests(unittest.TestCase):
             "Externe Datenbanken werden nicht gelöscht.",
             self.script,
         )
+        self.assertIn("RemoveUserDataFailed", self.script)
 
 
 if __name__ == "__main__":
