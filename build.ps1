@@ -1,5 +1,7 @@
 param(
-    [string]$Python = "python"
+    [string]$Python = "python",
+    [switch]$PortableOnly,
+    [string]$InnoCompiler = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -15,6 +17,66 @@ $ExpectedBuildDirectory = [IO.Path]::GetFullPath(
 $ResolvedBuildDirectory = [IO.Path]::GetFullPath($BuildDirectory)
 if ($ResolvedBuildDirectory -ne $ExpectedBuildDirectory) {
     throw "Refusing to use an unexpected build directory."
+}
+
+function Resolve-InnoCompiler {
+    param([string]$RequestedCompiler)
+
+    if ($RequestedCompiler) {
+        if (-not (Test-Path -LiteralPath $RequestedCompiler -PathType Leaf)) {
+            throw "The specified Inno Setup compiler does not exist: $RequestedCompiler"
+        }
+        return [IO.Path]::GetFullPath($RequestedCompiler)
+    }
+
+    $Command = Get-Command "ISCC.exe" -ErrorAction SilentlyContinue
+    if ($Command) {
+        return $Command.Source
+    }
+
+    $Candidates = @()
+    if (${env:ProgramFiles(x86)}) {
+        $Candidates += Join-Path (
+            ${env:ProgramFiles(x86)}
+        ) "Inno Setup 7\ISCC.exe"
+    }
+    if ($env:ProgramFiles) {
+        $Candidates += Join-Path $env:ProgramFiles "Inno Setup 7\ISCC.exe"
+    }
+    foreach ($Candidate in $Candidates) {
+        if (Test-Path -LiteralPath $Candidate -PathType Leaf) {
+            return $Candidate
+        }
+    }
+
+    throw (
+        "Inno Setup 7 was not found. Install it, pass -InnoCompiler, " +
+        "or use -PortableOnly."
+    )
+}
+
+function Assert-InnoSetup7 {
+    param([string]$Compiler)
+
+    $PreviousErrorActionPreference = $ErrorActionPreference
+    try {
+        $ErrorActionPreference = "Continue"
+        $VersionOutput = (& $Compiler /? 2>&1 | Out-String)
+    }
+    finally {
+        $ErrorActionPreference = $PreviousErrorActionPreference
+    }
+    if ($VersionOutput -notmatch "Inno Setup 7 Command-Line Compiler") {
+        throw (
+            "The selected compiler is not Inno Setup 7: $Compiler"
+        )
+    }
+}
+
+$ResolvedInnoCompiler = $null
+if (-not $PortableOnly) {
+    $ResolvedInnoCompiler = Resolve-InnoCompiler $InnoCompiler
+    Assert-InnoSetup7 $ResolvedInnoCompiler
 }
 
 $TemporaryRoot = Join-Path (
@@ -105,6 +167,12 @@ try {
         $Paths = ($ForbiddenFiles.FullName -join ", ")
         throw "The application bundle contains forbidden user data: $Paths"
     }
+    $InstallModeMarker = Join-Path (
+        $ApplicationDirectory
+    ) "_internal\bttext-install-mode.json"
+    if (Test-Path -LiteralPath $InstallModeMarker) {
+        throw "The portable application contains the installed-mode marker."
+    }
 
     $Version = (
         & $VirtualEnvironmentPython -c "import info; print(info.version)"
@@ -121,7 +189,7 @@ try {
     }
     New-Item -ItemType Directory -Path $BuildDirectory | Out-Null
     $Archive = Join-Path $BuildDirectory (
-        "btText-{0}-windows.zip" -f $Version
+        "btText-{0}-portable-windows.zip" -f $Version
     )
     Compress-Archive `
         -LiteralPath $ApplicationDirectory `
@@ -132,8 +200,32 @@ try {
         throw "The btText archive was not created."
     }
 
+    $Installer = $null
+    if (-not $PortableOnly) {
+        Write-Host "Creating per-user Windows installer..."
+        $InstallerBaseName = "btText-{0}-setup" -f $Version
+        $Installer = Join-Path $BuildDirectory (
+            $InstallerBaseName + ".exe"
+        )
+        & $ResolvedInnoCompiler `
+            "/DMyAppVersion=$Version" `
+            "/DMySourceDir=$ApplicationDirectory" `
+            "/DMyOutputDir=$BuildDirectory" `
+            "/DMyOutputBaseFilename=$InstallerBaseName" `
+            (Join-Path $ProjectRoot "installer\btText.iss")
+        if ($LASTEXITCODE -ne 0) {
+            throw "Inno Setup failed with exit code $LASTEXITCODE."
+        }
+        if (-not (Test-Path -LiteralPath $Installer -PathType Leaf)) {
+            throw "Inno Setup did not create the expected installer."
+        }
+    }
+
     Write-Host "Build completed successfully:"
     Write-Host $Archive
+    if ($Installer) {
+        Write-Host $Installer
+    }
 }
 finally {
     Pop-Location

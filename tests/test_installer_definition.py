@@ -20,6 +20,7 @@ class InstallerDefinitionTests(unittest.TestCase):
 
     def test_installer_is_per_user_and_non_elevated(self):
         self.assertIn("PrivilegesRequired=lowest", self.script)
+        self.assertIn("SetupArchitecture=x64", self.script)
         self.assertIn(
             r"DefaultDirName={localappdata}\Programs\{#MyAppName}",
             self.script,

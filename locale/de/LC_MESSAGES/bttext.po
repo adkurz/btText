@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-29 21:22+0200\n"
+"POT-Creation-Date: 2026-07-29 23:59+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: de\n"
@@ -21,7 +21,7 @@ msgstr ""
 #. Translators: Title for an error opening a selected snippet
 #. database.
 #. Translators: Title for a failed database selection or creation.
-#: btText.py:54 ui/database_selection.py:92 ui/main_frame.py:413
+#: btText.py:58 ui/database_selection.py:92 ui/main_frame.py:413
 msgid "Database error"
 msgstr "Datenbankfehler"
 
@@ -29,19 +29,19 @@ msgstr "Datenbankfehler"
 #. database path in the application settings.
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:73 btText.py:128 ui/settings_controller.py:196
+#: btText.py:77 btText.py:132 ui/settings_controller.py:196
 msgid "Settings error"
 msgstr "Einstellungsfehler"
 
 #. Translators: Information shown when the user tries to start
 #. the application while it is already running.
-#: btText.py:115
+#: btText.py:119
 msgid "btText is already running."
 msgstr "btText wird bereits ausgeführt."
 
 #. Translators: Title of a startup warning after a translation
 #. catalog could not be loaded.
-#: btText.py:137
+#: btText.py:141
 msgid "Language error"
 msgstr "Sprachfehler"
 

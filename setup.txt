@@ -76,15 +76,30 @@ build dependencies into it, and then uses only that environment for catalog
 validation, tests, and PyInstaller. The globally available Python installation
 is used only once to create `.venv`.
 
-The finished portable archive is written to:
+The finished release artifacts are written to:
 
 ```text
-build/btText-<version>-windows.zip
+build/btText-<version>-portable-windows.zip
+build/btText-<version>-setup.exe
 ```
 
-It contains the executable and immutable runtime resources. It does not contain
-`data.db` or `settings.ini`; btText creates those files beside the executable
-when they are needed.
+The default build requires Inno Setup 7. The script finds `ISCC.exe` on `PATH`
+or in its standard installation directory. A non-standard compiler location
+can be supplied explicitly:
+
+```powershell
+.\build.ps1 -InnoCompiler "C:\Path\To\Inno Setup 7\ISCC.exe"
+```
+
+To create only the portable archive without requiring Inno Setup:
+
+```powershell
+.\build.ps1 -PortableOnly
+```
+
+The artifacts contain the executable and immutable runtime resources. Neither
+artifact contains `data.db` or `settings.ini`; btText creates them when needed
+in the data directory appropriate to the application mode.
 
 To select the Python installation used to create `.venv`:
 

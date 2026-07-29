@@ -293,14 +293,17 @@ It performs the required checks and packaging steps in order:
 1. validates POT and PO sources;
 2. compiles all runtime MO catalogs;
 3. runs the complete test suite;
-4. creates a portable, windowed PyInstaller application;
-5. writes `build/btText-<version>-windows.zip`.
+4. creates a windowed PyInstaller application;
+5. writes `build/btText-<version>-portable-windows.zip`;
+6. writes `build/btText-<version>-setup.exe` with Inno Setup 7.
 
-The archive contains `btText.exe`, its runtime dependencies, the application
-icon, and compiled translation catalogs. It deliberately does not contain
-`data.db`, `settings.ini`, or `settings.ini.tmp`. The application creates its
-database beside the executable on first start and creates the settings file
-only after settings are saved.
+Both artifacts contain `btText.exe`, its runtime dependencies, the application
+icon, and compiled translation catalogs. They deliberately do not contain
+`data.db`, `settings.ini`, or `settings.ini.tmp`.
+
+The default build requires Inno Setup 7. Pass `-InnoCompiler <path>` when
+`ISCC.exe` is installed in a non-standard location, or pass `-PortableOnly` to
+create and validate only the portable archive.
 
 To use a specific Python executable for creating `.venv`:
 

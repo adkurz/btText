@@ -27,6 +27,7 @@ DefaultDirName={localappdata}\Programs\{#MyAppName}
 DefaultGroupName={#MyAppName}
 DisableProgramGroupPage=yes
 PrivilegesRequired=lowest
+SetupArchitecture=x64
 OutputDir={#MyOutputDir}
 OutputBaseFilename={#MyOutputBaseFilename}
 SetupIconFile=..\assets\icon.ico
