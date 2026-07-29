@@ -182,6 +182,43 @@ class SettingsStoreTestCase(unittest.TestCase):
             self.assertFalse(settings.notify_hotstring_expansion)
             self.assertIsNone(settings.database_file)
 
+    def test_database_beside_settings_file_is_saved_portably(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            settings_file = directory / "settings.ini"
+            database_file = directory / "data.db"
+            store = SettingsStore(settings_file)
+
+            store.save(AppSettings(database_file=str(database_file)))
+
+            contents = settings_file.read_text(encoding="utf-8")
+            self.assertIn("database_file = data.db", contents)
+            self.assertNotIn(str(directory.resolve()), contents)
+            self.assertEqual(
+                store.load().database_file,
+                str(database_file.resolve()),
+            )
+
+    def test_external_database_is_saved_as_absolute_path(self):
+        with (
+            tempfile.TemporaryDirectory() as settings_directory,
+            tempfile.TemporaryDirectory() as database_directory,
+        ):
+            settings_file = Path(settings_directory) / "settings.ini"
+            database_file = Path(database_directory) / "snippets.db"
+            store = SettingsStore(settings_file)
+
+            store.save(AppSettings(database_file=str(database_file)))
+
+            self.assertIn(
+                "database_file = {}".format(database_file.resolve()),
+                settings_file.read_text(encoding="utf-8"),
+            )
+            self.assertEqual(
+                store.load().database_file,
+                str(database_file.resolve()),
+            )
+
     def test_obsolete_general_hotstring_keys_are_not_migrated(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             settings_file = Path(temporary_directory) / "settings.ini"

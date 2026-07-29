@@ -283,7 +283,10 @@ class SettingsStore:
                 "general", "database_file", fallback=None
             )
             if database_file is not None:
-                database_file = str(Path(database_file).expanduser().resolve())
+                database_path = Path(database_file).expanduser()
+                if not database_path.is_absolute():
+                    database_path = self.settings_file.parent / database_path
+                database_file = str(database_path.resolve())
             include_copied_text_in_clipboard_history = parser.getboolean(
                 "general",
                 "include_copied_text_in_clipboard_history",
@@ -344,8 +347,12 @@ class SettingsStore:
                 ),
             }
             if settings.database_file is not None:
-                parser["general"]["database_file"] = str(
-                    Path(settings.database_file).expanduser().resolve()
+                database_path = Path(settings.database_file).expanduser().resolve()
+                settings_directory = self.settings_file.parent.resolve()
+                parser["general"]["database_file"] = (
+                    database_path.name
+                    if database_path.parent == settings_directory
+                    else str(database_path)
                 )
             parser["hotstrings"] = {
                 "enabled": str(settings.hotstrings_enabled),
