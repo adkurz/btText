@@ -66,6 +66,31 @@ Name: "{autodesktop}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"; \
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}"; \
     Flags: nowait postinstall skipifsilent
 
-; No files below {userappdata}\btText are registered with Setup. Consequently,
-; uninstalling removes program files and shortcuts but preserves user settings
-; and databases managed by the application.
+[CustomMessages]
+english.RemoveUserDataPrompt=Do you also want to permanently delete all btText settings and databases stored in {userappdata}\btText? External databases will not be deleted. This cannot be undone.
+german.RemoveUserDataPrompt=Möchten Sie zusätzlich alle btText-Einstellungen und Datenbanken unter {userappdata}\btText dauerhaft löschen? Externe Datenbanken werden nicht gelöscht. Dies kann nicht rückgängig gemacht werden.
+
+[UninstallDelete]
+Type: filesandordirs; Name: "{userappdata}\btText"; \
+    Check: ShouldRemoveUserData
+
+[Code]
+var
+  UserDataChoiceMade: Boolean;
+  RemoveUserData: Boolean;
+
+function ShouldRemoveUserData(): Boolean;
+begin
+  if not UserDataChoiceMade then
+  begin
+    RemoveUserData :=
+      SuppressibleMsgBox(
+        ExpandConstant(CustomMessage('RemoveUserDataPrompt')),
+        mbConfirmation,
+        MB_YESNO,
+        IDNO
+      ) = IDYES;
+    UserDataChoiceMade := True;
+  end;
+  Result := RemoveUserData;
+end;

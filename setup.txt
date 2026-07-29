@@ -86,19 +86,26 @@ For a portable version:
 Uninstall btText from Windows **Installed apps** or from its Start menu
 uninstaller.
 
-The uninstaller removes the program files and shortcuts but deliberately keeps
-the user data in:
+The uninstaller always removes the program files and shortcuts. It then offers
+to delete the user data in:
 
 ```text
 %APPDATA%\btText
 ```
 
-This prevents an uninstall or upgrade from deleting snippet data. To remove
-btText completely:
+The removal option is disabled by default. Keeping the data allows a later
+installation to reuse the settings and default database.
 
-1. Uninstall the application.
-2. Back up `data.db` if it may still be needed.
-3. Manually delete `%APPDATA%\btText`.
+Select the data-removal option only after backing up `data.db`. It permanently
+deletes the complete `%APPDATA%\btText` directory, including the installed
+version's settings and default database, and cannot be undone. Databases
+selected from other directories are external and are not deleted.
+
+To remove btText without leaving its program-managed files behind:
+
+1. Back up any database that may still be needed.
+2. Start the uninstaller.
+3. Confirm the optional removal of settings and databases.
 
 To remove the portable version, close btText and delete its extracted
 directory. This also deletes a portable `settings.ini` and `data.db` stored in

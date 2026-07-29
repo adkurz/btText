@@ -43,15 +43,23 @@ class InstallerDefinitionTests(unittest.TestCase):
             self.script,
         )
 
-    def test_installer_does_not_manage_user_data(self):
-        directives = "\n".join(
-            line
-            for line in self.script.splitlines()
-            if line and not line.lstrip().startswith(";")
-        ).lower()
-        self.assertNotIn("userappdata", directives)
-        self.assertNotIn("data.db", directives)
-        self.assertNotIn("settings.ini", directives)
+    def test_user_data_removal_is_optional_and_defaults_to_keep(self):
+        self.assertIn("[UninstallDelete]", self.script)
+        self.assertIn(
+            r'Type: filesandordirs; Name: "{userappdata}\btText"',
+            self.script,
+        )
+        self.assertIn("Check: ShouldRemoveUserData", self.script)
+        self.assertIn("SuppressibleMsgBox(", self.script)
+        self.assertIn("IDNO", self.script)
+        self.assertIn(
+            "External databases will not be deleted.",
+            self.script,
+        )
+        self.assertIn(
+            "Externe Datenbanken werden nicht gelöscht.",
+            self.script,
+        )
 
 
 if __name__ == "__main__":
