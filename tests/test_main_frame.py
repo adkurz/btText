@@ -5,7 +5,6 @@ from unittest.mock import Mock, patch
 
 from core.app_settings import AppSettings, SettingsError
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY, Hotkey
-from platform_support import clipboard_paste
 from ui.main_frame import MainFrame
 
 
@@ -212,35 +211,6 @@ class SettingsChangeTestCase(unittest.TestCase):
         self.assertFalse(frame._settings.hotstrings_enabled)
         frame._settings_store.save.assert_called_once_with(frame._settings)
         frame._hotstring_hook.stop.assert_called_once_with()
-
-
-class ClipboardRestoreTestCase(unittest.TestCase):
-    @patch("ui.main_frame.wx.CallLater")
-    def test_transient_restore_failure_is_retried(self, call_later):
-        pending = Mock()
-        pending.restore_clipboard.side_effect = clipboard_paste.PasteError(
-            "clipboard busy"
-        )
-        retry = Mock()
-        frame = SimpleNamespace(_restore_clipboard=retry)
-
-        MainFrame._restore_clipboard(frame, pending, 3)
-
-        call_later.assert_called_once_with(100, retry, pending, 2)
-        pending.discard_snapshot.assert_not_called()
-
-    @patch("ui.main_frame.wx.MessageBox")
-    def test_final_restore_failure_discards_snapshot(self, message_box):
-        pending = Mock()
-        pending.restore_clipboard.side_effect = clipboard_paste.PasteError(
-            "clipboard busy"
-        )
-        frame = SimpleNamespace()
-
-        MainFrame._restore_clipboard(frame, pending, 1)
-
-        pending.discard_snapshot.assert_called_once_with()
-        message_box.assert_called_once()
 
 
 class ShutdownTestCase(unittest.TestCase):

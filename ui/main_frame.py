@@ -9,7 +9,6 @@ import wx.lib.sized_controls as sc
 
 from platform_support import (
     clipboard,
-    clipboard_paste,
     hotstring_expansion,
     windows,
 )
@@ -25,6 +24,7 @@ from ui import utils
 from ui.category_tree import CategoryTree
 from ui.database_selection import select_database
 from ui.global_hotkey import WxGlobalHotkeyBinding
+from ui.paste_controller import PasteController
 from ui.search_dialog import SearchDialog
 from ui.shortcut_display import format_hotkey
 from ui.settings_dialog import SettingsDialog
@@ -32,7 +32,6 @@ from ui.snippet_list import SnippetList
 from ui.tray_icon import TrayIcon
 from ui.transfer import TransferBuffer
 
-CLIPBOARD_RESTORE_DELAY_MS = 500
 HOTKEY_LAYOUT_CHECK_INTERVAL_MS = 500
 
 class MainFrame(sc.SizedFrame):
@@ -67,13 +66,16 @@ class MainFrame(sc.SizedFrame):
             self._hotkey_layout_timer,
         )
         self._hotkey_layout_timer.Start(HOTKEY_LAYOUT_CHECK_INTERVAL_MS)
-        foreground_window = windows.get_foreground_window()
-        self._paste_target_window = (
-            foreground_window
-            if windows.is_external_window(foreground_window)
-            else None
+        self._paste_controller = PasteController(
+            self,
+            model,
+            self._prepare_external_paste,
+            self._reveal_after_paste_error,
         )
-        self._ee.on("snippet.insert_requested", self.insert_snippet)
+        self._ee.on(
+            "snippet.insert_requested",
+            self._paste_controller.insert_snippet,
+        )
         self._ee.on("status.changed", self.set_status_text)
         self.Bind(wx.EVT_ACTIVATE, self.on_activate)
         self.Bind(
@@ -457,12 +459,7 @@ class MainFrame(sc.SizedFrame):
                 self,
             )
             return
-        wx.CallLater(
-            CLIPBOARD_RESTORE_DELAY_MS,
-            self._restore_clipboard,
-            pending,
-            3,
-        )
+        self._paste_controller.schedule_restore(pending)
         if self._settings.notify_hotstring_expansion:
             self.tray_icon.show_hotstring_notification(snippet)
 
@@ -472,7 +469,7 @@ class MainFrame(sc.SizedFrame):
             self._remember_focused_control()
             self.Hide()
         else:
-            self._remember_foreground_window()
+            self._paste_controller.remember_foreground_window()
             self.show_and_focus()
 
     def show_and_focus(self):
@@ -496,100 +493,17 @@ class MainFrame(sc.SizedFrame):
         event.Skip()
         if not event.GetActive():
             self._remember_focused_control()
-            wx.CallAfter(self._remember_foreground_window)
+            wx.CallAfter(self._paste_controller.remember_foreground_window)
 
-    def _remember_foreground_window(self):
-        """Remember a valid external foreground window as the paste target."""
-        foreground_window = windows.get_foreground_window()
-        if windows.is_external_window(foreground_window):
-            self._paste_target_window = foreground_window
-
-    def insert_snippet(self, snippet_id: int):
-        """Hide the frame and schedule insertion into the previous window."""
-        if self._paste_target_window is None:
-            wx.MessageBox(
-                # Translators: Error when no previously active external window is
-                # available as the destination for inserting a snippet.
-                _("There is no previous window to insert the snippet into."),
-                # Translators: Title of an error inserting a snippet externally.
-                _("Paste error"),
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
-            return
-        try:
-            snippet = self._model.get_snippet(snippet_id)
-        except datamodel.DataModelError as error:
-            wx.MessageBox(
-                format_user_error(error),
-                # Translators: Generic title for a failed snippet operation.
-                _("Error"),
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
-            return
-
+    def _prepare_external_paste(self) -> None:
+        """Remember focus and hide while Windows activates the paste target."""
         self._remember_focused_control()
-        # Hiding lets Windows reactivate the external target before Ctrl+V.
         self.Hide()
-        wx.CallLater(50, self._paste_after_hide, snippet.content)
 
-    def _paste_after_hide(self, text: str):
-        """Paste after native window activation has settled."""
-        try:
-            pending = clipboard_paste.paste_text(self._paste_target_window, text)
-        except clipboard_paste.PasteError as error:
-            self.Show()
-            self.Iconize(False)
-            wx.MessageBox(
-                str(error),
-                # Translators: Title of an error inserting a snippet externally.
-                _("Paste error"),
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
-            return
-        wx.CallLater(
-            CLIPBOARD_RESTORE_DELAY_MS,
-            self._restore_clipboard,
-            pending,
-            3,
-        )
-
-    def _restore_clipboard(
-        self,
-        pending: clipboard_paste.PendingPaste,
-        attempts_remaining: int,
-    ):
-        """Restore the saved clipboard, retrying transient access failures."""
-        # Clipboard access is transiently exclusive, so retry briefly while
-        # retaining ownership of the saved snapshot.
-        try:
-            pending.restore_clipboard()
-        except clipboard_paste.PasteError as error:
-            if attempts_remaining > 1:
-                wx.CallLater(
-                    100,
-                    self._restore_clipboard,
-                    pending,
-                    attempts_remaining - 1,
-                )
-                return
-            pending.discard_snapshot()
-            wx.MessageBox(
-                # Translators: Error after inserting a snippet when restoring the
-                # user's old clipboard repeatedly failed. {} is a technical error.
-                _(
-                    "The previous clipboard contents could not be restored "
-                    "after multiple attempts. The clipboard may still contain "
-                    "the inserted snippet.\n\n{}"
-                ).format(error),
-                # Translators: Title of an error restoring the user's clipboard
-                # after a snippet was inserted.
-                _("Clipboard restore error"),
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
+    def _reveal_after_paste_error(self) -> None:
+        """Reveal the frame again when external paste preparation fails."""
+        self.Show()
+        self.Iconize(False)
 
     def _create_menubar(self):
         """Create application menus and bind their commands."""
