@@ -19,12 +19,13 @@ from ui.database_selection import select_database
 
 def _open_database(ee, settings_store, settings):
     """Resolve, open, and when needed persist the startup database."""
+    default_database_file = app_paths.get_database_file()
     if settings.database_file is not None:
         initial_path = settings.database_file
         allow_create = False
         persist_path = False
-    elif app_paths.get_database_file().exists():
-        initial_path = app_paths.get_database_file()
+    elif default_database_file.exists():
+        initial_path = default_database_file
         allow_create = False
         persist_path = True
     else:

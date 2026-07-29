@@ -1,4 +1,4 @@
-"""Application settings and their portable INI-file persistence."""
+"""Application settings and mode-aware INI-file persistence."""
 
 import dataclasses
 from configparser import ConfigParser, Error as ConfigParserError
@@ -36,7 +36,7 @@ class AppSettings:
 
 
 class SettingsStore:
-    """Load and atomically replace the application's INI settings file."""
+    """Load and atomically replace settings in the active data directory."""
     def __init__(
         self,
         settings_file: str | Path,
@@ -138,6 +138,9 @@ class SettingsStore:
             if settings.database_file is not None:
                 database_path = Path(settings.database_file).expanduser().resolve()
                 settings_directory = self.settings_file.parent.resolve()
+                # Keep the database path portable within whichever data
+                # directory is active. Databases elsewhere remain explicit
+                # absolute paths.
                 parser["general"]["database_file"] = (
                     database_path.name
                     if database_path.parent == settings_directory

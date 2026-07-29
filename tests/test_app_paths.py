@@ -7,6 +7,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+from core.app_settings import AppSettings, SettingsStore
 from platform_support import app_paths
 
 
@@ -98,6 +99,60 @@ class AppPathsTests(unittest.TestCase):
             ):
                 with self.assertRaisesRegex(RuntimeError, "APPDATA"):
                     app_paths.get_data_directory()
+
+    def test_installed_default_database_is_saved_relative_to_settings(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            bundle = root / "_internal"
+            bundle.mkdir()
+            (bundle / app_paths.INSTALL_MODE_MARKER).touch()
+            appdata = root / "AppData" / "Roaming"
+            with (
+                patch.object(sys, "frozen", True, create=True),
+                patch.object(sys, "_MEIPASS", str(bundle), create=True),
+                patch.dict(os.environ, {"APPDATA": str(appdata)}),
+            ):
+                settings_file = app_paths.get_settings_file()
+                database_file = app_paths.get_database_file()
+                store = SettingsStore(settings_file)
+
+                store.save(AppSettings(database_file=str(database_file)))
+
+                contents = settings_file.read_text(encoding="utf-8")
+                self.assertIn("database_file = data.db", contents)
+                self.assertEqual(
+                    store.load().database_file,
+                    str(database_file.resolve()),
+                )
+
+    def test_installed_external_database_is_saved_as_absolute_path(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            bundle = root / "_internal"
+            bundle.mkdir()
+            (bundle / app_paths.INSTALL_MODE_MARKER).touch()
+            appdata = root / "AppData" / "Roaming"
+            external_database = root / "external" / "snippets.db"
+            with (
+                patch.object(sys, "frozen", True, create=True),
+                patch.object(sys, "_MEIPASS", str(bundle), create=True),
+                patch.dict(os.environ, {"APPDATA": str(appdata)}),
+            ):
+                store = SettingsStore(app_paths.get_settings_file())
+
+                store.save(
+                    AppSettings(database_file=str(external_database))
+                )
+
+                contents = store.settings_file.read_text(encoding="utf-8")
+                self.assertIn(
+                    f"database_file = {external_database.resolve()}",
+                    contents,
+                )
+                self.assertEqual(
+                    store.load().database_file,
+                    str(external_database.resolve()),
+                )
 
 
 if __name__ == "__main__":

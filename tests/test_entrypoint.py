@@ -1,10 +1,13 @@
 import unittest
 import tempfile
+import os
+import sys
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import btText
-from core.app_settings import AppSettings
+from core.app_settings import AppSettings, SettingsStore
+from platform_support import app_paths
 
 
 class SingleInstanceTestCase(unittest.TestCase):
@@ -67,6 +70,48 @@ class DatabaseStartupTestCase(unittest.TestCase):
             )
             self.assertEqual(updated.database_file, str(database_file.resolve()))
             store.save.assert_called_once_with(updated)
+
+    @patch("btText.DataModel")
+    def test_installed_default_database_is_adopted_and_persisted(
+        self,
+        data_model,
+    ):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory).resolve()
+            bundle = root / "_internal"
+            bundle.mkdir()
+            (bundle / app_paths.INSTALL_MODE_MARKER).touch()
+            appdata = root / "AppData" / "Roaming"
+            database_file = appdata / "btText" / "data.db"
+            database_file.parent.mkdir(parents=True)
+            database_file.touch()
+            with (
+                patch.object(sys, "frozen", True, create=True),
+                patch.object(sys, "_MEIPASS", str(bundle), create=True),
+                patch.dict(os.environ, {"APPDATA": str(appdata)}),
+            ):
+                store = SettingsStore(app_paths.get_settings_file())
+
+                model, updated = btText._open_database(
+                    Mock(),
+                    store,
+                    AppSettings(),
+                )
+
+                self.assertIs(model, data_model.return_value)
+                data_model.assert_called_once_with(
+                    unittest.mock.ANY,
+                    database_file,
+                    allow_create=False,
+                )
+                self.assertEqual(
+                    updated.database_file,
+                    str(database_file.resolve()),
+                )
+                self.assertIn(
+                    "database_file = data.db",
+                    store.settings_file.read_text(encoding="utf-8"),
+                )
 
     @patch("btText.select_database", return_value=None)
     @patch("btText.app_paths.get_database_file")
