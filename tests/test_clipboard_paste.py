@@ -23,6 +23,29 @@ class ClipboardPasteCompatibilityTestCase(unittest.TestCase):
 
 
 class PendingPasteTestCase(unittest.TestCase):
+    def test_prepare_replaces_clipboard_with_generated_marker(self):
+        snapshot = RecordingClipboardSnapshot()
+        marker = b"generated marker"
+
+        with (
+            patch.object(
+                clipboard_paste.uuid,
+                "uuid4",
+                return_value=Mock(bytes=marker),
+            ),
+            patch.object(
+                clipboard_paste,
+                "_replace_clipboard",
+                return_value=snapshot,
+            ) as replace_clipboard,
+        ):
+            pending = PendingPaste.prepare("snippet")
+
+        replace_clipboard.assert_called_once_with("snippet", marker)
+        self.assertIs(pending._snapshot, snapshot)
+        self.assertEqual(pending._marker, marker)
+        self.assertEqual(pending._pasted_text, "snippet")
+
     def test_discard_snapshot_releases_saved_clipboard_data(self):
         snapshot = RecordingClipboardSnapshot()
         pending = PendingPaste(snapshot, b"marker", "snippet")
@@ -135,53 +158,40 @@ class PasteTextTestCase(unittest.TestCase):
 
         restore_clipboard.assert_called_once_with()
 
-
-class HotstringExpansionTestCase(unittest.TestCase):
-    def _expand(self, boundary_key):
+    def test_replacement_failure_restores_original_snapshot(self):
         snapshot = RecordingClipboardSnapshot()
         with (
             patch.object(
-                clipboard_paste.windows,
-                "is_valid_window",
+                clipboard_paste.ClipboardSnapshot,
+                "capture",
+                return_value=snapshot,
+            ),
+            patch.object(
+                clipboard_paste,
+                "_open_clipboard",
+            ),
+            patch.object(
+                clipboard_paste.user32,
+                "EmptyClipboard",
                 return_value=True,
             ),
             patch.object(
-                clipboard_paste, "_replace_clipboard", return_value=snapshot
+                clipboard_paste,
+                "_set_clipboard_text",
+                side_effect=clipboard.ClipboardError("write failed"),
             ),
             patch.object(
-                clipboard_paste.windows,
-                "activate_window",
-                return_value=True,
+                clipboard_paste.user32,
+                "CloseClipboard",
             ),
-            patch.object(
-                clipboard_paste.keyboard_input,
-                "send_ctrl_v",
-            ) as send_ctrl_v,
-            patch.object(
-                clipboard_paste.keyboard_input,
-                "send_virtual_key",
-            ) as send_virtual_key,
         ):
-            pending = clipboard_paste.expand_hotstring(
-                123, "Expanded", 3, boundary_key
-            )
-        return pending, send_ctrl_v, send_virtual_key
+            with self.assertRaisesRegex(
+                clipboard.ClipboardError,
+                "write failed",
+            ):
+                clipboard_paste._replace_clipboard("snippet", b"marker")
 
-    def test_boundary_key_is_replayed_when_requested(self):
-        pending, send_ctrl_v, send_virtual_key = self._expand(0x20)
-
-        self.assertIsInstance(pending, PendingPaste)
-        send_ctrl_v.assert_called_once_with()
-        self.assertEqual(
-            send_virtual_key.call_args_list,
-            [unittest.mock.call(0x08, 3), unittest.mock.call(0x20)],
-        )
-
-    def test_boundary_key_can_be_discarded(self):
-        _pending, send_ctrl_v, send_virtual_key = self._expand(None)
-
-        send_ctrl_v.assert_called_once_with()
-        send_virtual_key.assert_called_once_with(0x08, 3)
+        self.assertEqual(snapshot.restore_calls, 1)
 
 
 if __name__ == "__main__":

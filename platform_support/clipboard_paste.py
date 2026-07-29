@@ -86,6 +86,12 @@ class PendingPaste:
         self._marker = marker
         self._pasted_text = pasted_text
 
+    @classmethod
+    def prepare(cls, text: str) -> PendingPaste:
+        """Replace the clipboard with marked text and retain its snapshot."""
+        marker = uuid.uuid4().bytes
+        return cls(_replace_clipboard(text, marker), marker, text)
+
     def restore_clipboard(self) -> None:
         """Restore every old format unless another app changed the clipboard."""
         _open_clipboard()
@@ -112,38 +118,12 @@ def paste_text(target_window: int, text: str) -> PendingPaste:
     if not windows.is_valid_window(target_window):
         raise PasteError("The previously active window no longer exists.")
 
-    marker = uuid.uuid4().bytes
-    pending = PendingPaste(_replace_clipboard(text, marker), marker, text)
+    pending = PendingPaste.prepare(text)
     if not windows.activate_window(target_window):
         pending.restore_clipboard()
         raise PasteError("The previously active window could not be activated.")
     try:
         keyboard_input.send_ctrl_v()
-    except Exception:
-        pending.restore_clipboard()
-        raise
-    return pending
-
-
-def expand_hotstring(
-    target_window: int,
-    text: str,
-    hotstring_length: int,
-    boundary_key: int | None,
-) -> PendingPaste:
-    """Replace a typed hotstring and optionally replay its boundary key."""
-    if not windows.is_valid_window(target_window):
-        raise PasteError("The active window no longer exists.")
-    marker = uuid.uuid4().bytes
-    pending = PendingPaste(_replace_clipboard(text, marker), marker, text)
-    if not windows.activate_window(target_window):
-        pending.restore_clipboard()
-        raise PasteError("The active window could not be activated.")
-    try:
-        keyboard_input.send_virtual_key(0x08, hotstring_length)  # VK_BACK
-        keyboard_input.send_ctrl_v()
-        if boundary_key is not None:
-            keyboard_input.send_virtual_key(boundary_key)
     except Exception:
         pending.restore_clipboard()
         raise

@@ -7,7 +7,12 @@ import wx
 import wx.adv
 import wx.lib.sized_controls as sc
 
-from platform_support import clipboard_paste, windows
+from platform_support import (
+    clipboard,
+    clipboard_paste,
+    hotstring_expansion,
+    windows,
+)
 from core import datamodel
 from platform_support import hotstrings
 import i18n
@@ -432,7 +437,7 @@ class MainFrame(sc.SizedFrame):
     ):
         """Replace a recognized hotstring through the clipboard paste path."""
         try:
-            pending = clipboard_paste.expand_hotstring(
+            pending = hotstring_expansion.expand_hotstring(
                 target_window,
                 snippet.content,
                 len(snippet.hotstring or ""),
@@ -442,7 +447,7 @@ class MainFrame(sc.SizedFrame):
                     else None
                 ),
             )
-        except clipboard_paste.PasteError as error:
+        except clipboard.ClipboardError as error:
             wx.MessageBox(
                 str(error),
                 # Translators: Title for a failure to monitor or expand a
