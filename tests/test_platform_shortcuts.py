@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import patch
+from unittest.mock import call, patch
 
 from core.shortcuts import Hotkey
 from platform_support import shortcuts
@@ -97,3 +97,16 @@ class WindowsKeyboardLayoutTestCase(unittest.TestCase):
             self.assertTrue(shortcuts.activate_keyboard_layout(0x04070407))
 
         activate.assert_called_once_with(0x04070407, 0)
+
+    def test_physical_windows_key_state_uses_high_bit(self):
+        with patch.object(
+            shortcuts.user32,
+            "GetAsyncKeyState",
+            side_effect=(0, 0x8000),
+        ) as get_key_state:
+            self.assertTrue(shortcuts.is_windows_key_down())
+
+        self.assertEqual(
+            get_key_state.call_args_list,
+            [call(0x5B), call(0x5C)],
+        )

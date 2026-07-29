@@ -18,6 +18,8 @@ user32.GetKeyboardLayout.argtypes = (wintypes.DWORD,)
 user32.GetKeyboardLayout.restype = wintypes.HANDLE
 user32.ActivateKeyboardLayout.argtypes = (wintypes.HANDLE, wintypes.UINT)
 user32.ActivateKeyboardLayout.restype = wintypes.HANDLE
+user32.GetAsyncKeyState.argtypes = (wintypes.INT,)
+user32.GetAsyncKeyState.restype = wintypes.SHORT
 
 
 def get_key_label(hotkey: Hotkey) -> str:
@@ -53,3 +55,13 @@ def get_foreground_keyboard_layout() -> int | None:
 def activate_keyboard_layout(keyboard_layout: int) -> bool:
     """Activate a foreground thread's keyboard layout for the calling thread."""
     return bool(user32.ActivateKeyboardLayout(keyboard_layout, 0))
+
+
+def is_windows_key_down() -> bool:
+    """Return whether either physical Windows key is currently pressed."""
+    left_windows_key = user32.GetAsyncKeyState(0x5B)
+    right_windows_key = user32.GetAsyncKeyState(0x5C)
+    return bool(
+        left_windows_key & 0x8000
+        or right_windows_key & 0x8000
+    )

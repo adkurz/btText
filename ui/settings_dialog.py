@@ -1,13 +1,13 @@
 """Settings dialog with keyboard-accessible global-hotkey recording."""
 
 from collections.abc import Callable
-import sys
 
 import wx
 
 from core.error_messages import format_user_error
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY, Hotkey
 from i18n import SYSTEM_LANGUAGE, _, get_language_display_name
+from ui.hotkey_recorder import hotkey_from_event, is_modifier_event
 from ui.shortcut_display import format_hotkey
 
 
@@ -500,20 +500,11 @@ class SettingsDialog(wx.Dialog):
             self._cancel_recording()
             event.Skip()
             return
-        if self._is_modifier_event(event):
+        if is_modifier_event(event):
             return
 
-        key_name = self._get_key_name_from_event(event)
         try:
-            if key_name is None:
-                raise ValueError("The pressed key is not supported")
-            hotkey = Hotkey(
-                key=key_name,
-                control=event.ControlDown(),
-                shift=event.ShiftDown(),
-                alt=event.AltDown(),
-                windows=self._windows_down(event),
-            )
+            hotkey = hotkey_from_event(event)
         except ValueError as error:
             wx.Bell()
             self._finish_recording(
@@ -562,96 +553,6 @@ class SettingsDialog(wx.Dialog):
             else:
                 self.record_button.SetFocus()
             return True
-        return False
-
-    @staticmethod
-    def _get_key_name(key_code: int) -> str | None:
-        """Map common wx key codes to stable serialized names."""
-        if ord("A") <= key_code <= ord("Z"):
-            return chr(key_code)
-        if ord("0") <= key_code <= ord("9"):
-            return chr(key_code)
-        if wx.WXK_F1 <= key_code <= wx.WXK_F24:
-            return "F{}".format(key_code - wx.WXK_F1 + 1)
-        return None
-
-    @staticmethod
-    def _is_modifier_event(event: wx.KeyEvent) -> bool:
-        """Return whether an event represents only a modifier key."""
-        modifier_keys = {
-            wx.WXK_CONTROL,
-            wx.WXK_SHIFT,
-            wx.WXK_ALT,
-            getattr(wx, "WXK_RAW_CONTROL", wx.WXK_CONTROL),
-            getattr(wx, "WXK_COMMAND", wx.WXK_CONTROL),
-            getattr(wx, "WXK_WINDOWS_LEFT", wx.WXK_CONTROL),
-            getattr(wx, "WXK_WINDOWS_RIGHT", wx.WXK_CONTROL),
-        }
-        # Windows uses separate virtual-key codes for left and right modifier
-        # keys in raw keyboard events.
-        raw_modifier_keys = {
-            0xA0,  # VK_LSHIFT
-            0xA1,  # VK_RSHIFT
-            0xA2,  # VK_LCONTROL
-            0xA3,  # VK_RCONTROL
-            0xA4,  # VK_LMENU (Alt)
-            0xA5,  # VK_RMENU (Alt/AltGr)
-        }
-        return (
-            event.GetKeyCode() in modifier_keys
-            or event.GetRawKeyCode() in raw_modifier_keys
-        )
-
-    @classmethod
-    def _get_key_name_from_event(cls, event: wx.KeyEvent) -> str | None:
-        """Derive a portable key name from a wx key event."""
-        key_code = event.GetKeyCode()
-        raw_key_code = event.GetRawKeyCode()
-
-        try:
-            return Hotkey.key_from_code(raw_key_code)
-        except ValueError:
-            pass
-
-        # With Ctrl held down, wx can report letters as ASCII control codes
-        # (Ctrl+A == 1 through Ctrl+Z == 26) instead of A through Z.
-        if event.ControlDown() and 1 <= key_code <= 26:
-            return chr(ord("A") + key_code - 1)
-
-        key_name = cls._get_key_name(key_code)
-        if key_name is not None:
-            return key_name
-
-        unicode_key = event.GetUnicodeKey()
-        if unicode_key != wx.WXK_NONE:
-            key_name = cls._get_key_name(unicode_key)
-            if key_name is not None:
-                return key_name
-
-        # On Windows this is the virtual-key code and remains stable when
-        # Ctrl and Alt transform GetKeyCode() into a control character.
-        return cls._get_key_name(raw_key_code)
-
-    @staticmethod
-    def _windows_down(event: wx.KeyEvent) -> bool:
-        """Return whether either Windows key is currently pressed."""
-        if event.MetaDown() or bool(event.GetModifiers() & wx.MOD_WIN):
-            return True
-
-        for key_name in ("WXK_WINDOWS_LEFT", "WXK_WINDOWS_RIGHT"):
-            key_code = getattr(wx, key_name, None)
-            if key_code is not None and wx.GetKeyState(key_code):
-                return True
-
-        if sys.platform == "win32":
-            from ctypes import windll
-
-            left_windows_key = windll.user32.GetAsyncKeyState(0x5B)
-            right_windows_key = windll.user32.GetAsyncKeyState(0x5C)
-            return bool(
-                left_windows_key & 0x8000
-                or right_windows_key & 0x8000
-            )
         return False
 
     def _use_default(self, event: wx.CommandEvent):
