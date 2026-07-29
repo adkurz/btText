@@ -1,9 +1,23 @@
 """Windows-specific labels for portable keyboard shortcuts."""
 
+import ctypes
 import sys
-from ctypes import create_unicode_buffer, windll
+from ctypes import create_unicode_buffer, windll, wintypes
 
 from core.shortcuts import Hotkey
+
+
+user32 = ctypes.WinDLL("user32", use_last_error=True)
+user32.GetForegroundWindow.restype = wintypes.HWND
+user32.GetWindowThreadProcessId.argtypes = (
+    wintypes.HWND,
+    ctypes.POINTER(wintypes.DWORD),
+)
+user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+user32.GetKeyboardLayout.argtypes = (wintypes.DWORD,)
+user32.GetKeyboardLayout.restype = wintypes.HANDLE
+user32.ActivateKeyboardLayout.argtypes = (wintypes.HANDLE, wintypes.UINT)
+user32.ActivateKeyboardLayout.restype = wintypes.HANDLE
 
 
 def get_key_label(hotkey: Hotkey) -> str:
@@ -22,3 +36,20 @@ def get_key_label(hotkey: Hotkey) -> str:
         if windll.user32.GetKeyNameTextW(key_data, buffer, 64):
             return buffer.value
     return hotkey.key
+
+
+def get_foreground_keyboard_layout() -> int | None:
+    """Return the keyboard layout used by the current foreground thread."""
+    foreground_window = user32.GetForegroundWindow()
+    if not foreground_window:
+        return None
+    thread_id = user32.GetWindowThreadProcessId(foreground_window, None)
+    if not thread_id:
+        return None
+    keyboard_layout = user32.GetKeyboardLayout(thread_id)
+    return int(keyboard_layout) if keyboard_layout else None
+
+
+def activate_keyboard_layout(keyboard_layout: int) -> bool:
+    """Activate a foreground thread's keyboard layout for the calling thread."""
+    return bool(user32.ActivateKeyboardLayout(keyboard_layout, 0))

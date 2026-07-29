@@ -1,8 +1,6 @@
 """Main-window coordination for navigation, hotkeys, and external paste."""
 
-import ctypes
 import dataclasses
-from ctypes import wintypes
 
 import pymitter
 import wx
@@ -21,6 +19,7 @@ from i18n import _
 from ui import utils
 from ui.category_tree import CategoryTree
 from ui.database_selection import select_database
+from ui.global_hotkey import WxGlobalHotkeyBinding
 from ui.search_dialog import SearchDialog
 from ui.shortcut_display import format_hotkey
 from ui.settings_dialog import SettingsDialog
@@ -30,36 +29,6 @@ from ui.transfer import TransferBuffer
 
 CLIPBOARD_RESTORE_DELAY_MS = 500
 HOTKEY_LAYOUT_CHECK_INTERVAL_MS = 500
-
-user32 = ctypes.WinDLL("user32", use_last_error=True)
-user32.GetForegroundWindow.restype = wintypes.HWND
-user32.GetWindowThreadProcessId.argtypes = (
-    wintypes.HWND,
-    ctypes.POINTER(wintypes.DWORD),
-)
-user32.GetWindowThreadProcessId.restype = wintypes.DWORD
-user32.GetKeyboardLayout.argtypes = (wintypes.DWORD,)
-user32.GetKeyboardLayout.restype = wintypes.HANDLE
-user32.ActivateKeyboardLayout.argtypes = (wintypes.HANDLE, wintypes.UINT)
-user32.ActivateKeyboardLayout.restype = wintypes.HANDLE
-
-
-def _get_foreground_keyboard_layout() -> int | None:
-    """Return the keyboard layout used by the current foreground thread."""
-    foreground_window = user32.GetForegroundWindow()
-    if not foreground_window:
-        return None
-    thread_id = user32.GetWindowThreadProcessId(foreground_window, None)
-    if not thread_id:
-        return None
-    keyboard_layout = user32.GetKeyboardLayout(thread_id)
-    return int(keyboard_layout) if keyboard_layout else None
-
-
-def _activate_keyboard_layout(keyboard_layout: int) -> bool:
-    """Activate a foreground thread's keyboard layout for btText's UI thread."""
-    return bool(user32.ActivateKeyboardLayout(keyboard_layout, 0))
-
 
 class MainFrame(sc.SizedFrame):
     """Coordinate the application's views and process-wide integrations."""
@@ -85,10 +54,7 @@ class MainFrame(sc.SizedFrame):
         self._ee.on("snippet.added", self._refresh_hotstrings)
         self._ee.on("snippet.edited", self._refresh_hotstrings)
         self._ee.on("snippet.deleted", self._refresh_hotstrings)
-        self._hotkey_id = 1
-        self._registered_hotkey = None
-        self._hotkey_suspended = False
-        self._hotkey_keyboard_layout = _get_foreground_keyboard_layout()
+        self._global_hotkey = WxGlobalHotkeyBinding(self, hotkey_id=1)
         self._hotkey_layout_timer = wx.Timer(self)
         self.Bind(
             wx.EVT_TIMER,
@@ -105,7 +71,11 @@ class MainFrame(sc.SizedFrame):
         self._ee.on("snippet.insert_requested", self.insert_snippet)
         self._ee.on("status.changed", self.set_status_text)
         self.Bind(wx.EVT_ACTIVATE, self.on_activate)
-        self.Bind(wx.EVT_HOTKEY, self.on_global_hotkey, id=self._hotkey_id)
+        self.Bind(
+            wx.EVT_HOTKEY,
+            self.on_global_hotkey,
+            id=self._global_hotkey.hotkey_id,
+        )
         self.pane = self.GetContentsPane()
         self.transfer_buffer = TransferBuffer()
         layout_panel = wx.Panel(self.pane)
@@ -276,83 +246,45 @@ class MainFrame(sc.SizedFrame):
 
     def _register_hotkey(self, hotkey: Hotkey, show_error: bool = True) -> bool:
         """Register the global toggle hotkey with Windows."""
-        success = self.RegisterHotKey(
-            self._hotkey_id,
-            self._get_hotkey_modifiers(hotkey),
-            self._get_hotkey_key_code(hotkey),
-        )
-        if not success:
-            if show_error:
-                wx.MessageBox(
-                    # Translators: Startup error shown when btText cannot claim
-                    # its global shortcut. {} is a shortcut such as Ctrl+Alt+T.
-                    _(
-                        "The global hotkey {} is already in use and could not "
-                        "be registered."
-                    ).format(format_hotkey(hotkey)),
-                    # Translators: Title of an error registering a global shortcut.
-                    _("Hotkey error"),
-                    wx.OK | wx.ICON_ERROR,
-                    self,
-                )
-            return False
-        self._registered_hotkey = hotkey
-        return True
-
-    @staticmethod
-    def _get_hotkey_modifiers(hotkey: Hotkey) -> int:
-        """Translate portable modifiers to wxPython flags."""
-        modifiers = 0
-        if hotkey.control:
-            modifiers |= wx.MOD_CONTROL
-        if hotkey.shift:
-            modifiers |= wx.MOD_SHIFT
-        if hotkey.alt:
-            modifiers |= wx.MOD_ALT
-        if hotkey.windows:
-            modifiers |= wx.MOD_WIN
-        return modifiers
-
-    @staticmethod
-    def _get_hotkey_key_code(hotkey: Hotkey) -> int:
-        """Return the virtual-key code used by wxPython."""
-        return hotkey.key_code
+        success = self._global_hotkey.register(hotkey)
+        if not success and show_error:
+            self._show_hotkey_registration_error(hotkey)
+        return success
 
     def _unregister_hotkey(self):
         """Release the currently registered global hotkey."""
-        if self._registered_hotkey is None:
-            return
-        self.UnregisterHotKey(self._hotkey_id)
-        self._registered_hotkey = None
+        self._global_hotkey.unregister()
 
     def _suspend_hotkey(self):
         """Temporarily release the hotkey while the settings dialog records."""
-        self._hotkey_suspended = True
-        self._unregister_hotkey()
+        self._global_hotkey.suspend()
 
     def _resume_hotkey(self):
         """Re-register a hotkey after temporary suspension."""
-        if not self._hotkey_suspended:
-            return
-        self._hotkey_suspended = False
-        if self._registered_hotkey is None:
-            self._register_hotkey(self._settings.toggle_window_hotkey)
+        hotkey = self._settings.toggle_window_hotkey
+        if not self._global_hotkey.resume(hotkey):
+            self._show_hotkey_registration_error(hotkey)
 
     def _on_hotkey_layout_timer(self, event: wx.TimerEvent):
         """Re-register the global hotkey after the input layout changes."""
-        keyboard_layout = _get_foreground_keyboard_layout()
-        if (
-            keyboard_layout is None
-            or keyboard_layout == self._hotkey_keyboard_layout
-        ):
-            return
-        self._hotkey_keyboard_layout = keyboard_layout
-        _activate_keyboard_layout(keyboard_layout)
-        if self._hotkey_suspended or self._registered_hotkey is None:
-            return
-        hotkey = self._registered_hotkey
-        self._unregister_hotkey()
-        self._register_hotkey(hotkey)
+        failed_hotkey = self._global_hotkey.refresh_keyboard_layout()
+        if failed_hotkey is not None:
+            self._show_hotkey_registration_error(failed_hotkey)
+
+    def _show_hotkey_registration_error(self, hotkey: Hotkey) -> None:
+        """Show the standard error for a global hotkey registration failure."""
+        wx.MessageBox(
+            # Translators: Startup error shown when btText cannot claim its
+            # global shortcut. {} is a shortcut such as Ctrl+Alt+T.
+            _(
+                "The global hotkey {} is already in use and could not "
+                "be registered."
+            ).format(format_hotkey(hotkey)),
+            # Translators: Title of an error registering a global shortcut.
+            _("Hotkey error"),
+            wx.OK | wx.ICON_ERROR,
+            self,
+        )
 
     def _change_settings(
         self,

@@ -58,78 +58,50 @@ class ApplicationMenuTestCase(unittest.TestCase):
 
 
 class HotkeyLayoutChangeTestCase(unittest.TestCase):
-    @patch("ui.main_frame._activate_keyboard_layout")
-    @patch(
-        "ui.main_frame._get_foreground_keyboard_layout",
-        return_value=0x04090409,
-    )
-    def test_layout_change_re_registers_active_hotkey(
-        self,
-        get_keyboard_layout,
-        activate_keyboard_layout,
-    ):
+    def test_resume_reports_failed_registration(self):
+        binding = Mock()
+        binding.resume.return_value = False
         frame = SimpleNamespace(
-            _hotkey_keyboard_layout=0x04070407,
-            _hotkey_suspended=False,
-            _registered_hotkey=DEFAULT_TOGGLE_HOTKEY,
-            _unregister_hotkey=Mock(),
-            _register_hotkey=Mock(),
+            _global_hotkey=binding,
+            _settings=AppSettings(),
+            _show_hotkey_registration_error=Mock(),
+        )
+
+        MainFrame._resume_hotkey(frame)
+
+        binding.resume.assert_called_once_with(DEFAULT_TOGGLE_HOTKEY)
+        frame._show_hotkey_registration_error.assert_called_once_with(
+            DEFAULT_TOGGLE_HOTKEY
+        )
+
+    def test_layout_timer_delegates_to_binding(self):
+        frame = SimpleNamespace(
+            _global_hotkey=Mock(
+                refresh_keyboard_layout=Mock(return_value=None)
+            ),
+            _show_hotkey_registration_error=Mock(),
         )
 
         MainFrame._on_hotkey_layout_timer(frame, Mock())
 
-        self.assertEqual(frame._hotkey_keyboard_layout, 0x04090409)
-        activate_keyboard_layout.assert_called_once_with(0x04090409)
-        frame._unregister_hotkey.assert_called_once_with()
-        frame._register_hotkey.assert_called_once_with(DEFAULT_TOGGLE_HOTKEY)
+        frame._global_hotkey.refresh_keyboard_layout.assert_called_once_with()
+        frame._show_hotkey_registration_error.assert_not_called()
 
-    @patch("ui.main_frame._activate_keyboard_layout")
-    @patch(
-        "ui.main_frame._get_foreground_keyboard_layout",
-        return_value=0x04090409,
-    )
-    def test_suspended_hotkey_is_not_registered_during_layout_change(
-        self,
-        get_keyboard_layout,
-        activate_keyboard_layout,
-    ):
+    def test_layout_timer_reports_failed_registration(self):
         frame = SimpleNamespace(
-            _hotkey_keyboard_layout=0x04070407,
-            _hotkey_suspended=True,
-            _registered_hotkey=None,
-            _unregister_hotkey=Mock(),
-            _register_hotkey=Mock(),
+            _global_hotkey=Mock(
+                refresh_keyboard_layout=Mock(
+                    return_value=DEFAULT_TOGGLE_HOTKEY
+                )
+            ),
+            _show_hotkey_registration_error=Mock(),
         )
 
         MainFrame._on_hotkey_layout_timer(frame, Mock())
 
-        activate_keyboard_layout.assert_called_once_with(0x04090409)
-        frame._unregister_hotkey.assert_not_called()
-        frame._register_hotkey.assert_not_called()
-
-    @patch("ui.main_frame._activate_keyboard_layout")
-    @patch(
-        "ui.main_frame._get_foreground_keyboard_layout",
-        return_value=0x04070407,
-    )
-    def test_unchanged_layout_keeps_registration(
-        self,
-        get_keyboard_layout,
-        activate_keyboard_layout,
-    ):
-        frame = SimpleNamespace(
-            _hotkey_keyboard_layout=0x04070407,
-            _hotkey_suspended=False,
-            _registered_hotkey=DEFAULT_TOGGLE_HOTKEY,
-            _unregister_hotkey=Mock(),
-            _register_hotkey=Mock(),
+        frame._show_hotkey_registration_error.assert_called_once_with(
+            DEFAULT_TOGGLE_HOTKEY
         )
-
-        MainFrame._on_hotkey_layout_timer(frame, Mock())
-
-        activate_keyboard_layout.assert_not_called()
-        frame._unregister_hotkey.assert_not_called()
-        frame._register_hotkey.assert_not_called()
 
 
 if __name__ == "__main__":
