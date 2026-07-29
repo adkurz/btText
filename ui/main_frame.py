@@ -7,7 +7,7 @@ import wx
 import wx.adv
 import wx.lib.sized_controls as sc
 
-from platform_support import clipboard_paste
+from platform_support import clipboard_paste, windows
 from core import datamodel
 from platform_support import hotstrings
 import i18n
@@ -47,8 +47,8 @@ class MainFrame(sc.SizedFrame):
         self._settings = settings
         self._hotstring_hook = hotstrings.KeyboardHook(
             self._queue_hotstring_expansion,
-            lambda: clipboard_paste.is_external_window(
-                clipboard_paste.get_foreground_window()
+            lambda: windows.is_external_window(
+                windows.get_foreground_window()
             ),
         )
         self._ee.on("snippet.added", self._refresh_hotstrings)
@@ -62,10 +62,10 @@ class MainFrame(sc.SizedFrame):
             self._hotkey_layout_timer,
         )
         self._hotkey_layout_timer.Start(HOTKEY_LAYOUT_CHECK_INTERVAL_MS)
-        foreground_window = clipboard_paste.get_foreground_window()
+        foreground_window = windows.get_foreground_window()
         self._paste_target_window = (
             foreground_window
-            if clipboard_paste.is_external_window(foreground_window)
+            if windows.is_external_window(foreground_window)
             else None
         )
         self._ee.on("snippet.insert_requested", self.insert_snippet)
@@ -413,8 +413,8 @@ class MainFrame(sc.SizedFrame):
         self, snippet: datamodel.Snippet, boundary_key: int
     ) -> bool:
         """Queue expansion only when the foreground window is external."""
-        target_window = clipboard_paste.get_foreground_window()
-        if not clipboard_paste.is_external_window(target_window):
+        target_window = windows.get_foreground_window()
+        if not windows.is_external_window(target_window):
             return False
         wx.CallAfter(
             self._expand_hotstring,
@@ -495,8 +495,8 @@ class MainFrame(sc.SizedFrame):
 
     def _remember_foreground_window(self):
         """Remember a valid external foreground window as the paste target."""
-        foreground_window = clipboard_paste.get_foreground_window()
-        if clipboard_paste.is_external_window(foreground_window):
+        foreground_window = windows.get_foreground_window()
+        if windows.is_external_window(foreground_window):
             self._paste_target_window = foreground_window
 
     def insert_snippet(self, snippet_id: int):

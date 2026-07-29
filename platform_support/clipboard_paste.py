@@ -3,11 +3,9 @@
 from __future__ import annotations
 
 import ctypes
-from ctypes import wintypes
-import os
 import uuid
 
-from platform_support import keyboard_input
+from platform_support import keyboard_input, windows
 from platform_support.clipboard import (
     CF_UNICODETEXT,
     ClipboardError,
@@ -19,50 +17,13 @@ from platform_support.clipboard import (
 )
 from platform_support.clipboard_snapshot import ClipboardSnapshot
 
-SW_RESTORE = 9
-
 
 PasteError = ClipboardError
-
-
-user32.GetForegroundWindow.restype = wintypes.HWND
-user32.GetWindowThreadProcessId.argtypes = (
-    wintypes.HWND,
-    ctypes.POINTER(wintypes.DWORD),
-)
-user32.IsWindow.argtypes = (wintypes.HWND,)
-user32.IsWindow.restype = wintypes.BOOL
-user32.SetForegroundWindow.argtypes = (wintypes.HWND,)
-user32.SetForegroundWindow.restype = wintypes.BOOL
-user32.ShowWindow.argtypes = (wintypes.HWND, ctypes.c_int)
 
 
 _MARKER_FORMAT = user32.RegisterClipboardFormatW("BTText.PasteMarker")
 if not _MARKER_FORMAT:
     raise ctypes.WinError(ctypes.get_last_error())
-
-
-def get_foreground_window() -> int | None:
-    """Return the current foreground window handle, if one exists."""
-    handle = user32.GetForegroundWindow()
-    return int(handle) if handle else None
-
-
-def is_external_window(handle: int | None) -> bool:
-    """Return whether handle belongs to another process and is still valid."""
-    if not handle or not user32.IsWindow(handle):
-        return False
-    process_id = wintypes.DWORD()
-    user32.GetWindowThreadProcessId(handle, ctypes.byref(process_id))
-    return process_id.value != os.getpid()
-
-
-def activate_window(handle: int) -> bool:
-    """Restore a valid window and make it the foreground window."""
-    if not handle or not user32.IsWindow(handle):
-        return False
-    user32.ShowWindow(handle, SW_RESTORE)
-    return bool(user32.SetForegroundWindow(handle))
 
 
 def _read_clipboard_bytes(format_id: int) -> bytes | None:
@@ -148,12 +109,12 @@ class PendingPaste:
 
 def paste_text(target_window: int, text: str) -> PendingPaste:
     """Activate target_window, put text on the clipboard and send Ctrl+V."""
-    if not target_window or not user32.IsWindow(target_window):
+    if not windows.is_valid_window(target_window):
         raise PasteError("The previously active window no longer exists.")
 
     marker = uuid.uuid4().bytes
     pending = PendingPaste(_replace_clipboard(text, marker), marker, text)
-    if not activate_window(target_window):
+    if not windows.activate_window(target_window):
         pending.restore_clipboard()
         raise PasteError("The previously active window could not be activated.")
     try:
@@ -171,11 +132,11 @@ def expand_hotstring(
     boundary_key: int | None,
 ) -> PendingPaste:
     """Replace a typed hotstring and optionally replay its boundary key."""
-    if not target_window or not user32.IsWindow(target_window):
+    if not windows.is_valid_window(target_window):
         raise PasteError("The active window no longer exists.")
     marker = uuid.uuid4().bytes
     pending = PendingPaste(_replace_clipboard(text, marker), marker, text)
-    if not activate_window(target_window):
+    if not windows.activate_window(target_window):
         pending.restore_clipboard()
         raise PasteError("The active window could not be activated.")
     try:
