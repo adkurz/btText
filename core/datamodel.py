@@ -70,12 +70,23 @@ class DataModel:
         "_migrate_from_4_to_5",
     )
 
-    def __init__(self, ee: pymitter.EventEmitter, db_file: str | Path):
+    def __init__(
+        self,
+        ee: pymitter.EventEmitter,
+        db_file: str | Path,
+        *,
+        allow_create: bool = True,
+    ):
         """Open, validate, and if necessary migrate the SQLite database."""
         self.ee = ee
         self._closed = False
         db_file = Path(db_file)
         exists = db_file.exists()
+        if not allow_create and not exists:
+            raise DataModelError(
+                "database_file_missing",
+                "The selected database file does not exist.",
+            )
         self._connection = None
         try:
             # Foreign-key enforcement must be enabled outside a transaction.
@@ -92,7 +103,7 @@ class DataModel:
                 )
             self._connection.autocommit = False
             tables = self._get_table_names()
-            if not exists or not tables:
+            if not exists or (allow_create and not tables):
                 self.create_tables()
             else:
                 missing_tables = {"category", "snippet"} - tables

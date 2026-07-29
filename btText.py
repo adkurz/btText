@@ -1,5 +1,7 @@
 """Application entry point and top-level resource lifetime management."""
 
+import dataclasses
+
 import wx
 import pymitter
 
@@ -12,6 +14,68 @@ from i18n import _
 import info
 import ui
 from core.datamodel import DataModel
+from ui.database_selection import select_database
+
+
+def _open_database(ee, settings_store, settings):
+    """Resolve, open, and when needed persist the startup database."""
+    if settings.database_file is not None:
+        initial_path = settings.database_file
+        allow_create = False
+        persist_path = False
+    elif app_paths.get_database_file().exists():
+        initial_path = app_paths.get_database_file()
+        allow_create = False
+        persist_path = True
+    else:
+        initial_path = None
+        allow_create = False
+        persist_path = False
+
+    while True:
+        if initial_path is None:
+            selection = select_database(None, first_start=True)
+            if selection is None:
+                return None, settings
+            initial_path = selection.path
+            allow_create = selection.create
+            persist_path = True
+        try:
+            model = DataModel(
+                ee,
+                initial_path,
+                allow_create=allow_create,
+            )
+        except datamodel.DataModelError as error:
+            wx.MessageBox(
+                format_user_error(error),
+                # Translators: Title for an error opening a selected snippet
+                # database.
+                _("Database error"),
+                wx.OK | wx.ICON_ERROR,
+            )
+            initial_path = None
+            continue
+
+        if persist_path:
+            new_settings = dataclasses.replace(
+                settings,
+                database_file=str(initial_path),
+            )
+            try:
+                settings_store.save(new_settings)
+            except SettingsError as error:
+                model.close()
+                wx.MessageBox(
+                    format_user_error(error),
+                    # Translators: Title for an error saving the selected
+                    # database path in the application settings.
+                    _("Settings error"),
+                    wx.OK | wx.ICON_ERROR,
+                )
+                return None, settings
+            settings = new_settings
+        return model, settings
 
 def main():
     """Initialize the wx application and release resources on shutdown."""
@@ -53,16 +117,8 @@ def main():
                 wx.OK | wx.ICON_INFORMATION,
             )
             return
-        try:
-            model = DataModel(ee, app_paths.get_database_file())
-        except datamodel.DataModelError as error:
-            wx.MessageBox(
-                format_user_error(error),
-                # Translators: Title of a fatal startup error concerning the
-                # snippet database.
-                _("Database error"),
-                wx.OK | wx.ICON_ERROR,
-            )
+        model, settings = _open_database(ee, settings_store, settings)
+        if model is None:
             return
         frame = ui.MainFrame(ee, model, settings_store, settings)
         if settings_error is not None:

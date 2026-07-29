@@ -1,6 +1,7 @@
 """Main-window coordination for navigation, hotkeys, and external paste."""
 
 import ctypes
+import dataclasses
 from ctypes import wintypes
 
 import pymitter
@@ -18,6 +19,7 @@ from core.error_messages import format_user_error
 from i18n import _
 from ui import utils
 from ui.category_tree import CategoryTree
+from ui.database_selection import select_database
 from ui.search_dialog import SearchDialog
 from ui.settings_dialog import SettingsDialog
 from ui.snippet_list import SnippetList
@@ -176,6 +178,7 @@ class MainFrame(sc.SizedFrame):
         self._last_focused_control: wx.Window | None = None
         self._search_command_id = wx.NewIdRef()
         self._settings_command_id = wx.NewIdRef()
+        self._database_command_id = wx.NewIdRef()
         self.Bind(
             wx.EVT_MENU,
             self.on_search,
@@ -185,6 +188,11 @@ class MainFrame(sc.SizedFrame):
             wx.EVT_MENU,
             self.on_settings,
             id=int(self._settings_command_id),
+        )
+        self.Bind(
+            wx.EVT_MENU,
+            self.on_select_database,
+            id=int(self._database_command_id),
         )
         self._create_menubar()
         self._create_statusbar()
@@ -408,6 +416,7 @@ class MainFrame(sc.SizedFrame):
             return False
 
         new_settings = AppSettings(
+            database_file=self._settings.database_file,
             toggle_window_hotkey=hotkey,
             language=language,
             include_copied_text_in_clipboard_history=(
@@ -640,6 +649,13 @@ class MainFrame(sc.SizedFrame):
         """Create application menus and bind their commands."""
         menubar = wx.MenuBar()
         file_menu = wx.Menu()
+        file_menu.Append(
+            int(self._database_command_id),
+            # Translators: File-menu command for selecting another snippet
+            # database. The selection is used after restarting btText.
+            _("Change &database..."),
+        )
+        file_menu.AppendSeparator()
         # Translators: File-menu command that hides the main window while
         # keeping btText available in the notification area.
         close_item = file_menu.Append(wx.ID_CLOSE, _("&Close"))
@@ -686,6 +702,59 @@ class MainFrame(sc.SizedFrame):
         """Request a complete application shutdown."""
         self.allow_close = True
         self.Close()
+
+    def on_select_database(self, event: wx.CommandEvent):
+        """Validate and remember a database to use after the next start."""
+        selection = select_database(self)
+        if selection is None:
+            return
+        candidate = None
+        try:
+            candidate = datamodel.DataModel(
+                pymitter.EventEmitter(),
+                selection.path,
+                allow_create=selection.create,
+            )
+        except datamodel.DataModelError as error:
+            wx.MessageBox(
+                format_user_error(error),
+                # Translators: Title for an error opening a selected snippet
+                # database.
+                _("Database error"),
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return
+        finally:
+            if candidate is not None:
+                candidate.close()
+
+        new_settings = dataclasses.replace(
+            self._settings,
+            database_file=str(selection.path),
+        )
+        try:
+            self._settings_store.save(new_settings)
+        except SettingsError as error:
+            wx.MessageBox(
+                format_user_error(error),
+                # Translators: Title for an error saving the selected database
+                # path in the application settings.
+                _("Settings error"),
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+            return
+        self._settings = new_settings
+        wx.MessageBox(
+            # Translators: Confirmation after choosing the database that btText
+            # should open following its next restart.
+            _("The selected database will be used the next time btText starts."),
+            # Translators: Title confirming that another database was selected.
+            _("Database selected"),
+            wx.OK | wx.ICON_INFORMATION,
+            self,
+        )
 
     def on_settings(self, event: wx.CommandEvent):
         """Open the settings dialog."""

@@ -700,6 +700,37 @@ class DatabaseMigrationTestCase(unittest.TestCase):
                 "database_foreign_key_violation",
             )
 
+    def test_existing_mode_rejects_missing_database(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_file = Path(temporary_directory) / "missing.db"
+
+            with self.assertRaises(DataModelError) as context:
+                DataModel(
+                    RecordingEventEmitter(),
+                    database_file,
+                    allow_create=False,
+                )
+
+            self.assertEqual(context.exception.code, "database_file_missing")
+            self.assertFalse(database_file.exists())
+
+    def test_existing_mode_rejects_empty_database(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_file = Path(temporary_directory) / "empty.db"
+            database_file.touch()
+
+            with self.assertRaises(DataModelError) as context:
+                DataModel(
+                    RecordingEventEmitter(),
+                    database_file,
+                    allow_create=False,
+                )
+
+            self.assertEqual(
+                context.exception.code,
+                "database_schema_incomplete",
+            )
+
     def test_database_with_category_cycle_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             database_file = Path(temporary_directory) / "category-cycle.db"

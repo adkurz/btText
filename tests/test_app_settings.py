@@ -112,6 +112,9 @@ class SettingsStoreTestCase(unittest.TestCase):
             settings_file = Path(temporary_directory) / "settings.ini"
             store = SettingsStore(settings_file)
             settings = AppSettings(
+                database_file=str(
+                    Path(temporary_directory) / "snippets.db"
+                ),
                 toggle_window_hotkey=Hotkey.parse("CTRL+ALT+F8"),
                 language="de",
                 include_copied_text_in_clipboard_history=False,
@@ -124,6 +127,10 @@ class SettingsStoreTestCase(unittest.TestCase):
             store.save(settings)
 
             self.assertEqual(store.load(), settings)
+            self.assertIn(
+                "database_file = ",
+                settings_file.read_text(encoding="utf-8"),
+            )
             self.assertIn(
                 "toggle_window = CTRL+ALT+F8",
                 settings_file.read_text(encoding="utf-8"),
@@ -173,6 +180,7 @@ class SettingsStoreTestCase(unittest.TestCase):
             self.assertTrue(settings.hotstrings_enabled)
             self.assertTrue(settings.preserve_hotstring_boundary)
             self.assertFalse(settings.notify_hotstring_expansion)
+            self.assertIsNone(settings.database_file)
 
     def test_obsolete_general_hotstring_keys_are_not_migrated(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

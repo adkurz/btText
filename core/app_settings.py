@@ -227,6 +227,7 @@ DEFAULT_TOGGLE_HOTKEY = Hotkey(
 @dataclasses.dataclass(frozen=True)
 class AppSettings:
     """Immutable collection of user-configurable application settings."""
+    database_file: str | None = None
     toggle_window_hotkey: Hotkey = DEFAULT_TOGGLE_HOTKEY
     language: str = i18n.SYSTEM_LANGUAGE
     include_copied_text_in_clipboard_history: bool = True
@@ -234,6 +235,15 @@ class AppSettings:
     hotstrings_enabled: bool = True
     preserve_hotstring_boundary: bool = True
     notify_hotstring_expansion: bool = False
+
+    def __post_init__(self):
+        """Normalize a configured database path once at the settings boundary."""
+        if self.database_file is not None:
+            object.__setattr__(
+                self,
+                "database_file",
+                str(Path(self.database_file).expanduser().resolve()),
+            )
 
 
 class SettingsStore:
@@ -269,6 +279,11 @@ class SettingsStore:
                 ),
                 self.locale_directory,
             )
+            database_file = parser.get(
+                "general", "database_file", fallback=None
+            )
+            if database_file is not None:
+                database_file = str(Path(database_file).expanduser().resolve())
             include_copied_text_in_clipboard_history = parser.getboolean(
                 "general",
                 "include_copied_text_in_clipboard_history",
@@ -289,6 +304,7 @@ class SettingsStore:
                 "hotstrings", "notify_expansion", fallback=False
             )
             return AppSettings(
+                database_file=database_file,
                 toggle_window_hotkey=Hotkey.parse(value),
                 language=language,
                 include_copied_text_in_clipboard_history=(
@@ -327,6 +343,10 @@ class SettingsStore:
                     settings.allow_copied_text_cloud_upload
                 ),
             }
+            if settings.database_file is not None:
+                parser["general"]["database_file"] = str(
+                    Path(settings.database_file).expanduser().resolve()
+                )
             parser["hotstrings"] = {
                 "enabled": str(settings.hotstrings_enabled),
                 "preserve_boundary": str(

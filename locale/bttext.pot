@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-28 23:59+0200\n"
+"POT-Creation-Date: 2026-07-29 14:19+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -17,27 +17,32 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.18.0\n"
 
-#. Translators: Information shown when the user tries to start
-#. the application while it is already running.
-#: btText.py:51
-msgid "btText is already running."
-msgstr ""
-
-#. Translators: Title of a fatal startup error concerning the
-#. snippet database.
-#: btText.py:63
+#. Translators: Title for an error opening a selected snippet
+#. database.
+#. Translators: Title for a failed database selection or creation.
+#: btText.py:54 ui/database_selection.py:92 ui/main_frame.py:723
 msgid "Database error"
 msgstr ""
 
+#. Translators: Title for an error saving the selected
+#. database path in the application settings.
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:72 ui/main_frame.py:448
+#. Translators: Title for an error saving the selected database
+#. path in the application settings.
+#: btText.py:73 btText.py:128 ui/main_frame.py:457 ui/main_frame.py:743
 msgid "Settings error"
+msgstr ""
+
+#. Translators: Information shown when the user tries to start
+#. the application while it is already running.
+#: btText.py:115
+msgid "btText is already running."
 msgstr ""
 
 #. Translators: Title of a startup warning after a translation
 #. catalog could not be loaded.
-#: btText.py:81
+#: btText.py:137
 msgid "Language error"
 msgstr ""
 
@@ -129,198 +134,204 @@ msgstr ""
 msgid "The settings file could not be saved: {reason}"
 msgstr ""
 
+#. Translators: Database-opening error shown when a configured or selected
+#. file was removed or is no longer reachable.
+#: core/error_messages.py:98
+msgid "The selected database file does not exist."
+msgstr ""
+
 #. Translators: Fatal startup error when SQLite cannot enforce relationships
 #. between categories and snippets.
-#: core/error_messages.py:98
+#: core/error_messages.py:103
 msgid "SQLite foreign-key support could not be enabled."
 msgstr ""
 
 #. Translators: Fatal startup error when stored records refer to missing
 #. categories or otherwise violate a database foreign-key relationship.
-#: core/error_messages.py:103
+#: core/error_messages.py:108
 msgid "The database contains records with invalid relationships."
 msgstr ""
 
 #. Translators: Fatal startup error when category parent relationships form
 #. a loop instead of a valid tree.
-#: core/error_messages.py:108
+#: core/error_messages.py:113
 msgid "The database contains a cycle in the category hierarchy."
 msgstr ""
 
 #. Translators: Fatal startup error describing category records without names.
-#: core/error_messages.py:116
+#: core/error_messages.py:121
 msgid "The database contains categories without a name."
 msgstr ""
 
 #. Translators: Fatal migration error for category names that are empty or
 #. consist only of spaces.
-#: core/error_messages.py:121
+#: core/error_messages.py:126
 msgid "The database contains categories with an empty name."
 msgstr ""
 
 #. Translators: Fatal migration error when a category refers to itself as
 #. its parent.
-#: core/error_messages.py:126
+#: core/error_messages.py:131
 msgid "The database contains a category that is its own parent."
 msgstr ""
 
 #. Translators: Fatal migration error for snippet names that are empty or
 #. consist only of spaces.
-#: core/error_messages.py:131
+#: core/error_messages.py:136
 msgid "The database contains snippets with an empty name."
 msgstr ""
 
 #. Translators: Fatal migration error for snippets whose reusable text is
 #. empty.
-#: core/error_messages.py:136
+#: core/error_messages.py:141
 msgid "The database contains snippets with empty content."
 msgstr ""
 
 #. Translators: Fatal startup error for snippet records whose numeric
 #. search-ranking weight is outside the supported range.
-#: core/error_messages.py:141
+#: core/error_messages.py:146
 msgid "The database contains snippets with an invalid weight."
 msgstr ""
 
 #. Translators: Fatal startup error for duplicate snippet names in one
 #. category.
-#: core/error_messages.py:145
+#: core/error_messages.py:150
 msgid "The database contains duplicate snippet names in a category."
 msgstr ""
 
 #. Translators: Fatal migration error when two snippets in one category have
 #. names that differ only in uppercase or lowercase letters.
-#: core/error_messages.py:150
+#: core/error_messages.py:155
 msgid "The database contains snippet names that differ only in letter case within the same category."
 msgstr ""
 
 #. Translators: Fatal startup error for snippets without an existing category.
-#: core/error_messages.py:155
+#: core/error_messages.py:160
 msgid "The database contains snippets without a category."
 msgstr ""
 
 #. Translators: Validation error when a sibling category already uses this
 #. name.
-#: core/error_messages.py:161
+#: core/error_messages.py:166
 msgid "A category with this name already exists at this level."
 msgstr ""
 
 #. Translators: Internal error for an unsaved category without a database ID.
-#: core/error_messages.py:165
+#: core/error_messages.py:170
 msgid "The category has no ID."
 msgstr ""
 
 #. Translators: Error when the intended parent category was deleted meanwhile.
-#: core/error_messages.py:169
+#: core/error_messages.py:174
 msgid "The parent category no longer exists."
 msgstr ""
 
 #. Translators: Validation error preventing a category being its own parent.
-#: core/error_messages.py:173
+#: core/error_messages.py:178
 msgid "A category cannot be its own parent."
 msgstr ""
 
 #. Translators: Validation error preventing a move into the category's subtree.
-#: core/error_messages.py:177
+#: core/error_messages.py:182
 msgid "A category cannot be moved below one of its descendants."
 msgstr ""
 
 #. Translators: Validation error preventing recursive copying into the same
 #. category subtree.
-#: core/error_messages.py:182
+#: core/error_messages.py:187
 msgid "A category cannot be copied into itself or one of its descendants."
 msgstr ""
 
 #. Translators: Validation error for an empty category or snippet name.
-#: core/error_messages.py:186
+#: core/error_messages.py:191
 msgid "The name must not be empty."
 msgstr ""
 
 #. Translators: Validation error when a snippet has no insertion text.
-#: core/error_messages.py:190
+#: core/error_messages.py:195
 msgid "The content must not be empty."
 msgstr ""
 
 #. Translators: Error when the snippet's selected category was deleted
 #. meanwhile.
-#: core/error_messages.py:194
+#: core/error_messages.py:199
 msgid "The selected category no longer exists."
 msgstr ""
 
 #. Translators: Validation error when a snippet name is already used in the
 #. same category.
-#: core/error_messages.py:199
+#: core/error_messages.py:204
 msgid "A snippet with this name already exists in this category."
 msgstr ""
 
 #. Translators: Validation error for a snippet search-ranking weight outside
 #. the allowed choices.
-#: core/error_messages.py:204
+#: core/error_messages.py:209
 msgid "The selected weight is not allowed."
 msgstr ""
 
 #. Translators: Validation error when a hotstring contains a space, tab, or
 #. another whitespace character.
-#: core/error_messages.py:209
+#: core/error_messages.py:214
 msgid "The hotstring must not contain whitespace."
 msgstr ""
 
 #. Translators: Validation error when another snippet already uses the same
 #. global hotstring.
-#: core/error_messages.py:214
+#: core/error_messages.py:219
 msgid "This hotstring is already assigned to another snippet."
 msgstr ""
 
 #. Translators: Internal error for an unsaved snippet without a database ID.
-#: core/error_messages.py:218
+#: core/error_messages.py:223
 msgid "The snippet has no ID."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut contains an
 #. unsupported keyboard key.
-#: core/error_messages.py:223
+#: core/error_messages.py:228
 msgid "The shortcut contains an unsupported key."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut has no Ctrl, Shift,
 #. Alt, or Windows modifier.
-#: core/error_messages.py:228
+#: core/error_messages.py:233
 msgid "The shortcut requires at least one modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut from settings cannot be
 #. parsed.
-#: core/error_messages.py:232
+#: core/error_messages.py:237
 msgid "The shortcut has an invalid format."
 msgstr ""
 
 #. Translators: Validation error when a shortcut repeats the same modifier.
-#: core/error_messages.py:236
+#: core/error_messages.py:241
 msgid "The shortcut contains a duplicate modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut has zero or multiple main
 #. keys.
-#: core/error_messages.py:240
+#: core/error_messages.py:245
 msgid "The shortcut must contain exactly one key."
 msgstr ""
 
 #. Translators: Validation error when a key cannot be used for a global
 #. shortcut.
-#: core/error_messages.py:244
+#: core/error_messages.py:249
 msgid "This key cannot be used as a shortcut."
 msgstr ""
 
 #. Translators: Settings error when the selected UI language has no installed
 #. gettext catalog.
-#: core/error_messages.py:249
+#: core/error_messages.py:254
 msgid "No translation catalog is available for the selected language."
 msgstr ""
 
 #. Translators: Startup warning after a damaged translation catalog forced
 #. btText to continue in English. {language} is a locale code such as de;
 #. {reason} is a technical catalog-loading error.
-#: core/error_messages.py:255
+#: core/error_messages.py:260
 #, python-brace-format
 msgid ""
 "The translation catalog for {language} could not be loaded. btText will continue in English.\n"
@@ -329,13 +340,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Settings error when the saved UI language code is malformed.
-#: core/error_messages.py:263
+#: core/error_messages.py:268
 msgid "The language setting has an invalid format."
 msgstr ""
 
 #. Translators: Safe fallback when no specific localized application-error
 #. message is available.
-#: core/error_messages.py:278
+#: core/error_messages.py:283
 msgid "An unexpected application error occurred."
 msgstr ""
 
@@ -347,7 +358,7 @@ msgstr ""
 
 #. Translators: Root label of the main window's category tree.
 #. Translators: Accessible name for the main window's category tree.
-#: ui/category_tree.py:67 ui/main_frame.py:124
+#: ui/category_tree.py:67 ui/main_frame.py:126
 msgid "Categories"
 msgstr ""
 
@@ -523,27 +534,88 @@ msgstr ""
 msgid "Delete category '{name}', {descendants} subcategories and {snippets} snippets?"
 msgstr ""
 
+#. Translators: First-start question offering to create a new snippet
+#. database or open one that already exists.
+#: ui/database_selection.py:30
+msgid "Welcome to btText. Would you like to create a new database or open an existing database?"
+msgstr ""
+
+#. Translators: Question shown when changing the snippet database.
+#: ui/database_selection.py:36
+msgid "Would you like to create a new database or open an existing database?"
+msgstr ""
+
+#. Translators: Title of the database creation/opening choice.
+#: ui/database_selection.py:45
+msgid "Select database"
+msgstr ""
+
+#. Translators: Button that continues with a Save dialog for a new
+#. snippet database.
+#: ui/database_selection.py:52
+msgid "Create &new database..."
+msgstr ""
+
+#. Translators: Button that continues with an Open dialog for an
+#. existing snippet database.
+#: ui/database_selection.py:55
+msgid "&Open existing database..."
+msgstr ""
+
+#. Translators: Button that cancels database selection.
+#. Translators: Search-dialog button that closes the dialog without
+#. selecting a result. "&" marks the keyboard mnemonic.
+#. Translators: Settings-dialog button that discards pending changes and
+#. closes the dialog. "&" marks the keyboard mnemonic.
+#. Translators: Snippet-editor button that discards unsaved changes and
+#: ui/database_selection.py:57 ui/search_dialog.py:60 ui/settings_dialog.py:95
+#: ui/snippet_editor.py:109
+msgid "&Cancel"
+msgstr ""
+
+#. Translators: Title of the file dialog used to create a database.
+#: ui/database_selection.py:67
+msgid "Create new database"
+msgstr ""
+
+#. Translators: Title of the file dialog used to open a database.
+#: ui/database_selection.py:70
+msgid "Open existing database"
+msgstr ""
+
+#. Translators: File-dialog filter. Preserve the vertical bars,
+#. wildcard patterns, and .db extension.
+#: ui/database_selection.py:78
+msgid "btText databases (*.db)|*.db|All files (*.*)|*.*"
+msgstr ""
+
+#. Translators: Error after choosing an existing file while the user
+#. requested creation of a new database.
+#: ui/database_selection.py:90
+msgid "The selected file already exists. Choose a different name."
+msgstr ""
+
 #. Translators: Heading for the tree used to select a category.
 #. "&" marks the keyboard mnemonic for the category tree.
-#: ui/main_frame.py:114
+#: ui/main_frame.py:116
 msgid "&Categories"
 msgstr ""
 
 #. Translators: Heading for the list of snippets in the selected
 #. category. "&" marks the keyboard mnemonic for the snippet list.
-#: ui/main_frame.py:129
+#: ui/main_frame.py:131
 msgid "&Snippets"
 msgstr ""
 
 #. Translators: Accessible name for the main window list showing snippets
 #. from the selected category.
-#: ui/main_frame.py:142
+#: ui/main_frame.py:144
 msgid "Snippets in the selected category"
 msgstr ""
 
 #. Translators: Title for a failure to monitor or expand a
 #. globally typed snippet hotstring.
-#: ui/main_frame.py:202 ui/main_frame.py:373 ui/main_frame.py:500
+#: ui/main_frame.py:210 ui/main_frame.py:381 ui/main_frame.py:509
 msgid "Hotstring error"
 msgstr ""
 
@@ -551,27 +623,27 @@ msgstr ""
 #. Translators: Generic title for a failed snippet operation.
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
-#: ui/main_frame.py:229 ui/main_frame.py:248 ui/main_frame.py:260
-#: ui/main_frame.py:571 ui/snippet_list.py:415 ui/snippet_list.py:445
+#: ui/main_frame.py:237 ui/main_frame.py:256 ui/main_frame.py:268
+#: ui/main_frame.py:580 ui/snippet_list.py:415 ui/snippet_list.py:445
 #: ui/snippet_list.py:485
 msgid "Error"
 msgstr ""
 
 #. Translators: Error shown when a selected snippet points to a
 #. category that was deleted meanwhile.
-#: ui/main_frame.py:246
+#: ui/main_frame.py:254
 msgid "The category of the selected snippet no longer exists."
 msgstr ""
 
 #. Translators: Error shown when the selected snippet was deleted
 #. before it could be displayed or inserted.
-#: ui/main_frame.py:258
+#: ui/main_frame.py:266
 msgid "The selected snippet no longer exists."
 msgstr ""
 
 #. Translators: Startup error shown when btText cannot claim
 #. its global shortcut. {} is a shortcut such as Ctrl+Alt+T.
-#: ui/main_frame.py:280
+#: ui/main_frame.py:288
 #, python-brace-format
 msgid "The global hotkey {} is already in use and could not be registered."
 msgstr ""
@@ -579,45 +651,45 @@ msgstr ""
 #. Translators: Title of an error registering a global shortcut.
 #. Translators: Title of an error changing the global shortcut.
 #. Translators: Title of an error restoring a global shortcut.
-#: ui/main_frame.py:284 ui/main_frame.py:402 ui/main_frame.py:441
+#: ui/main_frame.py:292 ui/main_frame.py:410 ui/main_frame.py:450
 msgid "Hotkey error"
 msgstr ""
 
 #. Translators: Settings error: the requested global shortcut is
 #. occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
-#: ui/main_frame.py:389
+#: ui/main_frame.py:397
 #, python-brace-format
 msgid "The selected hotkey {} is already in use. The previous hotkey has been restored."
 msgstr ""
 
 #. Translators: Settings error: the requested shortcut is occupied
 #. and restoring the old one also failed. {} is such as Ctrl+Alt+T.
-#: ui/main_frame.py:396
+#: ui/main_frame.py:404
 #, python-brace-format
 msgid "The selected hotkey {} is already in use and the previous hotkey could not be restored. No global hotkey is active."
 msgstr ""
 
 #. Translators: Error after cancelling settings when btText
 #. could not restore the previously active global shortcut.
-#: ui/main_frame.py:437
+#: ui/main_frame.py:446
 msgid "The previous hotkey could not be restored. No global hotkey is active."
 msgstr ""
 
 #. Translators: Error when no previously active external window is
 #. available as the destination for inserting a snippet.
-#: ui/main_frame.py:558
+#: ui/main_frame.py:567
 msgid "There is no previous window to insert the snippet into."
 msgstr ""
 
 #. Translators: Title of an error inserting a snippet externally.
 #. Translators: Title of an error while pasting copied or cut items.
-#: ui/main_frame.py:560 ui/main_frame.py:592 ui/snippet_list.py:352
+#: ui/main_frame.py:569 ui/main_frame.py:601 ui/snippet_list.py:352
 msgid "Paste error"
 msgstr ""
 
 #. Translators: Error after inserting a snippet when restoring the
 #. user's old clipboard repeatedly failed. {} is a technical error.
-#: ui/main_frame.py:628
+#: ui/main_frame.py:637
 #, python-brace-format
 msgid ""
 "The previous clipboard contents could not be restored after multiple attempts. The clipboard may still contain the inserted snippet.\n"
@@ -627,60 +699,77 @@ msgstr ""
 
 #. Translators: Title of an error restoring the user's clipboard
 #. after a snippet was inserted.
-#: ui/main_frame.py:634
+#: ui/main_frame.py:643
 msgid "Clipboard restore error"
+msgstr ""
+
+#. Translators: File-menu command for selecting another snippet
+#. database. The selection is used after restarting btText.
+#: ui/main_frame.py:656
+msgid "Change &database..."
 msgstr ""
 
 #. Translators: File-menu command that hides the main window while
 #. keeping btText available in the notification area.
-#: ui/main_frame.py:645
+#: ui/main_frame.py:661
 msgid "&Close"
 msgstr ""
 
 #. Translators: File-menu command that exits btText completely,
 #. including its notification-area icon.
-#: ui/main_frame.py:650
+#: ui/main_frame.py:666
 msgid "E&xit"
 msgstr ""
 
 #. Translators: Main-window menu containing window-close and full-exit
 #. commands. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:654
+#: ui/main_frame.py:670
 msgid "&File"
 msgstr ""
 
 #. Translators: Edit-menu command that opens the snippet search
 #. dialog. "&" marks the mnemonic; keep F3 after "\t".
-#: ui/main_frame.py:660
+#: ui/main_frame.py:676
 msgid "&Search...\tF3"
 msgstr ""
 
 #. Translators: Edit-menu command that opens the settings dialog.
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
-#: ui/main_frame.py:667
+#: ui/main_frame.py:683
 msgid "&Settings...\tCtrl+,"
 msgstr ""
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:671
+#: ui/main_frame.py:687
 msgid "&Edit"
 msgstr ""
 
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:674
+#: ui/main_frame.py:690
 msgid "About"
 msgstr ""
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:678
+#: ui/main_frame.py:694
 msgid "&Help"
+msgstr ""
+
+#. Translators: Confirmation after choosing the database that btText
+#. should open following its next restart.
+#: ui/main_frame.py:752
+msgid "The selected database will be used the next time btText starts."
+msgstr ""
+
+#. Translators: Title confirming that another database was selected.
+#: ui/main_frame.py:754
+msgid "Database selected"
 msgstr ""
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:722
+#: ui/main_frame.py:791
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr ""
 
@@ -729,15 +818,6 @@ msgstr ""
 #. in the main window and closes the dialog. "&" marks the mnemonic.
 #: ui/search_dialog.py:56
 msgid "&Show snippet"
-msgstr ""
-
-#. Translators: Search-dialog button that closes the dialog without
-#. selecting a result. "&" marks the keyboard mnemonic.
-#. Translators: Settings-dialog button that discards pending changes and
-#. closes the dialog. "&" marks the keyboard mnemonic.
-#. Translators: Snippet-editor button that discards unsaved changes and
-#: ui/search_dialog.py:60 ui/settings_dialog.py:95 ui/snippet_editor.py:109
-msgid "&Cancel"
 msgstr ""
 
 #. Translators: Title of an error while searching snippets.

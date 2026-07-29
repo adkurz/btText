@@ -92,6 +92,11 @@ def _format_settings_save_failed(parameters: dict[str, Any]) -> str:
 
 _FORMATTERS: dict[str, ErrorFormatter] = {
     "database_open_failed": _format_database_open_failed,
+    # Translators: Database-opening error shown when a configured or selected
+    # file was removed or is no longer reachable.
+    "database_file_missing": lambda parameters: _(
+        "The selected database file does not exist."
+    ),
     # Translators: Fatal startup error when SQLite cannot enforce relationships
     # between categories and snippets.
     "database_foreign_keys_unavailable": lambda parameters: _(
