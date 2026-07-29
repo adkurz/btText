@@ -1,10 +1,11 @@
 """Windows low-level keyboard monitoring for snippet hotstrings."""
 
 import ctypes
-import string
-import unicodedata
+from collections.abc import Mapping
 from ctypes import wintypes
 from typing import Callable
+
+from core.hotstrings import HotstringMatcher
 
 
 WH_KEYBOARD_LL = 13
@@ -83,58 +84,6 @@ kernel32.GetModuleHandleW.argtypes = (wintypes.LPCWSTR,)
 kernel32.GetModuleHandleW.restype = wintypes.HMODULE
 
 
-class HotstringMatcher:
-    """Track typed text and recognize configured strings at boundaries."""
-
-    def __init__(self):
-        self._hotstrings: dict[str, object] = {}
-        self._prefixes: set[str] = set()
-        self._buffer = ""
-
-    def update(self, snippets) -> None:
-        """Replace the active case-sensitive hotstring mapping."""
-        self._hotstrings = {
-            snippet.hotstring: snippet
-            for snippet in snippets
-            if snippet.hotstring
-        }
-        self._prefixes = {
-            hotstring[:length]
-            for hotstring in self._hotstrings
-            for length in range(1, len(hotstring) + 1)
-        }
-        self.reset()
-
-    def reset(self) -> None:
-        """Discard all remembered user input."""
-        self._buffer = ""
-
-    def backspace(self) -> None:
-        """Mirror one user-generated Backspace in the internal buffer."""
-        self._buffer = self._buffer[:-1]
-
-    def character(self, character: str):
-        """Record a character or return a match when it is a boundary."""
-        is_boundary = (
-            character.isspace()
-            or character in string.punctuation
-            or unicodedata.category(character).startswith("P")
-        )
-        if is_boundary:
-            snippet = self._hotstrings.get(self._buffer)
-            if snippet is not None or character.isspace():
-                self.reset()
-                return snippet
-            candidate = self._buffer + character
-            if candidate not in self._prefixes:
-                self.reset()
-                return None
-        # Keep enough recent word text for Backspace to reveal a valid trigger
-        # again without allowing an unbounded buffer.
-        self._buffer = (self._buffer + character)[-256:]
-        return None
-
-
 class KeyboardHook:
     """Install and own a process-wide Windows low-level keyboard hook."""
 
@@ -151,9 +100,9 @@ class KeyboardHook:
         self._shift_keys_down: set[int] = set()
         self._callback = HOOKPROC(self._hook_callback)
 
-    def update(self, snippets) -> None:
+    def update(self, hotstrings: Mapping[str, object]) -> None:
         """Replace active hotstrings without reinstalling the hook."""
-        self._matcher.update(snippets)
+        self._matcher.update(hotstrings)
 
     def start(self) -> None:
         """Install the hook on the current desktop."""

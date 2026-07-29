@@ -466,7 +466,14 @@ class MainFrame(sc.SizedFrame):
 
     def _refresh_hotstrings(self, *_arguments):
         """Reload active hotstrings after any snippet mutation."""
-        self._hotstring_hook.update(self._model.get_hotstring_snippets())
+        snippets = self._model.get_hotstring_snippets()
+        self._hotstring_hook.update(
+            {
+                snippet.hotstring: snippet
+                for snippet in snippets
+                if snippet.hotstring
+            }
+        )
 
     def _queue_hotstring_expansion(
         self, snippet: datamodel.Snippet, boundary_key: int
