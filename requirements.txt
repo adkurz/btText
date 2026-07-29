@@ -1,2 +1,2 @@
-wxPython>=4.2.0
+wxPython>=4.3.0
 pymitter>=1.0.0
