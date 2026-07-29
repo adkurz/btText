@@ -1,154 +1,174 @@
-# btText – Installation Guide
+# btText - Installation, Portable Use, and Development
 
-## Requirements
+btText is available as a per-user Windows installation and as a portable
+archive. Neither packaged version requires Python to be installed.
 
-- Python 3.12 or higher
-- A 64-bit Python installation is recommended
+## Install btText on Windows
 
----
+1. Run `btText-<version>-setup.exe`.
+2. Select the installer language.
+3. Optionally enable the desktop shortcut.
+4. Complete the installation and start btText.
 
-## Step-by-step Installation
-
-### 1. Install Python
-
-Download and install Python from [python.org](https://www.python.org/downloads/).  
-During installation, check **"Add Python to PATH"**.
-
-Verify the installation:
-
-```bash
-python --version
-```
-
-### 2. Create a virtual environment
-
-Open a terminal in the project folder (`btText`) and run:
-
-```bash
-python -m venv .venv
-```
-
-Activate it:
-
-- **Windows (Command Prompt):**
-  ```cmd
-  .venv\Scripts\activate.bat
-  ```
-- **Windows (PowerShell):**
-  ```powershell
-  .venv\Scripts\Activate.ps1
-  ```
-
-### 3. Install dependencies
-
-For running the application from source:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements.txt
-```
-
-For development, translation work, tests, and packaging:
-
-```powershell
-.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
-```
-
-### 4. Launch the application
-
-Run the application with the virtual-environment interpreter:
-
-```powershell
-.\.venv\Scripts\python.exe btText.py
-```
-
----
-
-## Create a packaged Windows build
-
-Run the build script from the project folder:
-
-```powershell
-.\build.ps1
-```
-
-The script creates `.venv` automatically when it is missing, installs all
-build dependencies into it, and then uses only that environment for catalog
-validation, tests, and PyInstaller. The globally available Python installation
-is used only once to create `.venv`.
-
-The finished release artifacts are written to:
+The installer does not request administrator privileges. It installs the
+program for the current user in:
 
 ```text
-build/btText-<version>-portable-windows.zip
-build/btText-<version>-setup.exe
+%LOCALAPPDATA%\Programs\btText
 ```
 
-The default build requires Inno Setup 7. The script finds `ISCC.exe` on `PATH`
-or in its standard installation directory. A non-standard compiler location
-can be supplied explicitly:
+It also creates a Start menu entry and a standard Windows uninstaller.
 
-```powershell
-.\build.ps1 -InnoCompiler "C:\Path\To\Inno Setup 7\ISCC.exe"
+On first start, btText asks whether to create a new snippet database or open an
+existing one. Settings and the default database of the installed version are
+stored separately from the program files:
+
+```text
+%APPDATA%\btText\settings.ini
+%APPDATA%\btText\data.db
 ```
 
-To create only the portable archive without requiring Inno Setup:
+## Use the portable version
 
-```powershell
-.\build.ps1 -PortableOnly
-```
+1. Extract `btText-<version>-portable-windows.zip` to a writable directory.
+2. Start `btText.exe` from the extracted `btText` directory.
 
-The artifacts contain the executable and immutable runtime resources. Neither
-artifact contains `data.db` or `settings.ini`; btText creates them when needed
-in the data directory appropriate to the application mode.
+The portable version stores `settings.ini` and its default `data.db` beside
+`btText.exe`. Keep the complete directory together when moving the portable
+installation.
 
-To select the Python installation used to create `.venv`:
+Do not run the portable version from a protected directory such as
+`C:\Program Files`, because it must be able to write its settings and default
+database beside the executable.
 
-```powershell
-.\build.ps1 -Python "C:\Path\To\python.exe"
-```
+## Move from portable to installed
 
----
+btText does not search for, move, or delete portable data automatically.
 
-## Data locations and first-run behaviour
+There are two supported ways to continue using an existing portable database:
 
-When run from source or from the portable archive, btText stores
-`settings.ini` and its default `data.db` beside the script or executable.
+- Start the installed version, choose **Open existing database**, and select
+  the portable `data.db`. The database remains in its original location, and
+  the installed settings store its absolute path.
+- Before the first installed start, copy the portable `data.db` to
+  `%APPDATA%\btText\data.db`. btText adopts it as the installed default
+  database.
 
-An installed build stores both files in the current user's roaming application
-data directory:
+Back up `data.db` before copying or moving it. Do not overwrite an existing
+database unless its contents are no longer needed.
+
+## Change the active database
+
+Use the database selection command in btText to choose another existing
+database or create a new one. btText validates the selected file before saving
+the setting. Restart btText after changing the active database.
+
+A database inside the active data directory is stored as a relative filename.
+A database in any other directory is stored as an absolute path.
+
+## Update btText
+
+For an installed version, close btText and run the newer setup executable. The
+installer updates the program files in place. User settings and databases under
+`%APPDATA%\btText` remain unchanged.
+
+For a portable version:
+
+1. Close btText.
+2. Extract the new archive to a new directory.
+3. Copy the previous `settings.ini` and `data.db` into the new `btText`
+   directory, or continue opening an externally stored database.
+4. Start the new executable and verify the data before deleting the old
+   directory.
+
+## Uninstall btText
+
+Uninstall btText from Windows **Installed apps** or from its Start menu
+uninstaller.
+
+The uninstaller removes the program files and shortcuts but deliberately keeps
+the user data in:
 
 ```text
 %APPDATA%\btText
 ```
 
-If the active data directory does not already contain `data.db` and no database
-is configured, btText asks whether to create a new database or open an existing
-one. It does not search other folders, move a portable database, or delete the
-original file automatically.
+This prevents an uninstall or upgrade from deleting snippet data. To remove
+btText completely:
 
-To continue using a database from a portable copy, choose **Open existing
-database** on first start and select that copy's `data.db`. btText keeps the
-database in its original location and stores its absolute path in the installed
-settings.
+1. Uninstall the application.
+2. Back up `data.db` if it may still be needed.
+3. Manually delete `%APPDATA%\btText`.
 
-Alternatively, before the first installed start, copy the portable `data.db`
-to `%APPDATA%\btText\data.db`. btText then adopts it as the installed default
-database and records it relatively as `data.db`.
+To remove the portable version, close btText and delete its extracted
+directory. This also deletes a portable `settings.ini` and `data.db` stored in
+that directory, so back up the database first.
 
----
+## Run from source
 
-## Uninstall
+Running from source is intended for development. It requires Python 3.12 or
+newer; a 64-bit Python installation is recommended.
 
-To remove the application:
+Create a virtual environment and install the runtime dependencies:
 
-1. Deactivate and delete the virtual environment:
-   ```bash
-   deactivate
-   rmdir /s .venv          # Windows
-   rm -rf .venv            # Linux/macOS
-   ```
-2. Remove installed packages (optional):
-   ```bash
-   pip uninstall wx pymitter
-   ```
-3. Delete the project folder, including `data.db`.
+```powershell
+python -m venv .venv
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe btText.py
+```
+
+The source version stores `settings.ini` and its default `data.db` in the
+project directory.
+
+For development, translation work, tests, and packaging, install:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
+```
+
+## Build the Windows releases
+
+The default build requires Inno Setup 7 and creates both release artifacts:
+
+```powershell
+.\build.ps1
+```
+
+```text
+build\btText-<version>-portable-windows.zip
+build\btText-<version>-setup.exe
+```
+
+The build script:
+
+1. creates or reuses the project `.venv`;
+2. installs the declared build dependencies;
+3. validates and compiles translation catalogs;
+4. runs the complete test suite;
+5. creates the PyInstaller onedir application;
+6. verifies that the payload contains no user data;
+7. creates the portable ZIP;
+8. verifies and invokes the Inno Setup 7 compiler;
+9. creates the per-user x64 installer.
+
+The script locates `ISCC.exe` on `PATH` or in the standard Inno Setup 7
+installation directory. Supply a non-standard location explicitly:
+
+```powershell
+.\build.ps1 -InnoCompiler "C:\Path\To\Inno Setup 7\ISCC.exe"
+```
+
+Create only the portable artifact without Inno Setup:
+
+```powershell
+.\build.ps1 -PortableOnly
+```
+
+Select the Python interpreter used when creating a missing `.venv`:
+
+```powershell
+.\build.ps1 -Python "C:\Path\To\python.exe"
+```
+
+An existing `.venv` is reused. Recreate it before using `-Python` to switch the
+build environment to another Python version.
