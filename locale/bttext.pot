@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-30 17:21+0200\n"
+"POT-Creation-Date: 2026-07-30 17:27+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1255,19 +1255,19 @@ msgid "Hotstring “{hotstring}” expanded to “{snippet}”."
 msgstr ""
 
 #. Translators: Lowest search-ranking weight assigned to a snippet.
-#: ui/utils.py:115
+#: ui/utils.py:123
 msgctxt "snippet weight"
 msgid "Low"
 msgstr ""
 
 #. Translators: Medium search-ranking weight assigned to a snippet.
-#: ui/utils.py:117
+#: ui/utils.py:125
 msgctxt "snippet weight"
 msgid "Middle"
 msgstr ""
 
 #. Translators: Highest search-ranking weight assigned to a snippet.
-#: ui/utils.py:119
+#: ui/utils.py:127
 msgctxt "snippet weight"
 msgid "High"
 msgstr ""

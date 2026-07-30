@@ -65,6 +65,18 @@ class InstallerDefinitionTests(unittest.TestCase):
         )
         self.assertIn("RemoveUserDataFailed", self.script)
 
+    def test_uninstaller_waits_for_the_running_application(self):
+        self.assertIn("function InitializeUninstall: Boolean;", self.script)
+        self.assertIn(
+            "ExpandConstant('{#MyAppName}-{username}')",
+            self.script,
+        )
+        self.assertIn("while CheckForMutexes(MutexName) do", self.script)
+        self.assertIn("MB_RETRYCANCEL", self.script)
+        self.assertIn("IDRETRY", self.script)
+        self.assertIn("ApplicationStillRunning", self.script)
+        self.assertIn("klicken Sie anschließend auf Wiederholen", self.script)
+
 
 if __name__ == "__main__":
     unittest.main()

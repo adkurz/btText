@@ -72,10 +72,33 @@ english.RemoveUserDataPrompt=Do you also want to permanently delete all btText s
 german.RemoveUserDataPrompt=Möchten Sie zusätzlich alle btText-Einstellungen und Datenbanken unter {userappdata}\btText dauerhaft löschen? Externe Datenbanken werden nicht gelöscht. Dies kann nicht rückgängig gemacht werden.
 english.RemoveUserDataFailed=Not all btText user data could be removed. Please delete {userappdata}\btText manually.
 german.RemoveUserDataFailed=Nicht alle btText-Nutzerdaten konnten entfernt werden. Bitte löschen Sie {userappdata}\btText manuell.
+english.ApplicationStillRunning=btText is still running. Close btText before uninstalling it, then click Retry.
+german.ApplicationStillRunning=btText wird noch ausgeführt. Schließen Sie btText vor der Deinstallation und klicken Sie anschließend auf Wiederholen.
 
 [Code]
 var
   RemoveUserData: Boolean;
+
+function InitializeUninstall: Boolean;
+var
+  MutexName: String;
+begin
+  MutexName := ExpandConstant('{#MyAppName}-{username}');
+  while CheckForMutexes(MutexName) do
+  begin
+    if SuppressibleMsgBox(
+      ExpandConstant(CustomMessage('ApplicationStillRunning')),
+      mbError,
+      MB_RETRYCANCEL,
+      IDRETRY
+    ) <> IDRETRY then
+    begin
+      Result := False;
+      Exit;
+    end;
+  end;
+  Result := True;
+end;
 
 procedure CurUninstallStepChanged(
   CurUninstallStep: TUninstallStep
