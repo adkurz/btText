@@ -1261,7 +1261,7 @@ msgstr "Beenden"
 #: ui/tray_icon.py:66
 #, python-brace-format
 msgid "Hotstring “{hotstring}” expanded to “{snippet}”."
-msgstr "Hotstring „{hotstring}“ als „{snippet}“ erweitert."
+msgstr "Hotstring „{hotstring}“ mit „{snippet}“ erweitert."
 
 #. Translators: Lowest search-ranking weight assigned to a snippet.
 #: ui/utils.py:115
