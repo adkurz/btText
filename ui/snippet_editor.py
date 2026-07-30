@@ -111,6 +111,7 @@ class SnippetEditor(wx.Dialog):
         btn_sizer.AddButton(self.cancel_btn)
         btn_sizer.Realize()
         self.SetAffirmativeId(wx.ID_OK)
+        self.SetEscapeId(wx.ID_CANCEL)
         self.save_btn.SetDefault()
 
         dialog_sizer = wx.BoxSizer(wx.VERTICAL)
@@ -126,9 +127,12 @@ class SnippetEditor(wx.Dialog):
         self.SetSize(self.FromDIP((720, 560)))
         self.CentreOnParent()
         self.Bind(wx.EVT_SHOW, self._on_show)
+        self.cancel_btn.Bind(wx.EVT_BUTTON, self._on_cancel)
 
         if self._snippet is not None:
             self.load()
+        self._initial_state = self._current_state()
+        self._closing_allowed = False
 
     def _on_show(self, event: wx.ShowEvent):
         """Focus the first input after wx has activated the dialog."""
@@ -145,6 +149,53 @@ class SnippetEditor(wx.Dialog):
         self.weight_input.SetSelection(s.weight - 1)
         self.content_input.SetValue(s.content)
         self.hotstring_input.SetValue(s.hotstring or "")
+
+    def _current_state(self) -> tuple[str, int, int, str, str]:
+        """Return all editable values for unsaved-change detection."""
+        return (
+            self.name_input.GetValue(),
+            self.category_input.GetSelection(),
+            self.weight_input.GetSelection(),
+            self.hotstring_input.GetValue(),
+            self.content_input.GetValue(),
+        )
+
+    def _has_unsaved_changes(self) -> bool:
+        """Return whether an editable value differs from its initial value."""
+        return self._current_state() != self._initial_state
+
+    def _confirm_discard_changes(self) -> bool:
+        """Ask before discarding changes and return whether closing may proceed."""
+        if self._closing_allowed:
+            return True
+        if not self._has_unsaved_changes():
+            return True
+        with utils.managed_dialog(
+            wx.MessageDialog(
+                self,
+                # Translators: Confirmation shown when closing the snippet
+                # editor would discard changes made since it was opened.
+                _("Do you want to discard the unsaved changes?"),
+                # Translators: Title of the unsaved-changes confirmation in the
+                # snippet editor.
+                _("Discard unsaved changes?"),
+                style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
+            )
+        ) as dialog:
+            confirmed = dialog.ShowModal() == wx.ID_YES
+            if confirmed:
+                # Set this before the confirmation dialog is destroyed because
+                # native teardown can synchronously deliver another close event.
+                self._closing_allowed = True
+            return confirmed
+
+    def _on_cancel(self, event: wx.CommandEvent):
+        """Close through Cancel only after confirming unsaved changes."""
+        if self._closing_allowed:
+            return
+        if self._confirm_discard_changes():
+            self._closing_allowed = True
+            self.EndModal(wx.ID_CANCEL)
 
     def save(self, event):
         """Validate controls and persist the edited snippet."""
@@ -173,6 +224,7 @@ class SnippetEditor(wx.Dialog):
             else: # Edit existing snippet
                 snippet.id = self._snippet.id
                 self._model.edit_snippet(snippet)
+            self._closing_allowed = True
             self.EndModal(wx.OK)
         except datamodel.DataModelError as e:
             wx.MessageBox(
