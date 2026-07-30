@@ -110,6 +110,8 @@ class SnippetEditor(wx.Dialog):
         btn_sizer.AddButton(self.save_btn)
         btn_sizer.AddButton(self.cancel_btn)
         btn_sizer.Realize()
+        self.SetAffirmativeId(wx.ID_OK)
+        self.save_btn.SetDefault()
 
         dialog_sizer = wx.BoxSizer(wx.VERTICAL)
         dialog_sizer.Add(self.pane, 1, wx.EXPAND)

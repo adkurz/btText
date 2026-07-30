@@ -63,6 +63,8 @@ class SearchDialog(wx.Dialog):
         button_sizer.AddButton(self.open_button)
         button_sizer.AddButton(cancel_button)
         button_sizer.Realize()
+        self.SetAffirmativeId(wx.ID_OK)
+        self.open_button.SetDefault()
 
         pane_sizer = wx.BoxSizer(wx.VERTICAL)
         pane_sizer.Add(search_label, 0, wx.LEFT | wx.RIGHT | wx.TOP, 10)

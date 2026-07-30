@@ -104,6 +104,8 @@ class SettingsDialog(wx.Dialog):
         button_sizer.AddButton(self.cancel_button)
         button_sizer.AddButton(self.apply_button)
         button_sizer.Realize()
+        self.SetAffirmativeId(wx.ID_OK)
+        self.ok_button.SetDefault()
 
         dialog_sizer = wx.BoxSizer(wx.VERTICAL)
         dialog_sizer.Add(self.notebook, 1, wx.EXPAND | wx.ALL, 10)
