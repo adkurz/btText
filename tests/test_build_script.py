@@ -5,6 +5,9 @@ from pathlib import Path
 
 
 BUILD_SCRIPT = Path(__file__).resolve().parents[1] / "build.ps1"
+INSTALLER_SCRIPT = (
+    Path(__file__).resolve().parents[1] / "installer" / "btText.iss"
+)
 
 
 class BuildScriptTests(unittest.TestCase):
@@ -13,14 +16,20 @@ class BuildScriptTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.script = BUILD_SCRIPT.read_text(encoding="utf-8")
+        cls.installer_script = INSTALLER_SCRIPT.read_text(encoding="utf-8")
 
     def test_default_build_creates_portable_archive_and_installer(self):
         self.assertIn(
             '"btText-{0}-portable-windows.zip" -f $Version',
             self.script,
         )
-        self.assertIn('"btText-{0}-setup" -f $Version', self.script)
         self.assertIn("installer\\btText.iss", self.script)
+        self.assertNotIn("MyOutputBaseFilename", self.script)
+        self.assertIn(
+            '#define MyOutputBaseFilename '
+            '"btText-" + MyAppVersion + "-setup-windows"',
+            self.installer_script,
+        )
 
     def test_portable_only_build_does_not_require_inno_setup(self):
         self.assertIn("[switch]$PortableOnly", self.script)
@@ -49,7 +58,7 @@ class BuildScriptTests(unittest.TestCase):
 
     def test_build_checks_expected_outputs(self):
         self.assertIn(
-            "Inno Setup did not create the expected installer.",
+            "Inno Setup did not create exactly one installer.",
             self.script,
         )
         self.assertIn(

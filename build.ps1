@@ -203,22 +203,23 @@ try {
     $Installer = $null
     if (-not $PortableOnly) {
         Write-Host "Creating per-user Windows installer..."
-        $InstallerBaseName = "btText-{0}-setup" -f $Version
-        $Installer = Join-Path $BuildDirectory (
-            $InstallerBaseName + ".exe"
-        )
         & $ResolvedInnoCompiler `
             "/DMyAppVersion=$Version" `
             "/DMySourceDir=$ApplicationDirectory" `
             "/DMyOutputDir=$BuildDirectory" `
-            "/DMyOutputBaseFilename=$InstallerBaseName" `
             (Join-Path $ProjectRoot "installer\btText.iss")
         if ($LASTEXITCODE -ne 0) {
             throw "Inno Setup failed with exit code $LASTEXITCODE."
         }
-        if (-not (Test-Path -LiteralPath $Installer -PathType Leaf)) {
-            throw "Inno Setup did not create the expected installer."
+        $Installers = @(
+            Get-ChildItem -LiteralPath $BuildDirectory `
+                -Filter "*.exe" `
+                -File
+        )
+        if ($Installers.Count -ne 1) {
+            throw "Inno Setup did not create exactly one installer."
         }
+        $Installer = $Installers[0].FullName
     }
 
     Write-Host "Build completed successfully:"

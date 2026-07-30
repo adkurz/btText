@@ -1,5 +1,5 @@
 ; Per-user installer for the PyInstaller onedir build.
-; The build supplies these values with ISCC /D switches in the full pipeline.
+; The build supplies the version, source, and output directory with ISCC /D switches.
 
 #ifndef MyAppVersion
   #define MyAppVersion "1.0"
@@ -11,7 +11,7 @@
   #define MyOutputDir "..\build"
 #endif
 #ifndef MyOutputBaseFilename
-  #define MyOutputBaseFilename "btText-" + MyAppVersion + "-setup"
+  #define MyOutputBaseFilename "btText-" + MyAppVersion + "-setup-windows"
 #endif
 
 #define MyAppName "btText"
