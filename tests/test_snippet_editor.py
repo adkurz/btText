@@ -63,8 +63,8 @@ class SnippetEditorUnsavedChangesTestCase(unittest.TestCase):
 
         dialog.EndModal.assert_not_called()
 
-    @patch("ui.snippet_editor.wx.MessageDialog")
-    def test_unchanged_editor_closes_without_confirmation(self, message_dialog):
+    @patch("ui.snippet_editor.utils.confirm_yes_no")
+    def test_unchanged_editor_closes_without_confirmation(self, confirm_yes_no):
         dialog = SimpleNamespace(
             _has_unsaved_changes=lambda: False,
             _closing_allowed=False,
@@ -73,12 +73,10 @@ class SnippetEditorUnsavedChangesTestCase(unittest.TestCase):
         result = SnippetEditor._confirm_discard_changes(dialog)
 
         self.assertTrue(result)
-        message_dialog.assert_not_called()
+        confirm_yes_no.assert_not_called()
 
-    @patch("ui.snippet_editor.wx.MessageDialog")
-    def test_changed_editor_closes_only_after_yes(self, message_dialog):
-        confirmation = message_dialog.return_value
-        confirmation.ShowModal.return_value = wx.ID_YES
+    @patch("ui.snippet_editor.utils.confirm_yes_no", return_value=True)
+    def test_changed_editor_closes_only_after_yes(self, confirm_yes_no):
         dialog = SimpleNamespace(
             _has_unsaved_changes=lambda: True,
             _closing_allowed=False,
@@ -88,11 +86,11 @@ class SnippetEditorUnsavedChangesTestCase(unittest.TestCase):
 
         self.assertTrue(result)
         self.assertTrue(dialog._closing_allowed)
-        confirmation.ShowModal.assert_called_once_with()
-        confirmation.Destroy.assert_called_once_with()
+        confirm_yes_no.assert_called_once()
+        self.assertTrue(confirm_yes_no.call_args.kwargs["warning"])
 
-    @patch("ui.snippet_editor.wx.MessageDialog")
-    def test_already_confirmed_editor_never_asks_again(self, message_dialog):
+    @patch("ui.snippet_editor.utils.confirm_yes_no")
+    def test_already_confirmed_editor_never_asks_again(self, confirm_yes_no):
         dialog = SimpleNamespace(
             _has_unsaved_changes=lambda: True,
             _closing_allowed=True,
@@ -101,30 +99,7 @@ class SnippetEditorUnsavedChangesTestCase(unittest.TestCase):
         result = SnippetEditor._confirm_discard_changes(dialog)
 
         self.assertTrue(result)
-        message_dialog.assert_not_called()
-
-    @patch("ui.snippet_editor.wx.MessageDialog")
-    def test_confirmation_teardown_cannot_open_second_confirmation(
-        self,
-        message_dialog,
-    ):
-        confirmation = message_dialog.return_value
-        confirmation.ShowModal.return_value = wx.ID_YES
-        dialog = SimpleNamespace(
-            _has_unsaved_changes=lambda: True,
-            _closing_allowed=False,
-            EndModal=Mock(),
-        )
-        confirmation.Destroy.side_effect = lambda: SnippetEditor._on_cancel(
-            dialog,
-            Mock(),
-        )
-
-        result = SnippetEditor._confirm_discard_changes(dialog)
-
-        self.assertTrue(result)
-        message_dialog.assert_called_once()
-        dialog.EndModal.assert_not_called()
+        confirm_yes_no.assert_not_called()
 
     def test_two_cancel_events_ask_only_once(self):
         dialog = SimpleNamespace(
@@ -137,11 +112,13 @@ class SnippetEditorUnsavedChangesTestCase(unittest.TestCase):
             _closing_allowed=False,
             EndModal=Mock(),
         )
-        with patch("ui.snippet_editor.wx.MessageDialog") as message_dialog:
-            message_dialog.return_value.ShowModal.return_value = wx.ID_YES
+        with patch(
+            "ui.snippet_editor.utils.confirm_yes_no",
+            return_value=True,
+        ) as confirm_yes_no:
 
             SnippetEditor._on_cancel(dialog, Mock())
             SnippetEditor._on_cancel(dialog, Mock())
 
-        message_dialog.assert_called_once()
+        confirm_yes_no.assert_called_once()
         dialog.EndModal.assert_called_once_with(wx.ID_CANCEL)

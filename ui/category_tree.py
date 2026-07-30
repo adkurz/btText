@@ -344,18 +344,15 @@ class CategoryTree(wx.TreeCtrl):
             descendants,
             snippets,
         )
-        with utils.managed_dialog(
-            wx.MessageDialog(
-                self,
-                message,
-                # Translators: Title of the confirmation for deleting a category
-                # and everything it contains.
-                _("Delete category"),
-                style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
-            )
-        ) as dialog:
-            if dialog.ShowModal() != wx.ID_YES:
-                return
+        if not utils.confirm_yes_no(
+            self,
+            message,
+            # Translators: Title of the confirmation for deleting a category
+            # and everything it contains.
+            _("Delete category"),
+            warning=True,
+        ):
+            return
         try:
             self._model.delete_category(category_id)
         except datamodel.DataModelError as error:

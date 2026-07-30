@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-07-30 17:13+0200\n"
+"POT-Creation-Date: 2026-07-30 17:21+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -441,68 +441,68 @@ msgstr ""
 
 #. Translators: Title of the confirmation for deleting a category
 #. and everything it contains.
-#: ui/category_tree.py:353
+#: ui/category_tree.py:352
 msgid "Delete category"
 msgstr ""
 
 #. Translators: Status after copying a category; it remains pending
 #. until the user selects a destination and presses Ctrl+V.
-#: ui/category_tree.py:407
+#: ui/category_tree.py:404
 msgid "Copied category. Select a destination and press Ctrl+V."
 msgstr ""
 
 #. Translators: Status after cutting a category; it remains pending
 #. until the user selects a destination and presses Ctrl+V.
-#: ui/category_tree.py:413
+#: ui/category_tree.py:410
 msgid "Cut category. Select a destination and press Ctrl+V."
 msgstr ""
 
 #. Translators: Explains that a snippet cannot be pasted at the
 #. category-tree root and requires a destination category.
-#: ui/category_tree.py:430
+#: ui/category_tree.py:427
 msgid "A snippet must be pasted into a category."
 msgstr ""
 
 #. Translators: Title of an informational message explaining that
 #. snippets cannot be pasted at the category-tree root.
-#: ui/category_tree.py:433
+#: ui/category_tree.py:430
 msgid "Paste snippet"
 msgstr ""
 
 #. Translators: Status after a copied or cut category was pasted.
-#: ui/category_tree.py:483
+#: ui/category_tree.py:480
 msgid "Transfer completed."
 msgstr ""
 
 #. Translators: Title of an error caused by a category operation.
-#: ui/category_tree.py:509
+#: ui/category_tree.py:506
 msgid "Category error"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; both displayed counts are exactly 1.
-#: ui/category_tree.py:529
+#: ui/category_tree.py:526
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategory and {snippets} snippet?"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; descendants is 1, snippets is not 1.
-#: ui/category_tree.py:533
+#: ui/category_tree.py:530
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategory and {snippets} snippets?"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; descendants is not 1, snippets is 1.
-#: ui/category_tree.py:537
+#: ui/category_tree.py:534
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategories and {snippets} snippet?"
 msgstr ""
 
 #. Translators: Confirmation before deleting a category and all its
 #. contents. {name} is its name; neither displayed count is 1.
-#: ui/category_tree.py:541
+#: ui/category_tree.py:538
 #, python-brace-format
 msgid "Delete category '{name}', {descendants} subcategories and {snippets} snippets?"
 msgstr ""
@@ -598,7 +598,7 @@ msgstr ""
 #. Translators: Generic title for a failed snippet deletion.
 #: ui/main_frame.py:250 ui/main_frame.py:269 ui/main_frame.py:281
 #: ui/paste_controller.py:62 ui/snippet_list.py:415 ui/snippet_list.py:445
-#: ui/snippet_list.py:485
+#: ui/snippet_list.py:477
 msgid "Error"
 msgstr ""
 
@@ -1065,18 +1065,18 @@ msgstr ""
 
 #. Translators: Confirmation shown when closing the snippet
 #. editor would discard changes made since it was opened.
-#: ui/snippet_editor.py:178
+#: ui/snippet_editor.py:177
 msgid "Do you want to discard the unsaved changes?"
 msgstr ""
 
 #. Translators: Title of the unsaved-changes confirmation in the
 #. snippet editor.
-#: ui/snippet_editor.py:181
+#: ui/snippet_editor.py:180
 msgid "Discard unsaved changes?"
 msgstr ""
 
 #. Translators: Title of a dialog reporting invalid form input.
-#: ui/snippet_editor.py:232 ui/validators.py:28
+#: ui/snippet_editor.py:227 ui/validators.py:28
 msgid "Validation error"
 msgstr ""
 
@@ -1221,7 +1221,7 @@ msgstr ""
 
 #. Translators: Status after selected snippets were permanently deleted.
 #. {count} is the number deleted.
-#: ui/snippet_list.py:503
+#: ui/snippet_list.py:495
 #, python-brace-format
 msgid "Deleted {count} snippet."
 msgid_plural "Deleted {count} snippets."
@@ -1255,19 +1255,19 @@ msgid "Hotstring “{hotstring}” expanded to “{snippet}”."
 msgstr ""
 
 #. Translators: Lowest search-ranking weight assigned to a snippet.
-#: ui/utils.py:21
+#: ui/utils.py:115
 msgctxt "snippet weight"
 msgid "Low"
 msgstr ""
 
 #. Translators: Medium search-ranking weight assigned to a snippet.
-#: ui/utils.py:23
+#: ui/utils.py:117
 msgctxt "snippet weight"
 msgid "Middle"
 msgstr ""
 
 #. Translators: Highest search-ranking weight assigned to a snippet.
-#: ui/utils.py:25
+#: ui/utils.py:119
 msgctxt "snippet weight"
 msgid "High"
 msgstr ""

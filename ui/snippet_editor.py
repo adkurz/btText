@@ -170,24 +170,19 @@ class SnippetEditor(wx.Dialog):
             return True
         if not self._has_unsaved_changes():
             return True
-        with utils.managed_dialog(
-            wx.MessageDialog(
-                self,
-                # Translators: Confirmation shown when closing the snippet
-                # editor would discard changes made since it was opened.
-                _("Do you want to discard the unsaved changes?"),
-                # Translators: Title of the unsaved-changes confirmation in the
-                # snippet editor.
-                _("Discard unsaved changes?"),
-                style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_WARNING,
-            )
-        ) as dialog:
-            confirmed = dialog.ShowModal() == wx.ID_YES
-            if confirmed:
-                # Set this before the confirmation dialog is destroyed because
-                # native teardown can synchronously deliver another close event.
-                self._closing_allowed = True
-            return confirmed
+        confirmed = utils.confirm_yes_no(
+            self,
+            # Translators: Confirmation shown when closing the snippet
+            # editor would discard changes made since it was opened.
+            _("Do you want to discard the unsaved changes?"),
+            # Translators: Title of the unsaved-changes confirmation in the
+            # snippet editor.
+            _("Discard unsaved changes?"),
+            warning=True,
+        )
+        if confirmed:
+            self._closing_allowed = True
+        return confirmed
 
     def _on_cancel(self, event: wx.CommandEvent):
         """Close through Cancel only after confirming unsaved changes."""

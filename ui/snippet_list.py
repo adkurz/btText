@@ -465,16 +465,8 @@ class SnippetList(wx.ListView):
             ).format(count=len(snippets))
             # Translators: Title of the confirmation for deleting multiple snippets.
             title = _("Delete snippets?")
-        with utils.managed_dialog(
-            wx.MessageDialog(
-                self,
-                message,
-                title,
-                style=wx.YES_NO | wx.NO_DEFAULT | wx.ICON_QUESTION,
-            )
-        ) as dialog:
-            if dialog.ShowModal() != wx.ID_YES:
-                return
+        if not utils.confirm_yes_no(self, message, title):
+            return
         focus_id = self._get_focus_target_after_delete(set(snippet_ids))
         try:
             self._model.delete_snippets(snippet_ids)
