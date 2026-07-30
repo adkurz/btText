@@ -52,24 +52,27 @@ class SettingsStore:
 
     def load(self) -> AppSettings:
         """Load settings, using defaults when the file or key is absent."""
+        defaults = AppSettings()
         parser = ConfigParser()
         try:
             parser.read(self.settings_file, encoding="utf-8")
             value = parser.get(
                 "hotkeys",
                 "toggle_window",
-                fallback=str(DEFAULT_TOGGLE_HOTKEY),
+                fallback=str(defaults.toggle_window_hotkey),
             )
             language = i18n.validate_language(
                 parser.get(
                     "general",
                     "language",
-                    fallback=i18n.SYSTEM_LANGUAGE,
+                    fallback=defaults.language,
                 ),
                 self.locale_directory,
             )
             database_file = parser.get(
-                "general", "database_file", fallback=None
+                "general",
+                "database_file",
+                fallback=defaults.database_file,
             )
             if database_file is not None:
                 database_path = Path(database_file).expanduser()
@@ -79,21 +82,27 @@ class SettingsStore:
             include_copied_text_in_clipboard_history = parser.getboolean(
                 "general",
                 "include_copied_text_in_clipboard_history",
-                fallback=True,
+                fallback=defaults.include_copied_text_in_clipboard_history,
             )
             allow_copied_text_cloud_upload = parser.getboolean(
                 "general",
                 "allow_copied_text_cloud_upload",
-                fallback=True,
+                fallback=defaults.allow_copied_text_cloud_upload,
             )
             hotstrings_enabled = parser.getboolean(
-                "hotstrings", "enabled", fallback=True
+                "hotstrings",
+                "enabled",
+                fallback=defaults.hotstrings_enabled,
             )
             preserve_hotstring_boundary = parser.getboolean(
-                "hotstrings", "preserve_boundary", fallback=True
+                "hotstrings",
+                "preserve_boundary",
+                fallback=defaults.preserve_hotstring_boundary,
             )
             notify_hotstring_expansion = parser.getboolean(
-                "hotstrings", "notify_expansion", fallback=False
+                "hotstrings",
+                "notify_expansion",
+                fallback=defaults.notify_hotstring_expansion,
             )
             return AppSettings(
                 database_file=database_file,
