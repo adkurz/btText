@@ -97,6 +97,7 @@ class MainFrameConstructionTestCase(unittest.TestCase):
             frame = None
             try:
                 frame = MainFrame(events, model, store, settings)
+                wx.YieldIfNeeded()
 
                 self.assertIsInstance(frame.category_tree, CategoryTree)
                 self.assertIsInstance(frame.snippet_list, SnippetList)

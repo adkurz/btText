@@ -52,8 +52,10 @@ class MainFrame(sc.SizedFrame):
         self._create_menubar()
         self._create_statusbar()
         self._create_tray_icon()
-        self._start_process_integrations()
         self._configure_frame_geometry()
+        # Let wx finish creating and displaying the frame before touching
+        # process-wide hooks or loading all hotstrings from the database.
+        wx.CallAfter(self._start_process_integrations)
 
     def _create_process_integrations(
         self,
