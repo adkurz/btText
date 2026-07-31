@@ -1,15 +1,15 @@
 # German translations for btText.
 # Copyright (C) 2026 Adrian Kurz
 # This file is distributed under the same license as the btText project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2026.
+# Adrian Kurz <adkurz@bltech.de>, 2026.
 #
 msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
-"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"Report-Msgid-Bugs-To: adkurz@bltech.de\n"
 "POT-Creation-Date: 2026-07-30 17:21+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
-"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
 "Language-Team: de <LL@li.org>\n"
 "Plural-Forms: nplurals=2; plural=(n != 1);\n"
