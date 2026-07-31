@@ -103,7 +103,20 @@ class CategoryTree(wx.TreeCtrl):
         self.DeleteChildren(self._root)
         self._items.clear()
         self._empty_item = None
-        self._append_children(self._root, None)
+        summaries_by_parent = {}
+        for summary in self._model.get_all_category_summaries():
+            summaries_by_parent.setdefault(
+                summary.category.parent_id,
+                [],
+            ).append(summary)
+        for summaries in summaries_by_parent.values():
+            summaries.sort(
+                key=lambda summary: (
+                    summary.category.name.casefold(),
+                    summary.category.id,
+                )
+            )
+        self._append_children(self._root, None, summaries_by_parent)
         if not self._items:
             self._empty_item = self.AppendItem(
                 self._root,
@@ -121,9 +134,9 @@ class CategoryTree(wx.TreeCtrl):
             self.focus_id(selected_id)
         self.Thaw()
 
-    def _append_children(self, parent_item, parent_id):
+    def _append_children(self, parent_item, parent_id, summaries_by_parent):
         """Recursively append the model children below a tree item."""
-        for summary in self._model.get_category_child_summaries(parent_id):
+        for summary in summaries_by_parent.get(parent_id, ()):
             category = summary.category
             item = self.AppendItem(
                 parent_item,
@@ -132,7 +145,7 @@ class CategoryTree(wx.TreeCtrl):
             )
             self.SetItemData(item, category.id)
             self._items[category.id] = item
-            self._append_children(item, category.id)
+            self._append_children(item, category.id, summaries_by_parent)
 
     def get_selected_id(self):
         """Return the selected category ID, excluding placeholder items."""

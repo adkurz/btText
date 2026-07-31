@@ -552,6 +552,10 @@ class DataModel:
                 number_of_snippets=row["number_of_snippets"],
             )
 
+    def get_all_category_summaries(self) -> tuple[CategorySummary, ...]:
+        """Return all category summaries in one query for tree construction."""
+        return tuple(self.get_category_summaries())
+
     def get_category_children(self, parent_id: int | None):
         """Yield direct children of a category, ordered by name."""
         return self.get_categories(
