@@ -12,6 +12,7 @@ from ui.database_selection import DatabaseSelection
 
 
 class SingleInstanceTestCase(unittest.TestCase):
+    @patch("btText.theme.initialize")
     @patch("btText.DataModel")
     @patch("btText.i18n.initialize")
     @patch("btText.SettingsStore")
@@ -28,6 +29,7 @@ class SingleInstanceTestCase(unittest.TestCase):
         settings_store,
         initialize_i18n,
         data_model,
+        initialize_theme,
     ):
         checker_class.return_value.IsAnotherRunning.return_value = True
         settings_store.return_value.load.return_value = AppSettings()
@@ -35,6 +37,7 @@ class SingleInstanceTestCase(unittest.TestCase):
         btText.main()
 
         app_class.return_value.SetAppName.assert_called_once_with("btText")
+        initialize_theme.assert_called_once_with()
         checker_class.assert_called_once_with("btText-test-user")
         message_box.assert_called_once_with(
             "btText is already running.",

@@ -6,6 +6,7 @@ from core import datamodel
 from core.error_messages import format_user_error
 from i18n import _
 from ui import utils
+from ui import theme
 
 
 SEARCH_DELAY_MS = 300
@@ -98,6 +99,7 @@ class SearchDialog(wx.Dialog):
         dialog_sizer.Add(pane, 1, wx.EXPAND)
         self.SetSizer(dialog_sizer)
         self.SetMinSize(self.FromDIP((700, 440)))
+        theme.apply(self)
         self.SetSize(self.FromDIP((900, 580)))
         self.CentreOnParent()
 

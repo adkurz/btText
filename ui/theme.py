@@ -1,0 +1,117 @@
+"""System-driven colours for btText's wx user interface."""
+
+from __future__ import annotations
+
+import ctypes
+from dataclasses import dataclass
+import sys
+
+import wx
+
+
+@dataclass(frozen=True)
+class Theme:
+    """Colours used for an application appearance."""
+
+    dark: bool
+    window_background: wx.Colour
+    control_background: wx.Colour
+    foreground: wx.Colour
+
+
+_DARK_THEME = Theme(
+    dark=True,
+    window_background=wx.Colour(32, 32, 32),
+    control_background=wx.Colour(24, 24, 24),
+    foreground=wx.Colour(240, 240, 240),
+)
+_active_theme: Theme | None = None
+
+
+def system_uses_dark_mode() -> bool:
+    """Return whether wx reports that the system uses a dark appearance."""
+    get_appearance = getattr(wx.SystemSettings, "GetAppearance", None)
+    if get_appearance is None:
+        return False
+    return bool(get_appearance().IsDark())
+
+
+def initialize() -> Theme:
+    """Capture the current system appearance for this application run."""
+    global _active_theme
+    if system_uses_dark_mode():
+        _active_theme = _DARK_THEME
+    else:
+        _active_theme = Theme(
+            dark=False,
+            window_background=wx.SystemSettings.GetColour(
+                wx.SYS_COLOUR_3DFACE
+            ),
+            control_background=wx.SystemSettings.GetColour(
+                wx.SYS_COLOUR_WINDOW
+            ),
+            foreground=wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT),
+        )
+    return _active_theme
+
+
+def get_active_theme() -> Theme:
+    """Return the startup theme, initializing it on first use if necessary."""
+    return _active_theme if _active_theme is not None else initialize()
+
+
+def apply(window: wx.Window) -> None:
+    """Apply the startup theme to a window and all existing descendants."""
+    active_theme = get_active_theme()
+    _apply_to_window(window, active_theme)
+    for child in window.GetChildren():
+        _apply_tree(child, active_theme)
+    if isinstance(window, wx.TopLevelWindow):
+        _apply_windows_title_bar(window, active_theme.dark)
+
+
+def _apply_tree(window: wx.Window, active_theme: Theme) -> None:
+    """Apply one theme recursively without resolving it again."""
+    _apply_to_window(window, active_theme)
+    for child in window.GetChildren():
+        _apply_tree(child, active_theme)
+
+
+def _apply_to_window(window: wx.Window, active_theme: Theme) -> None:
+    """Set colours appropriate for one wx control."""
+    is_text_surface = isinstance(window, (wx.TextCtrl, wx.TreeCtrl, wx.ListCtrl))
+    background = (
+        active_theme.control_background
+        if is_text_surface
+        else active_theme.window_background
+    )
+    window.SetBackgroundColour(background)
+    window.SetForegroundColour(active_theme.foreground)
+    window.Refresh()
+
+
+def _apply_windows_title_bar(window: wx.TopLevelWindow, dark: bool) -> None:
+    """Ask Windows to match a top-level title bar to the active appearance."""
+    if sys.platform != "win32":
+        return
+    try:
+        attribute_value = ctypes.c_int(int(dark))
+        handle = ctypes.c_void_p(window.GetHandle())
+        # DWMWA_USE_IMMERSIVE_DARK_MODE is 20 on supported Windows versions;
+        # older Windows 10 builds used 19 for the same opt-in.
+        result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+            handle,
+            20,
+            ctypes.byref(attribute_value),
+            ctypes.sizeof(attribute_value),
+        )
+        if result != 0:
+            ctypes.windll.dwmapi.DwmSetWindowAttribute(
+                handle,
+                19,
+                ctypes.byref(attribute_value),
+                ctypes.sizeof(attribute_value),
+            )
+    except (AttributeError, OSError, TypeError, ValueError):
+        # Colouring the client area is still useful on unsupported systems.
+        return

@@ -9,6 +9,7 @@ from core.shortcuts import DEFAULT_TOGGLE_HOTKEY, Hotkey
 from i18n import SYSTEM_LANGUAGE, _, get_language_display_name
 from ui.hotkey_recorder import hotkey_from_event, is_modifier_event
 from ui.shortcut_display import format_hotkey
+from ui import theme
 
 
 class FocusableReadOnlyTextCtrl(wx.TextCtrl):
@@ -119,6 +120,7 @@ class SettingsDialog(wx.Dialog):
         self.SetMinSize(self.FromDIP((620, 430)))
         self.SetSize(self.FromDIP((720, 500)))
         self.CentreOnParent()
+        theme.apply(self)
 
         self.Bind(wx.EVT_CHAR_HOOK, self._on_character)
         self.ok_button.Bind(wx.EVT_BUTTON, self._on_ok)

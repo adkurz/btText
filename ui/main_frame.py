@@ -12,6 +12,7 @@ from core.app_settings import AppSettings, SettingsStore
 from core.error_messages import format_user_error
 from i18n import _
 from ui import utils
+from ui import theme
 from ui.category_tree import CategoryTree
 from ui.database_selection import select_database
 from ui.global_hotkey import WxGlobalHotkeyBinding
@@ -53,6 +54,7 @@ class MainFrame(sc.SizedFrame):
         self._create_statusbar()
         self._create_tray_icon()
         self._configure_frame_geometry()
+        theme.apply(self)
         # Let wx finish creating and displaying the frame before touching
         # process-wide hooks or loading all hotstrings from the database.
         wx.CallAfter(self._start_process_integrations)

@@ -13,6 +13,7 @@ import i18n
 from i18n import _
 import info
 import ui
+from ui import theme
 from core.datamodel import DataModel
 from ui.database_selection import select_database
 
@@ -89,6 +90,7 @@ def main():
     try:
         app = wx.App()
         app.SetAppName(info.name)
+        theme.initialize()
         instance_checker = wx.SingleInstanceChecker(
             f"{info.name}-{wx.GetUserId()}"
         )

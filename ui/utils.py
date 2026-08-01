@@ -5,6 +5,7 @@ from contextlib import contextmanager
 import wx
 
 from i18n import pgettext
+from ui import theme
 
 
 @contextmanager
@@ -80,6 +81,7 @@ class YesNoConfirmationDialog(wx.Dialog):
         self.SetSizerAndFit(dialog_sizer)
         self.SetMinSize(self.FromDIP((420, 180)))
         self.CentreOnParent()
+        theme.apply(self)
         self.Bind(wx.EVT_SHOW, self._on_show)
 
     def _on_show(self, event: wx.ShowEvent):
