@@ -2,6 +2,7 @@ data.db
 __pycache__/
 *.py[cod]
 *.mo
+*.html
 .venv/
 venv/
 env/
