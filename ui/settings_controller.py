@@ -30,6 +30,7 @@ class SettingsController:
         self._settings = settings
         self._global_hotkey = global_hotkey
         self._hotstrings = hotstrings
+        self._hotstrings_running = False
 
     @property
     def settings(self) -> AppSettings:
@@ -39,6 +40,14 @@ class SettingsController:
     def register_initial_hotkey(self) -> bool:
         """Register the configured hotkey during application startup."""
         return self._register_hotkey(self._settings.toggle_window_hotkey)
+
+    def start_initial_hotstrings(self) -> bool:
+        """Load hotstrings and start monitoring when currently configured."""
+        self._hotstrings.refresh()
+        if not self._settings.hotstrings_enabled:
+            return True
+        self._hotstrings_running = self._hotstrings.start()
+        return self._hotstrings_running
 
     def unregister_hotkey(self) -> None:
         """Release the currently registered global hotkey."""
@@ -83,11 +92,11 @@ class SettingsController:
         """Apply and persist settings, rolling runtime state back on failure."""
         old_hotkey = self._settings.toggle_window_hotkey
         hotkey_changed = hotkey != old_hotkey
-        hotstrings_were_enabled = self._settings.hotstrings_enabled
         hotstrings_started = False
-        if hotstrings_enabled and not hotstrings_were_enabled:
+        if hotstrings_enabled and not self._hotstrings_running:
             if not self._hotstrings.start():
                 return False
+            self._hotstrings_running = True
             hotstrings_started = True
         if hotkey_changed:
             self.unregister_hotkey()
@@ -119,6 +128,7 @@ class SettingsController:
             )
             if hotstrings_started:
                 self._hotstrings.stop()
+                self._hotstrings_running = False
             return False
 
         new_settings = AppSettings(
@@ -139,6 +149,7 @@ class SettingsController:
         except SettingsError as error:
             if hotstrings_started:
                 self._hotstrings.stop()
+                self._hotstrings_running = False
             if hotkey_changed:
                 self.unregister_hotkey()
             restored = (
@@ -163,6 +174,7 @@ class SettingsController:
         self._settings = new_settings
         if not hotstrings_enabled:
             self._hotstrings.stop()
+            self._hotstrings_running = False
         return True
 
     def save_database_file(self, database_file: str) -> bool:

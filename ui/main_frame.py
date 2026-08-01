@@ -223,9 +223,7 @@ class MainFrame(sc.SizedFrame):
     def _start_process_integrations(self) -> None:
         """Activate configured hotkeys and hotstring monitoring."""
         self._settings_controller.register_initial_hotkey()
-        self._hotstring_controller.refresh()
-        if self._settings_controller.settings.hotstrings_enabled:
-            self._hotstring_controller.start()
+        self._settings_controller.start_initial_hotstrings()
 
     def _configure_frame_geometry(self) -> None:
         """Apply initial frame size constraints and screen placement."""

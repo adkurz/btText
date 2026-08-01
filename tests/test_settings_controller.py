@@ -86,6 +86,58 @@ class SettingsControllerTestCase(unittest.TestCase):
         self.global_hotkey.register.assert_not_called()
         self.global_hotkey.unregister.assert_not_called()
 
+    def test_initial_hotstring_start_failure_can_be_retried_on_apply(self):
+        self.hotstrings.start.side_effect = (False, True)
+
+        self.assertFalse(self.controller.start_initial_hotstrings())
+        changed = self.controller.apply(
+            self.settings.toggle_window_hotkey,
+            self.settings.language,
+            self.settings.appearance,
+            self.settings.include_copied_text_in_clipboard_history,
+            self.settings.allow_copied_text_cloud_upload,
+            self.settings.hotstrings_enabled,
+            self.settings.preserve_hotstring_boundary,
+            self.settings.notify_hotstring_expansion,
+        )
+
+        self.assertTrue(changed)
+        self.assertEqual(self.hotstrings.start.call_count, 2)
+        self.store.save.assert_called_once_with(self.controller.settings)
+
+    def test_successful_initial_hotstring_start_is_not_repeated_on_apply(self):
+        self.hotstrings.start.return_value = True
+
+        self.assertTrue(self.controller.start_initial_hotstrings())
+        changed = self.controller.apply(
+            self.settings.toggle_window_hotkey,
+            self.settings.language,
+            self.settings.appearance,
+            self.settings.include_copied_text_in_clipboard_history,
+            self.settings.allow_copied_text_cloud_upload,
+            self.settings.hotstrings_enabled,
+            self.settings.preserve_hotstring_boundary,
+            self.settings.notify_hotstring_expansion,
+        )
+
+        self.assertTrue(changed)
+        self.hotstrings.start.assert_called_once_with()
+
+    def test_initial_hotstrings_are_loaded_but_not_started_when_disabled(self):
+        self.settings = AppSettings(hotstrings_enabled=False)
+        self.controller = SettingsController(
+            self.parent,
+            self.store,
+            self.settings,
+            self.global_hotkey,
+            self.hotstrings,
+        )
+
+        self.assertTrue(self.controller.start_initial_hotstrings())
+
+        self.hotstrings.refresh.assert_called_once_with()
+        self.hotstrings.start.assert_not_called()
+
     @patch("ui.settings_controller.wx.MessageBox")
     def test_hotkey_conflict_restores_old_binding_without_saving(
         self,

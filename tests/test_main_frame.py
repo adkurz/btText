@@ -137,12 +137,9 @@ class MainFrameConstructionTestCase(unittest.TestCase):
                     .register_initial_hotkey.assert_called_once_with()
                 )
                 (
-                    hotstring_controller_class.return_value.refresh
+                    settings_controller_class.return_value
+                    .start_initial_hotstrings
                     .assert_called_once_with()
-                )
-                (
-                    hotstring_controller_class.return_value.start
-                    .assert_not_called()
                 )
                 tray_icon_class.assert_called_once_with(frame)
             finally:
