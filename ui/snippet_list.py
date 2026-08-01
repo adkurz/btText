@@ -271,11 +271,14 @@ class SnippetList(wx.ListView):
         self._transfer_buffer.set("snippet", snippet_ids, copy)
         snippet_count = len(snippet_ids)
         if copy:
-            # Translators: Status after copying snippets; they are not pasted yet.
-            # {count} is the number copied, and Ctrl+V is the paste shortcut.
+            # Translators: Status after copying snippets; they are not pasted
+            # yet. Copies omit globally unique hotstrings. {count} is the
+            # number copied, and Ctrl+V is the paste shortcut.
             message = ngettext(
-                "Copied {count} snippet. Select a category and press Ctrl+V.",
-                "Copied {count} snippets. Select a category and press Ctrl+V.",
+                "Copied {count} snippet. Its hotstring will not be included "
+                "when pasted. Select a category and press Ctrl+V.",
+                "Copied {count} snippets. Their hotstrings will not be included "
+                "when pasted. Select a category and press Ctrl+V.",
                 snippet_count,
             )
         else:

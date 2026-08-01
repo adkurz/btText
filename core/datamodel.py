@@ -859,7 +859,7 @@ class DataModel:
 
     @_translate_sqlite_errors
     def copy_category(self, id: int, parent_id: int | None) -> Category:
-        """Deep-copy a category, its descendants, and their snippets."""
+        """Deep-copy a category tree without globally unique hotstrings."""
         source = self.get_category(id)
         if parent_id is not None and self._is_category_descendant(parent_id, id):
             raise CategoryValidationError(
@@ -891,7 +891,7 @@ class DataModel:
         source_id: int,
         target_id: int,
     ) -> None:
-        """Recursively copy child categories and snippets into a new parent."""
+        """Recursively copy children and snippets, omitting hotstrings."""
         connection.execute(
             "INSERT INTO snippet (category_id, name, content, weight) "
             "SELECT ?, name, content, weight FROM snippet WHERE category_id = ?",
@@ -923,7 +923,7 @@ class DataModel:
 
     @_translate_sqlite_errors
     def copy_snippet(self, id: int, category_id: int) -> Snippet:
-        """Copy a snippet into another category."""
+        """Copy a snippet without its globally unique hotstring."""
         return self.copy_snippets((id,), category_id)[0]
 
     @_translate_sqlite_errors
@@ -955,7 +955,7 @@ class DataModel:
         ids: tuple[int, ...] | list[int],
         category_id: int,
     ) -> list[Snippet]:
-        """Atomically copy multiple snippets into another category."""
+        """Atomically copy snippets without their globally unique hotstrings."""
         snippets = []
         for id in ids:
             source = self.get_snippet(id)

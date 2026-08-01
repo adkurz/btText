@@ -410,7 +410,14 @@ class DataModelTestCase(unittest.TestCase):
         child = self.model.add_category(
             Category("Child", parent_id=source.id)
         )
-        self.model.add_snippet(Snippet("Nested", "Content", child.id))
+        self.model.add_snippet(
+            Snippet(
+                "Nested",
+                "Content",
+                child.id,
+                hotstring="nested",
+            )
+        )
         destination = self.model.add_category(Category("Destination"))
 
         self.model.move_category(source.id, destination.id)
@@ -425,6 +432,7 @@ class DataModelTestCase(unittest.TestCase):
         self.assertEqual(copied.name, "Source")
         self.assertEqual(copied_child.name, "Child")
         self.assertEqual(copied_snippet.content, "Content")
+        self.assertIsNone(copied_snippet.hotstring)
 
         with self.assertRaises(CategoryValidationError):
             self.model.copy_category(source.id, source.id)

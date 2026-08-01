@@ -410,9 +410,11 @@ class CategoryTree(wx.TreeCtrl):
         self._transfer_buffer.set("category", category_id, copy)
         if copy:
             # Translators: Status after copying a category; it remains pending
-            # until the user selects a destination and presses Ctrl+V.
+            # until pasted. Category copies omit all snippet hotstrings because
+            # each hotstring can belong to only one snippet.
             message = _(
-                "Copied category. Select a destination and press Ctrl+V."
+                "Copied category. Its hotstrings will not be included when "
+                "pasted. Select a destination and press Ctrl+V."
             )
         else:
             # Translators: Status after cutting a category; it remains pending
