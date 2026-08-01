@@ -476,11 +476,13 @@ class MainFrame(sc.SizedFrame):
         self.status_bar.SetStatusText(message)
 
     def on_about(self, event: wx.CommandEvent):
-        """Show application name, version, and author."""
+        """Show application name, version, author, copyright, and license."""
         about_info = wx.adv.AboutDialogInfo()
         about_info.AddDeveloper(info.author)
         about_info.SetName(info.name)
         about_info.SetVersion(info.version)
+        about_info.SetCopyright(info.copyright)
+        about_info.SetLicense(info.license)
         wx.adv.AboutBox(about_info)
 
     def _create_tray_icon(self):
