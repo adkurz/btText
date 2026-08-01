@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 import ctypes
 import uuid
 
@@ -19,6 +20,40 @@ from platform_support.clipboard_snapshot import ClipboardSnapshot
 
 
 PasteError = ClipboardError
+
+
+class ClipboardRestoreError(ClipboardError):
+    """Report an operation failure followed by failed clipboard recovery."""
+
+    def __init__(
+        self,
+        operation_error: Exception,
+        restore_error: Exception,
+    ):
+        """Retain both failures while presenting one clipboard error."""
+        self.operation_error = operation_error
+        self.restore_error = restore_error
+        super().__init__(
+            "{operation_error} The previous clipboard contents could not be "
+            "restored: {restore_error}".format(
+                operation_error=operation_error,
+                restore_error=restore_error,
+            )
+        )
+
+
+def restore_after_failure(
+    restore: Callable[[], None],
+    operation_error: Exception,
+) -> None:
+    """Attempt recovery and preserve both errors when recovery also fails."""
+    try:
+        restore()
+    except Exception as restore_error:
+        raise ClipboardRestoreError(
+            operation_error,
+            restore_error,
+        ) from operation_error
 
 
 _MARKER_FORMAT = user32.RegisterClipboardFormatW("BTText.PasteMarker")
@@ -66,9 +101,9 @@ def _replace_clipboard(text: str, marker: bytes) -> ClipboardSnapshot:
         finally:
             user32.CloseClipboard()
         return snapshot
-    except Exception:
+    except Exception as operation_error:
         # EmptyClipboard may already have discarded the original contents.
-        snapshot.restore()
+        restore_after_failure(snapshot.restore, operation_error)
         raise
 
 
@@ -120,11 +155,14 @@ def paste_text(target_window: int, text: str) -> PendingPaste:
 
     pending = PendingPaste.prepare(text)
     if not windows.activate_window(target_window):
-        pending.restore_clipboard()
-        raise PasteError("The previously active window could not be activated.")
+        operation_error = PasteError(
+            "The previously active window could not be activated."
+        )
+        restore_after_failure(pending.restore_clipboard, operation_error)
+        raise operation_error
     try:
         keyboard_input.send_ctrl_v()
-    except Exception:
-        pending.restore_clipboard()
+    except Exception as operation_error:
+        restore_after_failure(pending.restore_clipboard, operation_error)
         raise
     return pending

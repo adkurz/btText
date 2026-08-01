@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock, call, patch
 
 from platform_support import clipboard, hotstring_expansion
-from platform_support.clipboard_paste import PendingPaste
+from platform_support.clipboard_paste import ClipboardRestoreError, PendingPaste
 
 
 class HotstringExpansionTestCase(unittest.TestCase):
@@ -123,3 +123,38 @@ class HotstringExpansionTestCase(unittest.TestCase):
                 hotstring_expansion.expand_hotstring(123, "Expanded", 3, None)
 
         pending.restore_clipboard.assert_called_once_with()
+
+    def test_input_and_restore_failures_are_both_preserved(self):
+        operation_error = clipboard.ClipboardError("input failed")
+        restore_error = clipboard.ClipboardError("restore failed")
+        pending = Mock(spec=PendingPaste)
+        pending.restore_clipboard.side_effect = restore_error
+        with (
+            patch.object(
+                hotstring_expansion.windows,
+                "is_valid_window",
+                return_value=True,
+            ),
+            patch.object(PendingPaste, "prepare", return_value=pending),
+            patch.object(
+                hotstring_expansion.windows,
+                "activate_window",
+                return_value=True,
+            ),
+            patch.object(
+                hotstring_expansion.keyboard_input,
+                "send_virtual_key",
+                side_effect=operation_error,
+            ),
+        ):
+            with self.assertRaises(ClipboardRestoreError) as raised:
+                hotstring_expansion.expand_hotstring(
+                    123,
+                    "Expanded",
+                    3,
+                    None,
+                )
+
+        self.assertIs(raised.exception.operation_error, operation_error)
+        self.assertIs(raised.exception.restore_error, restore_error)
+        self.assertIs(raised.exception.__cause__, operation_error)

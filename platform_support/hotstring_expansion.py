@@ -2,7 +2,7 @@
 
 from platform_support import keyboard_input, windows
 from platform_support.clipboard import ClipboardError
-from platform_support.clipboard_paste import PendingPaste
+from platform_support.clipboard_paste import PendingPaste, restore_after_failure
 
 
 def expand_hotstring(
@@ -16,14 +16,17 @@ def expand_hotstring(
         raise ClipboardError("The active window no longer exists.")
     pending = PendingPaste.prepare(text)
     if not windows.activate_window(target_window):
-        pending.restore_clipboard()
-        raise ClipboardError("The active window could not be activated.")
+        operation_error = ClipboardError(
+            "The active window could not be activated."
+        )
+        restore_after_failure(pending.restore_clipboard, operation_error)
+        raise operation_error
     try:
         keyboard_input.send_virtual_key(0x08, hotstring_length)  # VK_BACK
         keyboard_input.send_ctrl_v()
         if boundary_key is not None:
             keyboard_input.send_virtual_key(boundary_key)
-    except Exception:
-        pending.restore_clipboard()
+    except Exception as operation_error:
+        restore_after_failure(pending.restore_clipboard, operation_error)
         raise
     return pending

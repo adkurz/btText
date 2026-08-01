@@ -2,7 +2,7 @@ import unittest
 from unittest.mock import Mock, patch
 
 from platform_support import clipboard, clipboard_paste
-from platform_support.clipboard_paste import PendingPaste
+from platform_support.clipboard_paste import ClipboardRestoreError, PendingPaste
 
 
 class RecordingClipboardSnapshot:
@@ -158,6 +158,41 @@ class PasteTextTestCase(unittest.TestCase):
 
         restore_clipboard.assert_called_once_with()
 
+    def test_activation_and_restore_failures_are_both_preserved(self):
+        restore_error = clipboard.ClipboardError("restore failed")
+        with (
+            patch.object(
+                clipboard_paste.windows,
+                "is_valid_window",
+                return_value=True,
+            ),
+            patch.object(
+                clipboard_paste,
+                "_replace_clipboard",
+                return_value=RecordingClipboardSnapshot(),
+            ),
+            patch.object(
+                clipboard_paste.windows,
+                "activate_window",
+                return_value=False,
+            ),
+            patch.object(
+                PendingPaste,
+                "restore_clipboard",
+                side_effect=restore_error,
+            ),
+        ):
+            with self.assertRaises(ClipboardRestoreError) as raised:
+                clipboard_paste.paste_text(123, "Text")
+
+        self.assertRegex(str(raised.exception), "could not be activated")
+        self.assertRegex(str(raised.exception), "restore failed")
+        self.assertIs(
+            raised.exception.__cause__,
+            raised.exception.operation_error,
+        )
+        self.assertIs(raised.exception.restore_error, restore_error)
+
     def test_replacement_failure_restores_original_snapshot(self):
         snapshot = RecordingClipboardSnapshot()
         with (
@@ -192,6 +227,37 @@ class PasteTextTestCase(unittest.TestCase):
                 clipboard_paste._replace_clipboard("snippet", b"marker")
 
         self.assertEqual(snapshot.restore_calls, 1)
+
+    def test_replacement_and_snapshot_restore_failures_are_both_preserved(self):
+        operation_error = clipboard.ClipboardError("write failed")
+        restore_error = clipboard.ClipboardError("snapshot restore failed")
+        snapshot = Mock()
+        snapshot.restore.side_effect = restore_error
+        with (
+            patch.object(
+                clipboard_paste.ClipboardSnapshot,
+                "capture",
+                return_value=snapshot,
+            ),
+            patch.object(clipboard_paste, "_open_clipboard"),
+            patch.object(
+                clipboard_paste.user32,
+                "EmptyClipboard",
+                return_value=True,
+            ),
+            patch.object(
+                clipboard_paste,
+                "_set_clipboard_text",
+                side_effect=operation_error,
+            ),
+            patch.object(clipboard_paste.user32, "CloseClipboard"),
+        ):
+            with self.assertRaises(ClipboardRestoreError) as raised:
+                clipboard_paste._replace_clipboard("snippet", b"marker")
+
+        self.assertIs(raised.exception.operation_error, operation_error)
+        self.assertIs(raised.exception.restore_error, restore_error)
+        self.assertIs(raised.exception.__cause__, operation_error)
 
 
 if __name__ == "__main__":
