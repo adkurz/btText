@@ -50,7 +50,7 @@ Verwenden Sie keinen geschützten Ordner wie `C:\Program Files`, weil btText and
 
 Beim ersten Start fragt btText, ob eine neue Datenbank erstellt oder eine vorhandene Datenbank geöffnet werden soll.
 
-- **Neue Datenbank erstellen** öffnet einen Speicherdialog. Werden in diesem Dialog keine Änderungen vorgenommen, wird eine Datenbank mit dem Namen "data.db" im Standardverzeichnis gespeichert. Installierte Version: "%APPDATA%\btText\". Portable Version: Neben der Datei "btText.exe".
+- **Neue Datenbank erstellen** öffnet einen Speicherdialog. Werden in diesem Dialog keine Änderungen vorgenommen, wird eine Datenbank mit dem Namen `data.db` im Standardverzeichnis gespeichert. Installierte Version: `%APPDATA%\btText\`. Portable Version: Neben der Datei `btText.exe`.
 - **Vorhandene Datenbank öffnen** öffnet eine bereits vorhandene btText-Datenbank.
 - **Abbrechen** beendet die Auswahl. Ohne Datenbank kann btText nicht arbeiten.
 
