@@ -73,6 +73,7 @@ class SettingsController:
         self,
         hotkey: Hotkey,
         language: str,
+        appearance: str,
         include_copied_text_in_clipboard_history: bool,
         allow_copied_text_cloud_upload: bool,
         hotstrings_enabled: bool,
@@ -124,6 +125,7 @@ class SettingsController:
             database_file=self._settings.database_file,
             toggle_window_hotkey=hotkey,
             language=language,
+            appearance=appearance,
             include_copied_text_in_clipboard_history=(
                 include_copied_text_in_clipboard_history
             ),

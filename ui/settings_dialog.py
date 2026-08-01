@@ -4,6 +4,11 @@ from collections.abc import Callable
 
 import wx
 
+from core.app_settings import (
+    APPEARANCE_DARK,
+    APPEARANCE_LIGHT,
+    APPEARANCE_SYSTEM,
+)
 from core.error_messages import format_user_error
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY, Hotkey
 from i18n import SYSTEM_LANGUAGE, _, get_language_display_name
@@ -30,13 +35,16 @@ class SettingsDialog(wx.Dialog):
         parent,
         current_hotkey: Hotkey,
         current_language: str,
+        current_appearance: str,
         include_copied_text_in_clipboard_history: bool,
         allow_copied_text_cloud_upload: bool,
         hotstrings_enabled: bool,
         preserve_hotstring_boundary: bool,
         notify_hotstring_expansion: bool,
         available_languages: tuple[str, ...],
-        apply_settings: Callable[[Hotkey, str, bool, bool, bool, bool, bool], bool],
+        apply_settings: Callable[
+            [Hotkey, str, str, bool, bool, bool, bool, bool], bool
+        ],
         begin_recording: Callable[[], None],
         end_recording: Callable[[], None],
     ):
@@ -51,6 +59,8 @@ class SettingsDialog(wx.Dialog):
         self._candidate_hotkey = current_hotkey
         self._current_language = current_language
         self._candidate_language = current_language
+        self._current_appearance = current_appearance
+        self._candidate_appearance = current_appearance
         self._current_include_copied_text_in_clipboard_history = (
             include_copied_text_in_clipboard_history
         )
@@ -80,6 +90,10 @@ class SettingsDialog(wx.Dialog):
         # Translators: Tab for general application settings such as language.
         # "&" marks the keyboard mnemonic.
         self.notebook.AddPage(self.general_page, _("&General"))
+        self.design_page = self._create_design_page(self.notebook)
+        # Translators: Tab for selecting the application's visual appearance.
+        # "&" marks the keyboard mnemonic.
+        self.notebook.AddPage(self.design_page, _("&Design"))
         self.hotstrings_page = self._create_hotstrings_page(self.notebook)
         # Translators: Tab for configuring automatic snippet hotstrings.
         # "&" marks the keyboard mnemonic.
@@ -218,6 +232,64 @@ class SettingsDialog(wx.Dialog):
         page.SetSizer(sizer)
         return page
 
+    def _create_design_page(self, notebook: wx.Notebook) -> wx.Panel:
+        """Create controls for selecting the application appearance."""
+        page = wx.Panel(notebook, style=wx.TAB_TRAVERSAL)
+        self._appearance_values = (
+            APPEARANCE_SYSTEM,
+            APPEARANCE_LIGHT,
+            APPEARANCE_DARK,
+        )
+        self.appearance_choice = wx.RadioBox(
+            page,
+            # Translators: Group label for choosing the light or dark design.
+            # "&" marks the keyboard mnemonic.
+            label=_("&Appearance"),
+            choices=(
+                # Translators: Follow the operating system's light/dark mode.
+                _("Use &system setting"),
+                # Translators: Always use the light application design.
+                _("&Light"),
+                # Translators: Always use the dark application design.
+                _("&Dark"),
+            ),
+            majorDimension=1,
+            style=wx.RA_SPECIFY_COLS,
+        )
+        try:
+            selection = self._appearance_values.index(
+                self._candidate_appearance
+            )
+        except ValueError:
+            selection = 0
+        self.appearance_choice.SetSelection(selection)
+        self.appearance_choice.Bind(
+            wx.EVT_RADIOBOX,
+            self._on_appearance_changed,
+        )
+        restart_note = wx.StaticText(
+            page,
+            # Translators: Explains when a newly selected design is loaded.
+            label=_("Design changes take effect after restarting btText."),
+        )
+        restart_note.Wrap(540)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(
+            self.appearance_choice,
+            0,
+            wx.EXPAND | wx.ALL,
+            12,
+        )
+        sizer.Add(
+            restart_note,
+            0,
+            wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            12,
+        )
+        page.SetSizer(sizer)
+        return page
+
     def _create_hotstrings_page(self, notebook: wx.Notebook) -> wx.Panel:
         """Create controls for automatic snippet expansion."""
         page = wx.Panel(notebook, style=wx.TAB_TRAVERSAL)
@@ -296,6 +368,13 @@ class SettingsDialog(wx.Dialog):
             self._candidate_language = self._language_values[selection]
         self._update_apply_button()
 
+    def _on_appearance_changed(self, event: wx.CommandEvent):
+        """Store the pending application appearance."""
+        selection = self.appearance_choice.GetSelection()
+        if selection != wx.NOT_FOUND:
+            self._candidate_appearance = self._appearance_values[selection]
+        self._update_apply_button()
+
     def _on_clipboard_history_changed(self, event: wx.CommandEvent):
         """Store whether copied snippet text may enter clipboard history."""
         self._candidate_include_copied_text_in_clipboard_history = (
@@ -334,6 +413,7 @@ class SettingsDialog(wx.Dialog):
         self.apply_button.Enable(
             self._candidate_hotkey != self._current_hotkey
             or self._candidate_language != self._current_language
+            or self._candidate_appearance != self._current_appearance
             or self._candidate_include_copied_text_in_clipboard_history
             != self._current_include_copied_text_in_clipboard_history
             or self._candidate_allow_copied_text_cloud_upload
@@ -581,6 +661,7 @@ class SettingsDialog(wx.Dialog):
         if (
             self._candidate_hotkey == self._current_hotkey
             and self._candidate_language == self._current_language
+            and self._candidate_appearance == self._current_appearance
             and self._candidate_include_copied_text_in_clipboard_history
             == self._current_include_copied_text_in_clipboard_history
             and self._candidate_allow_copied_text_cloud_upload
@@ -596,6 +677,7 @@ class SettingsDialog(wx.Dialog):
         if not self._apply_settings(
             self._candidate_hotkey,
             self._candidate_language,
+            self._candidate_appearance,
             self._candidate_include_copied_text_in_clipboard_history,
             self._candidate_allow_copied_text_cloud_upload,
             self._candidate_hotstrings_enabled,
@@ -605,6 +687,7 @@ class SettingsDialog(wx.Dialog):
             return False
         self._current_hotkey = self._candidate_hotkey
         self._current_language = self._candidate_language
+        self._current_appearance = self._candidate_appearance
         self._current_include_copied_text_in_clipboard_history = (
             self._candidate_include_copied_text_in_clipboard_history
         )

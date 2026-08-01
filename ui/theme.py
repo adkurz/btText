@@ -9,6 +9,12 @@ import sys
 
 import wx
 
+from core.app_settings import (
+    APPEARANCE_DARK,
+    APPEARANCE_LIGHT,
+    APPEARANCE_SYSTEM,
+)
+
 
 DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 
@@ -23,6 +29,12 @@ class Theme:
     foreground: wx.Colour
 
 
+_LIGHT_THEME = Theme(
+    dark=False,
+    window_background=wx.Colour(240, 240, 240),
+    control_background=wx.Colour(255, 255, 255),
+    foreground=wx.Colour(0, 0, 0),
+)
 _DARK_THEME = Theme(
     dark=True,
     window_background=wx.Colour(32, 32, 32),
@@ -40,22 +52,20 @@ def system_uses_dark_mode() -> bool:
     return bool(get_appearance().IsDark())
 
 
-def initialize() -> Theme:
-    """Capture the current system appearance for this application run."""
+def initialize(appearance: str = APPEARANCE_SYSTEM) -> Theme:
+    """Select and retain the configured appearance for this application run."""
     global _active_theme
-    if system_uses_dark_mode():
+    use_dark_theme = (
+        appearance == APPEARANCE_DARK
+        or (
+            appearance == APPEARANCE_SYSTEM
+            and system_uses_dark_mode()
+        )
+    )
+    if use_dark_theme:
         _active_theme = _DARK_THEME
     else:
-        _active_theme = Theme(
-            dark=False,
-            window_background=wx.SystemSettings.GetColour(
-                wx.SYS_COLOUR_3DFACE
-            ),
-            control_background=wx.SystemSettings.GetColour(
-                wx.SYS_COLOUR_WINDOW
-            ),
-            foreground=wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOWTEXT),
-        )
+        _active_theme = _LIGHT_THEME
     return _active_theme
 
 

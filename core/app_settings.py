@@ -9,6 +9,12 @@ from core.shortcuts import DEFAULT_TOGGLE_HOTKEY, Hotkey
 from core.user_errors import UserFacingError
 
 
+APPEARANCE_SYSTEM = "system"
+APPEARANCE_LIGHT = "light"
+APPEARANCE_DARK = "dark"
+APPEARANCES = (APPEARANCE_SYSTEM, APPEARANCE_LIGHT, APPEARANCE_DARK)
+
+
 class SettingsError(UserFacingError):
     """Raised when application settings cannot be loaded or saved."""
 
@@ -19,6 +25,7 @@ class AppSettings:
     database_file: str | None = None
     toggle_window_hotkey: Hotkey = DEFAULT_TOGGLE_HOTKEY
     language: str = i18n.SYSTEM_LANGUAGE
+    appearance: str = APPEARANCE_SYSTEM
     include_copied_text_in_clipboard_history: bool = True
     allow_copied_text_cloud_upload: bool = True
     hotstrings_enabled: bool = True
@@ -69,6 +76,13 @@ class SettingsStore:
                 ),
                 self.locale_directory,
             )
+            appearance = parser.get(
+                "design",
+                "appearance",
+                fallback=defaults.appearance,
+            ).casefold()
+            if appearance not in APPEARANCES:
+                appearance = defaults.appearance
             database_file = parser.get(
                 "general",
                 "database_file",
@@ -108,6 +122,7 @@ class SettingsStore:
                 database_file=database_file,
                 toggle_window_hotkey=Hotkey.parse(value),
                 language=language,
+                appearance=appearance,
                 include_copied_text_in_clipboard_history=(
                     include_copied_text_in_clipboard_history
                 ),
@@ -142,6 +157,13 @@ class SettingsStore:
                 ),
                 "allow_copied_text_cloud_upload": str(
                     settings.allow_copied_text_cloud_upload
+                ),
+            }
+            parser["design"] = {
+                "appearance": (
+                    settings.appearance
+                    if settings.appearance in APPEARANCES
+                    else APPEARANCE_SYSTEM
                 ),
             }
             if settings.database_file is not None:

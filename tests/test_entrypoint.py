@@ -6,7 +6,7 @@ from pathlib import Path
 from unittest.mock import Mock, patch
 
 import btText
-from core.app_settings import AppSettings, SettingsStore
+from core.app_settings import APPEARANCE_DARK, AppSettings, SettingsStore
 from platform_support import app_paths
 from ui.database_selection import DatabaseSelection
 
@@ -32,12 +32,14 @@ class SingleInstanceTestCase(unittest.TestCase):
         initialize_theme,
     ):
         checker_class.return_value.IsAnotherRunning.return_value = True
-        settings_store.return_value.load.return_value = AppSettings()
+        settings_store.return_value.load.return_value = AppSettings(
+            appearance=APPEARANCE_DARK
+        )
 
         btText.main()
 
         app_class.return_value.SetAppName.assert_called_once_with("btText")
-        initialize_theme.assert_called_once_with()
+        initialize_theme.assert_called_once_with(APPEARANCE_DARK)
         checker_class.assert_called_once_with("btText-test-user")
         message_box.assert_called_once_with(
             "btText is already running.",

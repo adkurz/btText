@@ -15,7 +15,8 @@ available without leaving the active application.
 - Paste Unicode text into the active Windows application.
 - Preserve and restore the previous clipboard contents after a paste.
 - Configure global hotkeys and react to the active keyboard layout.
-- Automatically follow the Windows light or dark app mode at startup.
+- Follow the Windows light or dark app mode at startup, or select a fixed
+  appearance in the settings.
 - Multilingual user interface (english and german).
 - Store data in a portable directory or in the per-user Windows application
   data directory.

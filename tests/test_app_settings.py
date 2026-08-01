@@ -4,6 +4,8 @@ from pathlib import Path
 from unittest.mock import patch
 
 from core.app_settings import (
+    APPEARANCE_DARK,
+    APPEARANCE_SYSTEM,
     AppSettings,
     SettingsError,
     SettingsStore,
@@ -39,6 +41,7 @@ class SettingsStoreTestCase(unittest.TestCase):
                 ),
                 toggle_window_hotkey=Hotkey.parse("CTRL+ALT+F8"),
                 language="de",
+                appearance=APPEARANCE_DARK,
                 include_copied_text_in_clipboard_history=False,
                 allow_copied_text_cloud_upload=False,
                 hotstrings_enabled=False,
@@ -59,6 +62,14 @@ class SettingsStoreTestCase(unittest.TestCase):
             )
             self.assertIn(
                 "language = de",
+                settings_file.read_text(encoding="utf-8"),
+            )
+            self.assertIn(
+                "[design]",
+                settings_file.read_text(encoding="utf-8"),
+            )
+            self.assertIn(
+                "appearance = dark",
                 settings_file.read_text(encoding="utf-8"),
             )
             self.assertIn(
@@ -97,12 +108,37 @@ class SettingsStoreTestCase(unittest.TestCase):
             settings = SettingsStore(settings_file).load()
 
             self.assertEqual(settings.language, "system")
+            self.assertEqual(settings.appearance, APPEARANCE_SYSTEM)
             self.assertTrue(settings.include_copied_text_in_clipboard_history)
             self.assertTrue(settings.allow_copied_text_cloud_upload)
             self.assertTrue(settings.hotstrings_enabled)
             self.assertTrue(settings.preserve_hotstring_boundary)
             self.assertFalse(settings.notify_hotstring_expansion)
             self.assertIsNone(settings.database_file)
+
+    def test_invalid_appearance_falls_back_to_system(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            settings_file = Path(temporary_directory) / "settings.ini"
+            settings_file.write_text(
+                "[design]\nappearance = sepia\n",
+                encoding="utf-8",
+            )
+
+            settings = SettingsStore(settings_file).load()
+
+            self.assertEqual(settings.appearance, APPEARANCE_SYSTEM)
+
+    def test_general_appearance_is_not_migrated(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            settings_file = Path(temporary_directory) / "settings.ini"
+            settings_file.write_text(
+                "[general]\nappearance = dark\n",
+                encoding="utf-8",
+            )
+
+            settings = SettingsStore(settings_file).load()
+
+            self.assertEqual(settings.appearance, APPEARANCE_SYSTEM)
 
     def test_database_beside_settings_file_is_saved_portably(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

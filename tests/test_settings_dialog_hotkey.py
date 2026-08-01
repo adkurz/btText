@@ -4,8 +4,43 @@ from unittest.mock import Mock, patch
 
 import wx
 
+from core.app_settings import APPEARANCE_DARK, APPEARANCE_SYSTEM
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY
 from ui.settings_dialog import SettingsDialog
+
+
+class SettingsDialogDesignTestCase(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.app = wx.GetApp() or wx.App(False)
+
+    def test_design_page_selects_and_reports_appearance(self):
+        apply_settings = Mock(return_value=True)
+        dialog = SettingsDialog(
+            None,
+            DEFAULT_TOGGLE_HOTKEY,
+            "system",
+            APPEARANCE_SYSTEM,
+            True,
+            True,
+            True,
+            True,
+            False,
+            ("en",),
+            apply_settings,
+            Mock(),
+            Mock(),
+        )
+        try:
+            dialog.appearance_choice.SetSelection(2)
+            dialog._on_appearance_changed(Mock())
+
+            self.assertEqual(dialog._candidate_appearance, APPEARANCE_DARK)
+            self.assertTrue(dialog.apply_button.IsEnabled())
+            self.assertTrue(dialog._apply())
+            self.assertEqual(apply_settings.call_args.args[2], APPEARANCE_DARK)
+        finally:
+            dialog.Destroy()
 
 
 class SettingsDialogHotkeyRecordingTestCase(unittest.TestCase):

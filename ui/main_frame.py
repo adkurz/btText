@@ -451,6 +451,7 @@ class MainFrame(sc.SizedFrame):
                 self,
                 settings.toggle_window_hotkey,
                 settings.language,
+                settings.appearance,
                 settings.include_copied_text_in_clipboard_history,
                 settings.allow_copied_text_cloud_upload,
                 settings.hotstrings_enabled,

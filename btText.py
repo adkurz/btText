@@ -90,7 +90,6 @@ def main():
     try:
         app = wx.App()
         app.SetAppName(info.name)
-        theme.initialize()
         instance_checker = wx.SingleInstanceChecker(
             f"{info.name}-{wx.GetUserId()}"
         )
@@ -105,6 +104,7 @@ def main():
         except SettingsError as error:
             settings = AppSettings()
             settings_error = error
+        theme.initialize(settings.appearance)
         language_error = None
         try:
             i18n.initialize(

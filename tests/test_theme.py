@@ -5,6 +5,7 @@ from unittest.mock import Mock, patch
 
 import wx
 
+from core.app_settings import APPEARANCE_DARK, APPEARANCE_LIGHT
 from ui import theme
 
 
@@ -23,22 +24,29 @@ class ThemeSelectionTestCase(unittest.TestCase):
         self.assertTrue(active_theme.dark)
         system_uses_dark_mode.assert_called_once_with()
 
+    @patch("ui.theme.system_uses_dark_mode")
+    def test_explicit_dark_does_not_query_system(self, system_uses_dark_mode):
+        active_theme = theme.initialize(APPEARANCE_DARK)
+
+        self.assertTrue(active_theme.dark)
+        system_uses_dark_mode.assert_not_called()
+
+    @patch("ui.theme.system_uses_dark_mode")
+    def test_explicit_light_does_not_query_system(self, system_uses_dark_mode):
+        active_theme = theme.initialize(APPEARANCE_LIGHT)
+
+        self.assertFalse(active_theme.dark)
+        system_uses_dark_mode.assert_not_called()
+
     @patch("ui.theme.system_uses_dark_mode", return_value=False)
-    def test_initialize_uses_system_colours_for_light_theme(
+    def test_initialize_selects_light_theme_for_light_system(
         self,
         system_uses_dark_mode,
     ):
         active_theme = theme.initialize()
 
         self.assertFalse(active_theme.dark)
-        self.assertEqual(
-            active_theme.window_background,
-            wx.SystemSettings.GetColour(wx.SYS_COLOUR_3DFACE),
-        )
-        self.assertEqual(
-            active_theme.control_background,
-            wx.SystemSettings.GetColour(wx.SYS_COLOUR_WINDOW),
-        )
+        self.assertIs(active_theme, theme._LIGHT_THEME)
 
     @patch("ui.theme._apply_windows_title_bar")
     @patch("ui.theme._apply_to_window")

@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import Mock, call, patch
 
-from core.app_settings import AppSettings, SettingsError
+from core.app_settings import APPEARANCE_DARK, AppSettings, SettingsError
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY, Hotkey
 from ui.settings_controller import SettingsController
 
@@ -38,6 +38,7 @@ class SettingsControllerTestCase(unittest.TestCase):
         changed = self.controller.apply(
             new_hotkey,
             self.settings.language,
+            self.settings.appearance,
             self.settings.include_copied_text_in_clipboard_history,
             self.settings.allow_copied_text_cloud_upload,
             self.settings.hotstrings_enabled,
@@ -71,6 +72,7 @@ class SettingsControllerTestCase(unittest.TestCase):
         changed = self.controller.apply(
             self.settings.toggle_window_hotkey,
             self.settings.language,
+            self.settings.appearance,
             self.settings.include_copied_text_in_clipboard_history,
             self.settings.allow_copied_text_cloud_upload,
             True,
@@ -95,6 +97,7 @@ class SettingsControllerTestCase(unittest.TestCase):
         changed = self.controller.apply(
             new_hotkey,
             self.settings.language,
+            self.settings.appearance,
             self.settings.include_copied_text_in_clipboard_history,
             self.settings.allow_copied_text_cloud_upload,
             self.settings.hotstrings_enabled,
@@ -119,6 +122,7 @@ class SettingsControllerTestCase(unittest.TestCase):
         changed = self.controller.apply(
             self.settings.toggle_window_hotkey,
             self.settings.language,
+            self.settings.appearance,
             self.settings.include_copied_text_in_clipboard_history,
             self.settings.allow_copied_text_cloud_upload,
             False,
@@ -130,6 +134,22 @@ class SettingsControllerTestCase(unittest.TestCase):
         self.assertFalse(self.controller.settings.hotstrings_enabled)
         self.store.save.assert_called_once_with(self.controller.settings)
         self.hotstrings.stop.assert_called_once_with()
+
+    def test_changed_appearance_is_persisted_for_next_start(self):
+        changed = self.controller.apply(
+            self.settings.toggle_window_hotkey,
+            self.settings.language,
+            APPEARANCE_DARK,
+            self.settings.include_copied_text_in_clipboard_history,
+            self.settings.allow_copied_text_cloud_upload,
+            self.settings.hotstrings_enabled,
+            self.settings.preserve_hotstring_boundary,
+            self.settings.notify_hotstring_expansion,
+        )
+
+        self.assertTrue(changed)
+        self.assertEqual(self.controller.settings.appearance, APPEARANCE_DARK)
+        self.store.save.assert_called_once_with(self.controller.settings)
 
     @patch("ui.settings_controller.wx.MessageBox")
     def test_resume_reports_failed_registration(self, message_box):
