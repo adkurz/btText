@@ -357,8 +357,8 @@ class MainFrame(sc.SizedFrame):
         self.Bind(wx.EVT_MENU, self.on_hide_window, close_item)
         file_menu.AppendSeparator()
         # Translators: File-menu command that exits btText completely,
-        # including its notification-area icon.
-        exit_item = file_menu.Append(wx.ID_EXIT, _("E&xit"))
+        # including its notification-area icon. Keep Ctrl+Q after "\t".
+        exit_item = file_menu.Append(wx.ID_EXIT, _("E&xit\tCtrl+Q"))
         self.Bind(wx.EVT_MENU, self.on_exit_application, exit_item)
         # Translators: Main-window menu containing window-close and full-exit
         # commands. "&" marks the keyboard mnemonic.

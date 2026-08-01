@@ -125,6 +125,8 @@ class MainFrameConstructionTestCase(unittest.TestCase):
                 self.assertIsInstance(frame.snippet_list, SnippetList)
                 self.assertIsNotNone(frame.GetMenuBar())
                 self.assertIsNotNone(frame.GetStatusBar())
+                exit_item = frame.GetMenuBar().FindItemById(wx.ID_EXIT)
+                self.assertEqual(exit_item.GetItemLabel(), _("E&xit\tCtrl+Q"))
                 self.assertEqual(frame.category_tree.GetName(), _("Categories"))
                 self.assertEqual(
                     frame.snippet_list.GetName(),
