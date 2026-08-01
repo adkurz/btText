@@ -68,6 +68,9 @@ Prebuilt Windows releases are produced as:
 See [`docs/setup.md`](docs/setup.md) for installation, portable use, database
 selection, updates, uninstall behavior, and build options.
 
+The German end-user manual is available at
+[`docs/benutzerhandbuch.md`](docs/benutzerhandbuch.md).
+
 ## Requirements
 
 - Windows 11 x64. May also work with older versions of Windows, but this has not been tested.
