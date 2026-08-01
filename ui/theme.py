@@ -94,6 +94,17 @@ def get_active_theme() -> Theme:
     return _active_theme if _active_theme is not None else initialize()
 
 
+def apply_to_app(app: wx.App) -> None:
+    """Request the selected native appearance before creating any windows."""
+    active_theme = get_active_theme()
+    appearance = (
+        wx.PyApp.Appearance.Dark
+        if active_theme.dark
+        else wx.PyApp.Appearance.Light
+    )
+    app.SetAppearance(appearance)
+
+
 def apply(window: wx.Window) -> None:
     """Apply the startup theme to a window and all existing descendants."""
     active_theme = get_active_theme()

@@ -48,6 +48,22 @@ class ThemeSelectionTestCase(unittest.TestCase):
         self.assertFalse(active_theme.dark)
         self.assertIs(active_theme, theme._LIGHT_THEME)
 
+    def test_apply_to_app_requests_native_dark_appearance(self):
+        app = Mock()
+        theme._active_theme = theme._DARK_THEME
+
+        theme.apply_to_app(app)
+
+        app.SetAppearance.assert_called_once_with(wx.PyApp.Appearance.Dark)
+
+    def test_apply_to_app_requests_native_light_appearance(self):
+        app = Mock()
+        theme._active_theme = theme._LIGHT_THEME
+
+        theme.apply_to_app(app)
+
+        app.SetAppearance.assert_called_once_with(wx.PyApp.Appearance.Light)
+
     @patch("ui.theme.sys.platform", "win32")
     @patch("ui.theme._windows_uses_dark_mode", return_value=True)
     def test_windows_system_appearance_uses_windows_preference(

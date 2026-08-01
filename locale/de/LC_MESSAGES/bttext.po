@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-08-01 19:37+0200\n"
+"POT-Creation-Date: 2026-08-01 21:26+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -29,19 +29,19 @@ msgstr "Datenbankfehler"
 #. database path in the application settings.
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:78 btText.py:134 ui/settings_controller.py:198
+#: btText.py:78 btText.py:135 ui/settings_controller.py:198
 msgid "Settings error"
 msgstr "Einstellungsfehler"
 
 #. Translators: Information shown when the user tries to start
 #. the application while it is already running.
-#: btText.py:121
+#: btText.py:122
 msgid "btText is already running."
 msgstr "btText wird bereits ausgeführt."
 
 #. Translators: Title of a startup warning after a translation
 #. catalog could not be loaded.
-#: btText.py:143
+#: btText.py:144
 msgid "Language error"
 msgstr "Sprachfehler"
 
@@ -1318,3 +1318,4 @@ msgstr "Hoch"
 #: ui/validators.py:26
 msgid "The input field must not be empty!"
 msgstr "Das Eingabefeld darf nicht leer sein!"
+
