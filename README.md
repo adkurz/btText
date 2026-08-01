@@ -8,6 +8,7 @@ available without leaving the active application.
 
 ## Features
 
+- Accessible with screen readers and keyboard navigation.
 - Organize snippets in a hierarchical category tree.
 - Search, create, edit, move, copy, and delete snippets and categories.
 - Assign a weight and an optional hotstring to each snippet.
@@ -20,6 +21,12 @@ available without leaving the active application.
 - Open an existing SQLite database or create a new one.
 - Run as a portable application or install per user without administrator
   privileges.
+
+## Accessibility
+
+btText is designed to be accessible with screen readers. The user interface
+uses native controls with descriptive labels and supports keyboard navigation,
+so snippets and categories can be managed without relying on visual input.
 
 ## Snippets, weights, and hotstrings
 
