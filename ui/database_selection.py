@@ -6,6 +6,7 @@ from pathlib import Path
 import wx
 
 from i18n import _
+from platform_support import app_paths
 from ui import utils
 
 
@@ -69,6 +70,13 @@ def select_database(
         # Translators: Title of the file dialog used to open a database.
         else _("Open existing database")
     )
+    file_dialog_arguments = {}
+    if create:
+        default_database_file = app_paths.get_database_file()
+        file_dialog_arguments = {
+            "defaultDir": str(default_database_file.parent),
+            "defaultFile": default_database_file.name,
+        }
     with utils.managed_dialog(
         wx.FileDialog(
             parent,
@@ -77,6 +85,7 @@ def select_database(
             # wildcard patterns, and .db extension.
             wildcard=_("btText databases (*.db)|*.db|All files (*.*)|*.*"),
             style=style,
+            **file_dialog_arguments,
         )
     ) as dialog:
         if dialog.ShowModal() != wx.ID_OK:

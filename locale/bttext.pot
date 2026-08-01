@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-01 21:26+0200\n"
+"POT-Creation-Date: 2026-08-01 21:45+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,7 +20,7 @@ msgstr ""
 #. Translators: Title for an error opening a selected snippet
 #. database.
 #. Translators: Title for a failed database selection or creation.
-#: btText.py:59 ui/database_selection.py:92 ui/main_frame.py:417
+#: btText.py:59 ui/database_selection.py:101 ui/main_frame.py:417
 msgid "Database error"
 msgstr ""
 
@@ -509,29 +509,29 @@ msgstr ""
 
 #. Translators: First-start question offering to create a new snippet
 #. database or open one that already exists.
-#: ui/database_selection.py:30
+#: ui/database_selection.py:31
 msgid "Welcome to btText. Would you like to create a new database or open an existing database?"
 msgstr ""
 
 #. Translators: Question shown when changing the snippet database.
-#: ui/database_selection.py:36
+#: ui/database_selection.py:37
 msgid "Would you like to create a new database or open an existing database?"
 msgstr ""
 
 #. Translators: Title of the database creation/opening choice.
-#: ui/database_selection.py:45
+#: ui/database_selection.py:46
 msgid "Select database"
 msgstr ""
 
 #. Translators: Button that continues with a Save dialog for a new
 #. snippet database.
-#: ui/database_selection.py:52
+#: ui/database_selection.py:53
 msgid "Create &new database..."
 msgstr ""
 
 #. Translators: Button that continues with an Open dialog for an
 #. existing snippet database.
-#: ui/database_selection.py:55
+#: ui/database_selection.py:56
 msgid "&Open existing database..."
 msgstr ""
 
@@ -541,30 +541,30 @@ msgstr ""
 #. Translators: Settings-dialog button that discards pending changes and
 #. closes the dialog. "&" marks the keyboard mnemonic.
 #. Translators: Snippet-editor button that discards unsaved changes and
-#: ui/database_selection.py:57 ui/search_dialog.py:61 ui/settings_dialog.py:111
+#: ui/database_selection.py:58 ui/search_dialog.py:61 ui/settings_dialog.py:111
 #: ui/snippet_editor.py:110
 msgid "&Cancel"
 msgstr ""
 
 #. Translators: Title of the file dialog used to create a database.
-#: ui/database_selection.py:67
+#: ui/database_selection.py:68
 msgid "Create new database"
 msgstr ""
 
 #. Translators: Title of the file dialog used to open a database.
-#: ui/database_selection.py:70
+#: ui/database_selection.py:71
 msgid "Open existing database"
 msgstr ""
 
 #. Translators: File-dialog filter. Preserve the vertical bars,
 #. wildcard patterns, and .db extension.
-#: ui/database_selection.py:78
+#: ui/database_selection.py:86
 msgid "btText databases (*.db)|*.db|All files (*.*)|*.*"
 msgstr ""
 
 #. Translators: Error after choosing an existing file while the user
 #. requested creation of a new database.
-#: ui/database_selection.py:90
+#: ui/database_selection.py:99
 msgid "The selected file already exists. Choose a different name."
 msgstr ""
 
