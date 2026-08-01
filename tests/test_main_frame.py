@@ -4,11 +4,11 @@ from pathlib import Path
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-import pymitter
 import wx
 
 from core.app_settings import AppSettings, SettingsStore
 from core.datamodel import DataModel
+from core.events import EventEmitter
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY
 from i18n import _
 from ui.category_tree import CategoryTree
@@ -113,7 +113,7 @@ class MainFrameConstructionTestCase(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory)
-            events = pymitter.EventEmitter()
+            events = EventEmitter()
             model = DataModel(events, directory / "data.db")
             store = SettingsStore(directory / "settings.ini")
             frame = None

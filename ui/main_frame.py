@@ -1,6 +1,5 @@
 """Main-window coordination for navigation, hotkeys, and external paste."""
 
-import pymitter
 import wx
 import wx.adv
 import wx.lib.sized_controls as sc
@@ -10,6 +9,7 @@ import i18n
 import info
 from core.app_settings import AppSettings, SettingsStore
 from core.error_messages import format_user_error
+from core.events import EventEmitter
 from i18n import _
 from platform_support.documentation import open_manual
 from ui import utils
@@ -32,7 +32,7 @@ class MainFrame(sc.SizedFrame):
     """Coordinate the application's views and process-wide integrations."""
     def __init__(
         self,
-        ee: pymitter.EventEmitter,
+        ee: EventEmitter,
         model: datamodel.DataModel,
         settings_store: SettingsStore,
         settings: AppSettings,
@@ -62,7 +62,7 @@ class MainFrame(sc.SizedFrame):
 
     def _create_process_integrations(
         self,
-        ee: pymitter.EventEmitter,
+        ee: EventEmitter,
         model: datamodel.DataModel,
         settings_store: SettingsStore,
         settings: AppSettings,
@@ -116,7 +116,7 @@ class MainFrame(sc.SizedFrame):
 
     def _create_primary_views(
         self,
-        ee: pymitter.EventEmitter,
+        ee: EventEmitter,
         model: datamodel.DataModel,
     ) -> None:
         """Create and lay out the category and snippet views."""
@@ -409,7 +409,7 @@ class MainFrame(sc.SizedFrame):
         candidate = None
         try:
             candidate = datamodel.DataModel(
-                pymitter.EventEmitter(),
+                EventEmitter(),
                 selection.path,
                 allow_create=selection.create,
             )

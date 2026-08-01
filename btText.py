@@ -3,11 +3,11 @@
 import dataclasses
 
 import wx
-import pymitter
 
 from platform_support import app_paths
 from core import datamodel
 from core.app_settings import AppSettings, SettingsError, SettingsStore
+from core.events import EventEmitter
 from core.error_messages import format_user_error
 import i18n
 from i18n import _
@@ -84,7 +84,7 @@ def _open_database(ee, settings_store, settings):
 
 def main():
     """Initialize the wx application and release resources on shutdown."""
-    ee = pymitter.EventEmitter()
+    ee = EventEmitter()
     instance_checker = None
     model = None
     try:

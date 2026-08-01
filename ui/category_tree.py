@@ -1,10 +1,10 @@
 """Tree view and transfer commands for hierarchical categories."""
 
-import pymitter
 import wx
 
 from core import datamodel
 from core.error_messages import format_user_error
+from core.events import EventEmitter
 from i18n import _
 from ui import utils
 from ui.transfer import TransferBuffer
@@ -41,7 +41,7 @@ class CategoryTree(wx.TreeCtrl):
     def __init__(
         self,
         parent,
-        ee: pymitter.EventEmitter,
+        ee: EventEmitter,
         model: datamodel.DataModel,
         transfer_buffer: TransferBuffer,
     ):

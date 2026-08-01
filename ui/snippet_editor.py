@@ -1,9 +1,9 @@
 """Modal editor for creating and updating snippets."""
 
 import wx
-import pymitter
 
 from core import datamodel
+from core.events import EventEmitter
 import ui.validators as validators
 from core.error_messages import format_user_error
 from i18n import _
@@ -13,7 +13,7 @@ from ui import theme
 
 class SnippetEditor(wx.Dialog):
     """Edit one snippet and delegate validation to the data model."""
-    def __init__(self, parent, ee: pymitter.EventEmitter, model: datamodel.DataModel, category_id: int, snippet: datamodel.Snippet|None = None):
+    def __init__(self, parent, ee: EventEmitter, model: datamodel.DataModel, category_id: int, snippet: datamodel.Snippet|None = None):
         """Build an editor for a new snippet or an existing snippet."""
         super().__init__(
             parent,

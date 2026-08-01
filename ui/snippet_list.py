@@ -2,12 +2,12 @@
 
 from collections.abc import Callable
 
-import pymitter
 import wx
 
 from platform_support import clipboard, clipboard_paste
 from core import datamodel
 from core.error_messages import format_user_error
+from core.events import EventEmitter
 from i18n import _, ngettext
 from ui import utils
 from ui.snippet_editor import SnippetEditor
@@ -21,7 +21,7 @@ class SnippetList(wx.ListView):
     def __init__(
         self,
         parent,
-        ee: pymitter.EventEmitter,
+        ee: EventEmitter,
         model: datamodel.DataModel,
         transfer_buffer: TransferBuffer,
         include_copied_text_in_clipboard_history: Callable[[], bool],

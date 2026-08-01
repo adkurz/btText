@@ -2,11 +2,11 @@
 
 from collections.abc import Callable
 
-import pymitter
 import wx
 
 from core import datamodel
 from core.app_settings import AppSettings
+from core.events import EventEmitter
 from i18n import _
 from platform_support import clipboard, hotstring_expansion, hotstrings, windows
 from platform_support.clipboard_paste import PendingPaste
@@ -18,7 +18,7 @@ class HotstringController:
     def __init__(
         self,
         parent: wx.Window,
-        ee: pymitter.EventEmitter,
+        ee: EventEmitter,
         model: datamodel.DataModel,
         get_settings: Callable[[], AppSettings],
         schedule_clipboard_restore: Callable[[PendingPaste], None],

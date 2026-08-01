@@ -1,22 +1,10 @@
 import sqlite3
-import sys
 import tempfile
-import types
 import unittest
 from contextlib import ExitStack
 from pathlib import Path
 from unittest.mock import Mock
 
-
-try:
-    import pymitter  # noqa: F401
-except ModuleNotFoundError:
-    class _PymitterEventEmitter:
-        pass
-
-    sys.modules["pymitter"] = types.SimpleNamespace(
-        EventEmitter=_PymitterEventEmitter
-    )
 
 from core.datamodel import (
     Category,
@@ -28,6 +16,7 @@ from core.datamodel import (
     Snippet,
     SnippetValidationError,
 )
+from core.events import EventEmitter
 
 
 class RecordingEventEmitter:
@@ -36,11 +25,6 @@ class RecordingEventEmitter:
 
     def emit(self, name, value):
         self.events.append((name, value))
-
-
-class RaisingEventEmitter:
-    def emit(self, name, value):
-        raise RuntimeError("listener failed")
 
 
 class DataModelTestCase(unittest.TestCase):
@@ -84,13 +68,21 @@ class DataModelTestCase(unittest.TestCase):
             self.model.get_category(category.id)
 
     def test_event_listener_error_does_not_rollback_committed_change(self):
-        self.model.ee = RaisingEventEmitter()
+        events = EventEmitter()
+        events.on(
+            "category.added",
+            Mock(side_effect=RuntimeError("listener failed")),
+        )
+        later_listener = Mock()
+        events.on("category.added", later_listener)
+        self.model.ee = events
         category = Category("Committed before event")
 
-        with self.assertRaisesRegex(RuntimeError, "listener failed"):
+        with self.assertLogs("core.events", level="ERROR"):
             self.model.add_category(category)
 
         self.assertIsNotNone(category.id)
+        later_listener.assert_called_once_with(category)
         self.assertEqual(
             self.model.get_category(category.id).name,
             "Committed before event",

@@ -6,8 +6,7 @@ import inspect
 import sqlite3
 from pathlib import Path
 
-import pymitter
-
+from core.events import EventEmitter
 from core.user_errors import UserFacingError
 
 
@@ -104,7 +103,7 @@ class DataModel:
 
     def __init__(
         self,
-        ee: pymitter.EventEmitter,
+        ee: EventEmitter,
         db_file: str | Path,
         *,
         allow_create: bool = True,
