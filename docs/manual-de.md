@@ -4,7 +4,7 @@ btText ist eine Windows-Anwendung zum Verwalten und schnellen Einfügen von häu
 
 Die Anleitung richtet sich an Endnutzer der kompilierten Windows-Version. Für die Ausführung aus dem Quellcode gelten andere Voraussetzungen; sie wird hier nicht beschrieben.
 
-# Inhalt
+## Inhalt
 
 [TOC]
 

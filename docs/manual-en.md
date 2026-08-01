@@ -4,7 +4,7 @@ btText is a Windows application for managing and quickly inserting frequently us
 
 This manual is intended for end-users of the compiled Windows version. Requirements for running from source code are different and are not described here.
 
-# Contents
+## Contents
 
 [TOC]
 
