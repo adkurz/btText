@@ -2,7 +2,7 @@
 
 btText ist eine Windows-Anwendung zum Verwalten und schnellen Einfügen von häufig verwendeten Texten. Diese Texte werden in einer SQLite-Datenbank als **Textbausteine** gespeichert. Kategorien, die Suche, Tastenkürzel und optionale Hotstrings helfen dabei, den passenden Text schnell zu finden.
 
-Die Anleitung richtet sich an Endnutzer der fertigen Windows-Version. Für die Ausführung aus dem Quellcode gelten andere Voraussetzungen; sie wird hier nicht beschrieben.
+Die Anleitung richtet sich an Endnutzer der kompilierten Windows-Version. Für die Ausführung aus dem Quellcode gelten andere Voraussetzungen; sie wird hier nicht beschrieben.
 
 # Inhalt
 
@@ -11,13 +11,13 @@ Die Anleitung richtet sich an Endnutzer der fertigen Windows-Version. Für die A
 ## Voraussetzungen
 
 - Windows 11 (X64)
-- eine fertige btText-Installationsdatei oder das portable ZIP-Archiv
+- eine btText-Installationsdatei oder das portable ZIP-Archiv
 
-Die fertigen Pakete enthalten die benötigte Laufzeit. Python muss auf dem Computer nicht installiert sein.
+Die vorgefertigten Pakete enthalten die benötigte Laufzeit. Python muss nicht installiert werden.
 
 ## Installation
 
-### Installierte Version
+### Installierbare Version
 
 1. Starten Sie `btText-<Version>-setup-windows.exe`.
 2. Wählen Sie bei Bedarf die Sprache des Installationsprogramms.
