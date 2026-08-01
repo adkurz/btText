@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-08-01 23:42+0200\n"
+"POT-Creation-Date: 2026-08-02 01:22+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -21,7 +21,7 @@ msgstr ""
 #. Translators: Title for an error opening a selected snippet
 #. database.
 #. Translators: Title for a failed database selection or creation.
-#: btText.py:59 ui/database_selection.py:101 ui/main_frame.py:423
+#: btText.py:59 ui/database_selection.py:101 ui/main_frame.py:421
 msgid "Database error"
 msgstr "Datenbankfehler"
 
@@ -29,7 +29,7 @@ msgstr "Datenbankfehler"
 #. database path in the application settings.
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:78 btText.py:135 ui/settings_controller.py:198
+#: btText.py:78 btText.py:135 ui/settings_controller.py:210
 msgid "Settings error"
 msgstr "Einstellungsfehler"
 
@@ -52,260 +52,267 @@ msgstr "Sprachfehler"
 msgid "The database could not be opened: {reason}"
 msgstr "Die Datenbank konnte nicht geöffnet werden: {reason}"
 
+#. Translators: Runtime error when an already-open snippet database can no
+#. longer complete a read or write. {reason} is a technical SQLite message.
+#: core/error_messages.py:31
+#, python-brace-format
+msgid "The database operation failed: {reason}"
+msgstr "Der Datenbankvorgang ist fehlgeschlagen: {reason}"
+
 #. Translators: Startup error for a damaged or incomplete snippet database.
 #. {missing_tables} is a comma-separated list of technical table names.
-#: core/error_messages.py:32
+#: core/error_messages.py:40
 #, python-brace-format
 msgid "The database schema is incomplete. Missing table(s): {missing_tables}."
 msgstr "Das Datenbankschema ist unvollständig. Fehlende Tabelle(n): {missing_tables}."
 
 #. Translators: Startup error when the database comes from a newer btText and
 #. cannot be safely read. Both placeholders are integer schema versions.
-#: core/error_messages.py:41
+#: core/error_messages.py:49
 #, python-brace-format
 msgid "The database was created by a newer version of btText and cannot be opened. Database schema version: {database_version}; supported version: {supported_version}."
 msgstr "Die Datenbank wurde mit einer neueren Version von btText erstellt und kann nicht geöffnet werden. Schemaversion der Datenbank: {database_version}; unterstützte Version: {supported_version}."
 
 #. Translators: Startup error when btText cannot upgrade an older database.
 #. {database_version} is its integer schema version.
-#: core/error_messages.py:51
+#: core/error_messages.py:59
 #, python-brace-format
 msgid "No database migration is available from schema version {database_version}."
 msgstr "Für die Schemaversion {database_version} ist keine Datenbankmigration verfügbar."
 
 #. Translators: Startup error when a database upgrade did not reach its target
 #. version. The migration name is technical; both versions are integers.
-#: core/error_messages.py:60
+#: core/error_messages.py:68
 #, python-brace-format
 msgid "Database migration {migration_name} did not advance the schema from version {old_version} to version {new_version}."
 msgstr "Die Datenbankmigration {migration_name} hat das Schema nicht von Version {old_version} auf Version {new_version} aktualisiert."
 
 #. Translators: Error after a category disappeared before an operation could
 #. finish. {id} is its internal integer database ID.
-#: core/error_messages.py:68
+#: core/error_messages.py:76
 #, python-brace-format
 msgid "The category with ID {id} no longer exists."
 msgstr "Die Kategorie mit der ID {id} ist nicht mehr vorhanden."
 
 #. Translators: Error after a snippet disappeared before an operation could
 #. finish. {id} is its internal integer database ID.
-#: core/error_messages.py:74
+#: core/error_messages.py:82
 #, python-brace-format
 msgid "The snippet with ID {id} no longer exists."
 msgstr "Der Textbaustein mit der ID {id} ist nicht mehr vorhanden."
 
 #. Translators: Startup error when btText cannot load its settings file.
 #. {reason} is a localized validation or operating-system error.
-#: core/error_messages.py:80
+#: core/error_messages.py:88
 #, python-brace-format
 msgid "The settings file could not be read: {reason}"
 msgstr "Die Einstellungsdatei konnte nicht gelesen werden: {reason}"
 
 #. Translators: Error when btText cannot persist changed settings.
 #. {reason} is a localized validation or operating-system error.
-#: core/error_messages.py:88
+#: core/error_messages.py:96
 #, python-brace-format
 msgid "The settings file could not be saved: {reason}"
 msgstr "Die Einstellungsdatei konnte nicht gespeichert werden: {reason}"
 
 #. Translators: Database-opening error shown when a configured or selected
 #. file was removed or is no longer reachable.
-#: core/error_messages.py:98
+#: core/error_messages.py:107
 msgid "The selected database file does not exist."
 msgstr "Die ausgewählte Datenbankdatei ist nicht vorhanden."
 
 #. Translators: Fatal startup error when SQLite cannot enforce relationships
 #. between categories and snippets.
-#: core/error_messages.py:103
+#: core/error_messages.py:112
 msgid "SQLite foreign-key support could not be enabled."
 msgstr "Die Fremdschlüsselunterstützung von SQLite konnte nicht aktiviert werden."
 
 #. Translators: Fatal startup error when stored records refer to missing
 #. categories or otherwise violate a database foreign-key relationship.
-#: core/error_messages.py:108
+#: core/error_messages.py:117
 msgid "The database contains records with invalid relationships."
 msgstr "Die Datenbank enthält Datensätze mit ungültigen Beziehungen."
 
 #. Translators: Fatal startup error when category parent relationships form
 #. a loop instead of a valid tree.
-#: core/error_messages.py:113
+#: core/error_messages.py:122
 msgid "The database contains a cycle in the category hierarchy."
 msgstr "Die Datenbank enthält einen Zyklus in der Kategoriehierarchie."
 
 #. Translators: Fatal startup error describing category records without names.
-#: core/error_messages.py:121
+#: core/error_messages.py:130
 msgid "The database contains categories without a name."
 msgstr "Die Datenbank enthält Kategorien ohne Namen."
 
 #. Translators: Fatal migration error for category names that are empty or
 #. consist only of spaces.
-#: core/error_messages.py:126
+#: core/error_messages.py:135
 msgid "The database contains categories with an empty name."
 msgstr "Die Datenbank enthält Kategorien mit einem leeren Namen."
 
 #. Translators: Fatal migration error when a category refers to itself as
 #. its parent.
-#: core/error_messages.py:131
+#: core/error_messages.py:140
 msgid "The database contains a category that is its own parent."
 msgstr "Die Datenbank enthält eine Kategorie, die sich selbst als übergeordnete Kategorie verwendet."
 
 #. Translators: Fatal migration error for snippet names that are empty or
 #. consist only of spaces.
-#: core/error_messages.py:136
+#: core/error_messages.py:145
 msgid "The database contains snippets with an empty name."
 msgstr "Die Datenbank enthält Textbausteine mit einem leeren Namen."
 
 #. Translators: Fatal migration error for snippets whose reusable text is
 #. empty.
-#: core/error_messages.py:141
+#: core/error_messages.py:150
 msgid "The database contains snippets with empty content."
 msgstr "Die Datenbank enthält Textbausteine mit leerem Inhalt."
 
 #. Translators: Fatal startup error for snippet records whose numeric
 #. search-ranking weight is outside the supported range.
-#: core/error_messages.py:146
+#: core/error_messages.py:155
 msgid "The database contains snippets with an invalid weight."
 msgstr "Die Datenbank enthält Textbausteine mit einer ungültigen Gewichtung."
 
 #. Translators: Fatal startup error for duplicate snippet names in one
 #. category.
-#: core/error_messages.py:150
+#: core/error_messages.py:159
 msgid "The database contains duplicate snippet names in a category."
 msgstr "Die Datenbank enthält doppelte Textbausteinnamen innerhalb einer Kategorie."
 
 #. Translators: Fatal migration error when two snippets in one category have
 #. names that differ only in uppercase or lowercase letters.
-#: core/error_messages.py:155
+#: core/error_messages.py:164
 msgid "The database contains snippet names that differ only in letter case within the same category."
 msgstr "Die Datenbank enthält Textbausteinnamen, die sich innerhalb derselben Kategorie nur durch Groß- und Kleinschreibung unterscheiden."
 
 #. Translators: Fatal startup error for snippets without an existing category.
-#: core/error_messages.py:160
+#: core/error_messages.py:169
 msgid "The database contains snippets without a category."
 msgstr "Die Datenbank enthält Textbausteine ohne Kategorie."
 
 #. Translators: Validation error when a sibling category already uses this
 #. name.
-#: core/error_messages.py:166
+#: core/error_messages.py:175
 msgid "A category with this name already exists at this level."
 msgstr "Auf dieser Ebene ist bereits eine Kategorie mit diesem Namen vorhanden."
 
 #. Translators: Internal error for an unsaved category without a database ID.
-#: core/error_messages.py:170
+#: core/error_messages.py:179
 msgid "The category has no ID."
 msgstr "Die Kategorie hat keine ID."
 
 #. Translators: Error when the intended parent category was deleted meanwhile.
-#: core/error_messages.py:174
+#: core/error_messages.py:183
 msgid "The parent category no longer exists."
 msgstr "Die übergeordnete Kategorie ist nicht mehr vorhanden."
 
 #. Translators: Validation error preventing a category being its own parent.
-#: core/error_messages.py:178
+#: core/error_messages.py:187
 msgid "A category cannot be its own parent."
 msgstr "Eine Kategorie kann nicht ihre eigene übergeordnete Kategorie sein."
 
 #. Translators: Validation error preventing a move into the category's subtree.
-#: core/error_messages.py:182
+#: core/error_messages.py:191
 msgid "A category cannot be moved below one of its descendants."
 msgstr "Eine Kategorie kann nicht unter eine ihrer Unterkategorien verschoben werden."
 
 #. Translators: Validation error preventing recursive copying into the same
 #. category subtree.
-#: core/error_messages.py:187
+#: core/error_messages.py:196
 msgid "A category cannot be copied into itself or one of its descendants."
 msgstr "Eine Kategorie kann nicht in sich selbst oder eine ihrer Unterkategorien kopiert werden."
 
 #. Translators: Validation error for an empty category or snippet name.
-#: core/error_messages.py:191
+#: core/error_messages.py:200
 msgid "The name must not be empty."
 msgstr "Der Name darf nicht leer sein."
 
 #. Translators: Validation error when a snippet has no insertion text.
-#: core/error_messages.py:195
+#: core/error_messages.py:204
 msgid "The content must not be empty."
 msgstr "Der Inhalt darf nicht leer sein."
 
 #. Translators: Error when the snippet's selected category was deleted
 #. meanwhile.
-#: core/error_messages.py:199
+#: core/error_messages.py:208
 msgid "The selected category no longer exists."
 msgstr "Die ausgewählte Kategorie ist nicht mehr vorhanden."
 
 #. Translators: Validation error when a snippet name is already used in the
 #. same category.
-#: core/error_messages.py:204
+#: core/error_messages.py:213
 msgid "A snippet with this name already exists in this category."
 msgstr "In dieser Kategorie ist bereits ein Textbaustein mit diesem Namen vorhanden."
 
 #. Translators: Validation error for a snippet search-ranking weight outside
 #. the allowed choices.
-#: core/error_messages.py:209
+#: core/error_messages.py:218
 msgid "The selected weight is not allowed."
 msgstr "Die ausgewählte Gewichtung ist nicht zulässig."
 
 #. Translators: Validation error when a hotstring contains a space, tab, or
 #. another whitespace character.
-#: core/error_messages.py:214
+#: core/error_messages.py:223
 msgid "The hotstring must not contain whitespace."
 msgstr "Der Hotstring darf keine Leerraumzeichen enthalten."
 
 #. Translators: Validation error when another snippet already uses the same
 #. global hotstring.
-#: core/error_messages.py:219
+#: core/error_messages.py:228
 msgid "This hotstring is already assigned to another snippet."
 msgstr "Dieser Hotstring ist bereits einem anderen Textbaustein zugeordnet."
 
 #. Translators: Internal error for an unsaved snippet without a database ID.
-#: core/error_messages.py:223
+#: core/error_messages.py:232
 msgid "The snippet has no ID."
 msgstr "Der Textbaustein hat keine ID."
 
 #. Translators: Validation error when a global shortcut contains an
 #. unsupported keyboard key.
-#: core/error_messages.py:228
+#: core/error_messages.py:237
 msgid "The shortcut contains an unsupported key."
 msgstr "Die Tastenkombination enthält eine nicht unterstützte Taste."
 
 #. Translators: Validation error when a global shortcut has no Ctrl, Shift,
 #. Alt, or Windows modifier.
-#: core/error_messages.py:233
+#: core/error_messages.py:242
 msgid "The shortcut requires at least one modifier."
 msgstr "Die Tastenkombination muss mindestens eine Sondertaste enthalten."
 
 #. Translators: Validation error when a shortcut from settings cannot be
 #. parsed.
-#: core/error_messages.py:237
+#: core/error_messages.py:246
 msgid "The shortcut has an invalid format."
 msgstr "Die Tastenkombination hat ein ungültiges Format."
 
 #. Translators: Validation error when a shortcut repeats the same modifier.
-#: core/error_messages.py:241
+#: core/error_messages.py:250
 msgid "The shortcut contains a duplicate modifier."
 msgstr "Die Tastenkombination enthält eine Sondertaste mehrfach."
 
 #. Translators: Validation error when a shortcut has zero or multiple main
 #. keys.
-#: core/error_messages.py:245
+#: core/error_messages.py:254
 msgid "The shortcut must contain exactly one key."
 msgstr "Die Tastenkombination muss genau eine Haupttaste enthalten."
 
 #. Translators: Validation error when a key cannot be used for a global
 #. shortcut.
-#: core/error_messages.py:249
+#: core/error_messages.py:258
 msgid "This key cannot be used as a shortcut."
 msgstr "Diese Taste kann nicht für eine Tastenkombination verwendet werden."
 
 #. Translators: Settings error when the selected UI language has no installed
 #. gettext catalog.
-#: core/error_messages.py:254
+#: core/error_messages.py:263
 msgid "No translation catalog is available for the selected language."
 msgstr "Für die ausgewählte Sprache ist kein Übersetzungskatalog verfügbar."
 
 #. Translators: Startup warning after a damaged translation catalog forced
 #. btText to continue in English. {language} is a locale code such as de;
 #. {reason} is a technical catalog-loading error.
-#: core/error_messages.py:260
+#: core/error_messages.py:269
 #, python-brace-format
 msgid ""
 "The translation catalog for {language} could not be loaded. btText will continue in English.\n"
@@ -317,13 +324,13 @@ msgstr ""
 "{reason}"
 
 #. Translators: Settings error when the saved UI language code is malformed.
-#: core/error_messages.py:268
+#: core/error_messages.py:277
 msgid "The language setting has an invalid format."
 msgstr "Die Spracheinstellung hat ein ungültiges Format."
 
 #. Translators: Safe fallback when no specific localized application-error
 #. message is available.
-#: core/error_messages.py:283
+#: core/error_messages.py:292
 msgid "An unexpected application error occurred."
 msgstr "Es ist ein unerwarteter Anwendungsfehler aufgetreten."
 
@@ -600,7 +607,7 @@ msgstr "Textbausteine in der ausgewählten Kategorie"
 #. Translators: Generic title for a failed snippet operation.
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
-#: ui/main_frame.py:255 ui/main_frame.py:274 ui/main_frame.py:286
+#: ui/main_frame.py:253 ui/main_frame.py:272 ui/main_frame.py:284
 #: ui/paste_controller.py:62 ui/snippet_list.py:415 ui/snippet_list.py:445
 #: ui/snippet_list.py:477
 msgid "Error"
@@ -608,95 +615,95 @@ msgstr "Fehler"
 
 #. Translators: Error shown when a selected snippet points to a
 #. category that was deleted meanwhile.
-#: ui/main_frame.py:272
+#: ui/main_frame.py:270
 msgid "The category of the selected snippet no longer exists."
 msgstr "Die Kategorie des ausgewählten Textbausteins ist nicht mehr vorhanden."
 
 #. Translators: Error shown when the selected snippet was deleted
 #. before it could be displayed or inserted.
-#: ui/main_frame.py:284
+#: ui/main_frame.py:282
 msgid "The selected snippet no longer exists."
 msgstr "Der ausgewählte Textbaustein ist nicht mehr vorhanden."
 
 #. Translators: File-menu command for selecting another snippet
 #. database. The selection is used after restarting btText.
-#: ui/main_frame.py:351
+#: ui/main_frame.py:349
 msgid "Change &database..."
 msgstr "&Datenbank wechseln …"
 
 #. Translators: File-menu command that hides the main window while
 #. keeping btText available in the notification area.
-#: ui/main_frame.py:356
+#: ui/main_frame.py:354
 msgid "&Close"
 msgstr "&Schließen"
 
 #. Translators: File-menu command that exits btText completely,
 #. including its notification-area icon. Keep Ctrl+Q after "\t".
-#: ui/main_frame.py:361
+#: ui/main_frame.py:359
 msgid "E&xit\tCtrl+Q"
 msgstr "&Beenden\tCtrl+Q"
 
 #. Translators: Main-window menu containing window-close and full-exit
 #. commands. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:365
+#: ui/main_frame.py:363
 msgid "&File"
 msgstr "&Datei"
 
 #. Translators: Edit-menu command that opens the snippet search
 #. dialog. "&" marks the mnemonic; keep F3 after "\t".
-#: ui/main_frame.py:371
+#: ui/main_frame.py:369
 msgid "&Search...\tF3"
 msgstr "&Suchen...\tF3"
 
 #. Translators: Edit-menu command that opens the settings dialog.
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
-#: ui/main_frame.py:378
+#: ui/main_frame.py:376
 msgid "&Settings...\tCtrl+,"
 msgstr "&Einstellungen...\tCtrl+,"
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:382
+#: ui/main_frame.py:380
 msgid "&Edit"
 msgstr "&Bearbeiten"
 
 #. Translators: Help-menu command that opens the user manual. Keep F1
 #. after "\t" so wxPython registers the standard help shortcut.
-#: ui/main_frame.py:386
+#: ui/main_frame.py:384
 msgid "View user &manual\tF1"
 msgstr "Benutzer&handbuch anzeigen\tF1"
 
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:390
+#: ui/main_frame.py:388
 msgid "About"
 msgstr "Über btText"
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:394
+#: ui/main_frame.py:392
 msgid "&Help"
 msgstr "&Hilfe"
 
 #. Translators: Confirmation after choosing the database that btText
 #. should open following its next restart.
-#: ui/main_frame.py:439
+#: ui/main_frame.py:437
 msgid "The selected database will be used the next time btText starts."
 msgstr "Die ausgewählte Datenbank wird beim nächsten Start von btText verwendet."
 
 #. Translators: Title confirming that another database was selected.
-#: ui/main_frame.py:441
+#: ui/main_frame.py:439
 msgid "Database selected"
 msgstr "Datenbank ausgewählt"
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:480
+#: ui/main_frame.py:478
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr "F3: Textbausteine suchen    Eingabetaste: Ausgewählten Textbaustein einfügen"
 
 #. Translators: Error shown when the HTML user manual cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:505
+#: ui/main_frame.py:503
 #, python-brace-format
 msgid ""
 "The user manual could not be opened.\n"
@@ -708,7 +715,7 @@ msgstr ""
 "{reason}"
 
 #. Translators: Title of the user-manual opening error.
-#: ui/main_frame.py:509
+#: ui/main_frame.py:507
 msgid "User manual error"
 msgstr "Fehler beim Benutzerhandbuch"
 
@@ -797,7 +804,7 @@ msgstr "Suchfehler"
 
 #. Translators: Startup error shown when btText cannot claim its
 #. global shortcut. {} is a shortcut such as Ctrl+Alt+T.
-#: ui/settings_controller.py:63
+#: ui/settings_controller.py:72
 #, python-brace-format
 msgid "The global hotkey {} is already in use and could not be registered."
 msgstr "Die globale Tastenkombination {} wird bereits verwendet und konnte nicht registriert werden."
@@ -805,28 +812,28 @@ msgstr "Die globale Tastenkombination {} wird bereits verwendet und konnte nicht
 #. Translators: Title of an error registering a global shortcut.
 #. Translators: Title of an error changing the global shortcut.
 #. Translators: Title of an error restoring a global shortcut.
-#: ui/settings_controller.py:67 ui/settings_controller.py:116
-#: ui/settings_controller.py:157
+#: ui/settings_controller.py:76 ui/settings_controller.py:125
+#: ui/settings_controller.py:168
 msgid "Hotkey error"
 msgstr "Fehler bei der Tastenkombination"
 
 #. Translators: Settings error: the requested global shortcut is
 #. occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
-#: ui/settings_controller.py:103
+#: ui/settings_controller.py:112
 #, python-brace-format
 msgid "The selected hotkey {} is already in use. The previous hotkey has been restored."
 msgstr "Die ausgewählte Tastenkombination {} wird bereits verwendet. Die vorherige Tastenkombination wurde wiederhergestellt."
 
 #. Translators: Settings error: the requested shortcut is occupied
 #. and restoring the old one also failed. {} is such as Ctrl+Alt+T.
-#: ui/settings_controller.py:110
+#: ui/settings_controller.py:119
 #, python-brace-format
 msgid "The selected hotkey {} is already in use and the previous hotkey could not be restored. No global hotkey is active."
 msgstr "Die ausgewählte Tastenkombination {} wird bereits verwendet, und die vorherige Tastenkombination konnte nicht wiederhergestellt werden. Es ist keine globale Tastenkombination aktiv."
 
 #. Translators: Error after cancelling settings when btText
 #. could not restore the previously active global shortcut.
-#: ui/settings_controller.py:153
+#: ui/settings_controller.py:164
 msgid "The previous hotkey could not be restored. No global hotkey is active."
 msgstr "Die vorherige Tastenkombination konnte nicht wiederhergestellt werden. Es ist keine globale Tastenkombination aktiv."
 

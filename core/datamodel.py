@@ -1,7 +1,9 @@
 """Persistence and domain operations for categories and text snippets."""
 
+import dataclasses
+import functools
+import inspect
 import sqlite3
-import dataclasses 
 from pathlib import Path
 
 import pymitter
@@ -23,6 +25,36 @@ class CategoryValidationError(DataModelError):
 
 class SnippetValidationError(DataModelError):
     """Raised when a snippet violates naming, weight, or category constraints."""
+
+
+def _translate_sqlite_errors(method):
+    """Translate unexpected runtime SQLite failures at the model boundary."""
+    if inspect.isgeneratorfunction(method):
+        @functools.wraps(method)
+        def generator_wrapper(*args, **kwargs):
+            try:
+                yield from method(*args, **kwargs)
+            except sqlite3.Error as error:
+                raise DataModelError(
+                    "database_operation_failed",
+                    "The database operation failed: {reason}",
+                    reason=error,
+                ) from error
+
+        return generator_wrapper
+
+    @functools.wraps(method)
+    def wrapper(*args, **kwargs):
+        try:
+            return method(*args, **kwargs)
+        except sqlite3.Error as error:
+            raise DataModelError(
+                "database_operation_failed",
+                "The database operation failed: {reason}",
+                reason=error,
+            ) from error
+
+    return wrapper
 
 @dataclasses.dataclass
 class Snippet:
@@ -477,6 +509,7 @@ class DataModel:
             "ON snippet(category_id, name COLLATE NOCASE)"
         )
 
+    @_translate_sqlite_errors
     def get_category(self, id: int) -> Category:
         """Return one category or raise :class:`EntityNotFoundError`."""
         result = self._connection.execute(
@@ -496,6 +529,7 @@ class DataModel:
             name=category["name"],
         )
 
+    @_translate_sqlite_errors
     def get_categories(
         self,
         order: bool = False,
@@ -520,6 +554,7 @@ class DataModel:
                 name=category['name'],
             )
 
+    @_translate_sqlite_errors
     def get_category_summaries(
         self,
         order: bool = False,
@@ -552,10 +587,12 @@ class DataModel:
                 number_of_snippets=row["number_of_snippets"],
             )
 
+    @_translate_sqlite_errors
     def get_all_category_summaries(self) -> tuple[CategorySummary, ...]:
         """Return all category summaries in one query for tree construction."""
         return tuple(self.get_category_summaries())
 
+    @_translate_sqlite_errors
     def get_category_children(self, parent_id: int | None):
         """Yield direct children of a category, ordered by name."""
         return self.get_categories(
@@ -564,6 +601,7 @@ class DataModel:
             all_categories=False,
         )
 
+    @_translate_sqlite_errors
     def get_category_child_summaries(self, parent_id: int | None):
         """Yield direct child projections ordered by category name."""
         return self.get_category_summaries(
@@ -572,6 +610,7 @@ class DataModel:
             all_categories=False,
         )
 
+    @_translate_sqlite_errors
     def get_category_path(self, id: int) -> str:
         """Return a display path ordered from the root to the category."""
         self.get_category(id)
@@ -587,6 +626,7 @@ class DataModel:
         ).fetchone()
         return row["path"]
 
+    @_translate_sqlite_errors
     def get_category_subtree_stats(self, id: int) -> tuple[int, int]:
         """Return descendant-category and snippet counts for a subtree."""
         self.get_category(id)
@@ -602,6 +642,7 @@ class DataModel:
         ).fetchone()
         return row["descendants"], row["snippets"]
 
+    @_translate_sqlite_errors
     def get_snippets(self, category_id: int):
         """Yield snippets ordered by weight, name, and ID."""
         sql = (
@@ -619,6 +660,7 @@ class DataModel:
                 hotstring=snippet["hotstring"],
             )
 
+    @_translate_sqlite_errors
     def search_snippets(self, term: str):
         """Yield snippets whose name or content contains a literal term."""
         if not term:
@@ -644,6 +686,7 @@ class DataModel:
                 hotstring=snippet["hotstring"],
             )
 
+    @_translate_sqlite_errors
     def get_snippet(self, id: int) -> Snippet:
         """Return one snippet or raise :class:`EntityNotFoundError`."""
         result = self._connection.execute(
@@ -667,6 +710,7 @@ class DataModel:
             hotstring=snippet["hotstring"],
         )
 
+    @_translate_sqlite_errors
     def category_exist(
         self,
         name_or_id: str | int,
@@ -693,6 +737,7 @@ class DataModel:
         result = result.fetchone()
         return result["id"] if result is not None else None
 
+    @_translate_sqlite_errors
     def snippet_exist(
         self, name_or_id: str | int, category_id: int | None = None
     ) -> int | None:
@@ -713,6 +758,7 @@ class DataModel:
         result = result.fetchone()
         return result["id"] if result is not None else None
 
+    @_translate_sqlite_errors
     def add_category(self, category: Category) -> Category:
         """Validate, persist, and publish a new category."""
         self.validate_category(category)
@@ -733,6 +779,7 @@ class DataModel:
         self.ee.emit("category.added", category)
         return category
 
+    @_translate_sqlite_errors
     def edit_category(self, category: Category) -> Category:
         """Validate and persist changes to an existing category."""
         # Check that category exists:
@@ -764,6 +811,7 @@ class DataModel:
         self.ee.emit("category.edited", category)
         return category
 
+    @_translate_sqlite_errors
     def validate_category(self, category: Category) -> None:
         """Normalize a category and enforce tree invariants."""
         category.name = self._normalize_name(
@@ -802,12 +850,14 @@ class DataModel:
         ).fetchone()
         return row is not None
 
+    @_translate_sqlite_errors
     def move_category(self, id: int, parent_id: int | None) -> Category:
         """Move a category subtree below a new parent."""
         category = self.get_category(id)
         category.parent_id = parent_id
         return self.edit_category(category)
 
+    @_translate_sqlite_errors
     def copy_category(self, id: int, parent_id: int | None) -> Category:
         """Deep-copy a category, its descendants, and their snippets."""
         source = self.get_category(id)
@@ -854,6 +904,7 @@ class DataModel:
             ).lastrowid
             self._copy_category_contents(connection, child.id, new_child_id)
 
+    @_translate_sqlite_errors
     def delete_category(self, id: int) -> Category:
         """Delete a category and its complete subtree."""
         category = self.get_category(id)
@@ -865,14 +916,17 @@ class DataModel:
         self.ee.emit("category.deleted", id)
         return category
 
+    @_translate_sqlite_errors
     def move_snippet(self, id: int, category_id: int) -> Snippet:
         """Move a snippet into another category."""
         return self.move_snippets((id,), category_id)[0]
 
+    @_translate_sqlite_errors
     def copy_snippet(self, id: int, category_id: int) -> Snippet:
         """Copy a snippet into another category."""
         return self.copy_snippets((id,), category_id)[0]
 
+    @_translate_sqlite_errors
     def move_snippets(
         self,
         ids: tuple[int, ...] | list[int],
@@ -895,6 +949,7 @@ class DataModel:
             self.ee.emit("snippet.edited", snippet)
         return snippets
 
+    @_translate_sqlite_errors
     def copy_snippets(
         self,
         ids: tuple[int, ...] | list[int],
@@ -932,6 +987,7 @@ class DataModel:
             self.ee.emit("snippet.added", snippet)
         return snippets
 
+    @_translate_sqlite_errors
     def validate_snippet(self, snippet: Snippet) -> None:
         """Normalize a snippet and enforce its domain constraints."""
         snippet.name = self._normalize_name(
@@ -980,6 +1036,7 @@ class DataModel:
                     "This hotstring is already assigned to another snippet",
                 )
 
+    @_translate_sqlite_errors
     def add_snippet(self, snippet: Snippet) -> Snippet:
         """Validate, persist, and publish a new snippet."""
         self.validate_snippet(snippet)
@@ -1003,6 +1060,7 @@ class DataModel:
         self.ee.emit("snippet.added", snippet)
         return snippet
 
+    @_translate_sqlite_errors
     def edit_snippet(self, snippet: Snippet) -> Snippet:
         """Validate and persist changes to an existing snippet."""
         # Check that snippet id exists:
@@ -1032,10 +1090,12 @@ class DataModel:
         self.ee.emit("snippet.edited", snippet)
         return snippet
 
+    @_translate_sqlite_errors
     def delete_snippet(self, id: int) -> Snippet:
         """Delete and return an existing snippet."""
         return self.delete_snippets((id,))[0]
 
+    @_translate_sqlite_errors
     def hotstring_exist(self, hotstring: str) -> int | None:
         """Return the snippet ID assigned to ``hotstring``, if any."""
         row = self._connection.execute(
@@ -1044,6 +1104,7 @@ class DataModel:
         ).fetchone()
         return row["id"] if row is not None else None
 
+    @_translate_sqlite_errors
     def get_hotstring_snippets(self) -> tuple[Snippet, ...]:
         """Return all snippets that have an expansion hotstring."""
         rows = self._connection.execute(
@@ -1063,6 +1124,7 @@ class DataModel:
             for row in rows
         )
 
+    @_translate_sqlite_errors
     def delete_snippets(
         self,
         ids: tuple[int, ...] | list[int],
@@ -1163,6 +1225,7 @@ class DataModel:
         # LIKE wildcards are user data here, not search-pattern syntax.
         return string.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
 
+    @_translate_sqlite_errors
     def close(self) -> None:
         """Close the database connection; repeated calls are harmless."""
         if self._closed:

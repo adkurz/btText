@@ -96,6 +96,41 @@ class DataModelTestCase(unittest.TestCase):
             "Committed before event",
         )
 
+    def test_runtime_sqlite_read_error_is_translated(self):
+        self.model._connection.close()
+
+        with self.assertRaises(DataModelError) as raised:
+            self.model.get_category(1)
+
+        self.assertEqual(raised.exception.code, "database_operation_failed")
+        self.assertIsInstance(raised.exception.__cause__, sqlite3.Error)
+
+    def test_runtime_sqlite_generator_error_is_translated_during_iteration(self):
+        categories = self.model.get_categories()
+        self.model._connection.close()
+
+        with self.assertRaises(DataModelError) as raised:
+            list(categories)
+
+        self.assertEqual(raised.exception.code, "database_operation_failed")
+        self.assertIsInstance(raised.exception.__cause__, sqlite3.Error)
+
+    def test_runtime_sqlite_write_error_is_translated(self):
+        lock_connection = sqlite3.connect(
+            self.database_file,
+            autocommit=True,
+        )
+        self.addCleanup(lock_connection.close)
+        lock_connection.execute("BEGIN IMMEDIATE")
+        self.addCleanup(lock_connection.rollback)
+        self.model._connection.execute("PRAGMA busy_timeout = 0")
+
+        with self.assertRaises(DataModelError) as raised:
+            self.model.add_category(Category("Blocked write"))
+
+        self.assertEqual(raised.exception.code, "database_operation_failed")
+        self.assertIsInstance(raised.exception.__cause__, sqlite3.OperationalError)
+
     def test_category_summaries_include_number_of_snippets(self):
         empty_category = self.model.add_category(Category("Empty"))
         filled_category = self.model.add_category(Category("Filled"))

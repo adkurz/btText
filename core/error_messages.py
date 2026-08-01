@@ -25,6 +25,14 @@ def _format_database_open_failed(parameters: dict[str, Any]) -> str:
     )
 
 
+def _format_database_operation_failed(parameters: dict[str, Any]) -> str:
+    # Translators: Runtime error when an already-open snippet database can no
+    # longer complete a read or write. {reason} is a technical SQLite message.
+    return _("The database operation failed: {reason}").format(
+        reason=_format_reason(parameters["reason"])
+    )
+
+
 def _format_database_schema_incomplete(parameters: dict[str, Any]) -> str:
     # Translators: Startup error for a damaged or incomplete snippet database.
     # {missing_tables} is a comma-separated list of technical table names.
@@ -92,6 +100,7 @@ def _format_settings_save_failed(parameters: dict[str, Any]) -> str:
 
 _FORMATTERS: dict[str, ErrorFormatter] = {
     "database_open_failed": _format_database_open_failed,
+    "database_operation_failed": _format_database_operation_failed,
     # Translators: Database-opening error shown when a configured or selected
     # file was removed or is no longer reachable.
     "database_file_missing": lambda parameters: _(
