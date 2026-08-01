@@ -84,6 +84,7 @@ $TemporaryRoot = Join-Path (
 ) ("btText-build-" + [guid]::NewGuid().ToString("N"))
 $WorkDirectory = Join-Path $TemporaryRoot "work"
 $DistributionDirectory = Join-Path $TemporaryRoot "dist"
+$DocumentationDirectory = Join-Path $TemporaryRoot "documentation"
 
 Push-Location $ProjectRoot
 try {
@@ -118,6 +119,14 @@ try {
         throw "Translation compilation failed with exit code $LASTEXITCODE."
     }
 
+    Write-Host "Building HTML documentation..."
+    & $VirtualEnvironmentPython tools/build_documentation.py `
+        (Join-Path $ProjectRoot "docs") `
+        $DocumentationDirectory
+    if ($LASTEXITCODE -ne 0) {
+        throw "Documentation build failed with exit code $LASTEXITCODE."
+    }
+
     Write-Host "Running tests..."
     & $VirtualEnvironmentPython -m unittest discover -s tests -v
     if ($LASTEXITCODE -ne 0) {
@@ -125,7 +134,8 @@ try {
     }
 
     Write-Host "Creating portable Windows application..."
-    New-Item -ItemType Directory -Path $TemporaryRoot | Out-Null
+    New-Item -ItemType Directory -Path $TemporaryRoot -Force | Out-Null
+    $env:BTTEXT_DOCUMENTATION_DIRECTORY = $DocumentationDirectory
     & $VirtualEnvironmentPython -m PyInstaller `
         --noconfirm `
         --clean `
@@ -135,11 +145,33 @@ try {
     if ($LASTEXITCODE -ne 0) {
         throw "PyInstaller failed with exit code $LASTEXITCODE."
     }
+    Remove-Item Env:BTTEXT_DOCUMENTATION_DIRECTORY -ErrorAction SilentlyContinue
 
     $ApplicationDirectory = Join-Path $DistributionDirectory "btText"
     $Executable = Join-Path $ApplicationDirectory "btText.exe"
     if (-not (Test-Path -LiteralPath $Executable -PathType Leaf)) {
         throw "PyInstaller did not create btText.exe."
+    }
+
+    $SourceDocuments = Get-ChildItem `
+        -LiteralPath (Join-Path $ProjectRoot "docs") `
+        -Filter "*.md" `
+        -Recurse `
+        -File
+    $DocumentationSourceRoot = [IO.Path]::GetFullPath(
+        (Join-Path $ProjectRoot "docs")
+    ).TrimEnd("\", "/")
+    foreach ($SourceDocument in $SourceDocuments) {
+        $RelativeDocument = $SourceDocument.FullName.Substring(
+            $DocumentationSourceRoot.Length
+        ).TrimStart("\", "/")
+        $RelativeHtml = [IO.Path]::ChangeExtension($RelativeDocument, ".html")
+        $BundledDocument = Join-Path $ApplicationDirectory (
+            "_internal\docs\{0}" -f $RelativeHtml
+        )
+        if (-not (Test-Path -LiteralPath $BundledDocument -PathType Leaf)) {
+            throw "The application bundle is missing documentation: $BundledDocument"
+        }
     }
 
     $ApplicationCatalogs = Get-ChildItem `
@@ -229,6 +261,7 @@ try {
     }
 }
 finally {
+    Remove-Item Env:BTTEXT_DOCUMENTATION_DIRECTORY -ErrorAction SilentlyContinue
     Pop-Location
     if (
         (Test-Path -LiteralPath $TemporaryRoot) -and

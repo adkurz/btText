@@ -11,6 +11,7 @@ import info
 from core.app_settings import AppSettings, SettingsStore
 from core.error_messages import format_user_error
 from i18n import _
+from platform_support.documentation import open_manual
 from ui import utils
 from ui import theme
 from ui.category_tree import CategoryTree
@@ -380,6 +381,11 @@ class MainFrame(sc.SizedFrame):
         # "&" marks the keyboard mnemonic.
         menubar.Append(edit_menu, _("&Edit"))
         help_menu = wx.Menu()
+        # Translators: Help-menu command that opens the user manual. Keep F1
+        # after "\t" so wxPython registers the standard help shortcut.
+        manual_item = help_menu.Append(wx.ID_HELP, _("View user &manual\tF1"))
+        self.Bind(wx.EVT_MENU, self.on_open_manual, manual_item)
+        help_menu.AppendSeparator()
         # Translators: Help-menu command that opens application information.
         about_item = help_menu.Append(wx.ID_ABOUT, _("About"))
         self.Bind(wx.EVT_MENU, self.on_about, about_item)
@@ -487,6 +493,23 @@ class MainFrame(sc.SizedFrame):
         about_info.SetCopyright(info.copyright)
         about_info.SetLicense(info.license)
         wx.adv.AboutBox(about_info)
+
+    def on_open_manual(self, event: wx.CommandEvent):
+        """Open the manual matching the active user-interface language."""
+        try:
+            open_manual()
+        except OSError as error:
+            wx.MessageBox(
+                # Translators: Error shown when the HTML user manual cannot be
+                # found or opened by the system.
+                _("The user manual could not be opened.\n\n{reason}").format(
+                    reason=error
+                ),
+                # Translators: Title of the user-manual opening error.
+                _("User manual error"),
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
 
     def _create_tray_icon(self):
         """Create the tray icon and convert window close into hiding."""

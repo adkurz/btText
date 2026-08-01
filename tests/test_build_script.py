@@ -66,6 +66,12 @@ class BuildScriptTests(unittest.TestCase):
             self.script,
         )
 
+    def test_build_generates_and_checks_all_markdown_documentation(self):
+        self.assertIn("tools/build_documentation.py", self.script)
+        self.assertIn("BTTEXT_DOCUMENTATION_DIRECTORY", self.script)
+        self.assertIn('-Filter "*.md"', self.script)
+        self.assertIn("_internal\\docs", self.script)
+
 
 if __name__ == "__main__":
     unittest.main()

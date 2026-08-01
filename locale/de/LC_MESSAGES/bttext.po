@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-08-01 21:45+0200\n"
+"POT-Creation-Date: 2026-08-01 22:17+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -21,7 +21,7 @@ msgstr ""
 #. Translators: Title for an error opening a selected snippet
 #. database.
 #. Translators: Title for a failed database selection or creation.
-#: btText.py:59 ui/database_selection.py:101 ui/main_frame.py:417
+#: btText.py:59 ui/database_selection.py:101 ui/main_frame.py:423
 msgid "Database error"
 msgstr "Datenbankfehler"
 
@@ -335,7 +335,7 @@ msgstr "Systemstandard"
 
 #. Translators: Root label of the main window's category tree.
 #. Translators: Accessible name for the main window's category tree.
-#: ui/category_tree.py:67 ui/main_frame.py:141
+#: ui/category_tree.py:67 ui/main_frame.py:142
 msgid "Categories"
 msgstr "Kategorien"
 
@@ -580,19 +580,19 @@ msgstr "Hotstring-Fehler"
 
 #. Translators: Heading for the tree used to select a category.
 #. "&" marks the keyboard mnemonic for the category tree.
-#: ui/main_frame.py:131
+#: ui/main_frame.py:132
 msgid "&Categories"
 msgstr "&Kategorien"
 
 #. Translators: Heading for the list of snippets in the selected
 #. category. "&" marks the keyboard mnemonic for the snippet list.
-#: ui/main_frame.py:146
+#: ui/main_frame.py:147
 msgid "&Snippets"
 msgstr "&Textbausteine"
 
 #. Translators: Accessible name for the main window list showing snippets
 #. from the selected category.
-#: ui/main_frame.py:165
+#: ui/main_frame.py:166
 msgid "Snippets in the selected category"
 msgstr "Textbausteine in der ausgewählten Kategorie"
 
@@ -600,7 +600,7 @@ msgstr "Textbausteine in der ausgewählten Kategorie"
 #. Translators: Generic title for a failed snippet operation.
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
-#: ui/main_frame.py:254 ui/main_frame.py:273 ui/main_frame.py:285
+#: ui/main_frame.py:255 ui/main_frame.py:274 ui/main_frame.py:286
 #: ui/paste_controller.py:62 ui/snippet_list.py:415 ui/snippet_list.py:445
 #: ui/snippet_list.py:477
 msgid "Error"
@@ -608,85 +608,109 @@ msgstr "Fehler"
 
 #. Translators: Error shown when a selected snippet points to a
 #. category that was deleted meanwhile.
-#: ui/main_frame.py:271
+#: ui/main_frame.py:272
 msgid "The category of the selected snippet no longer exists."
 msgstr "Die Kategorie des ausgewählten Textbausteins ist nicht mehr vorhanden."
 
 #. Translators: Error shown when the selected snippet was deleted
 #. before it could be displayed or inserted.
-#: ui/main_frame.py:283
+#: ui/main_frame.py:284
 msgid "The selected snippet no longer exists."
 msgstr "Der ausgewählte Textbaustein ist nicht mehr vorhanden."
 
 #. Translators: File-menu command for selecting another snippet
 #. database. The selection is used after restarting btText.
-#: ui/main_frame.py:350
+#: ui/main_frame.py:351
 msgid "Change &database..."
 msgstr "&Datenbank wechseln …"
 
 #. Translators: File-menu command that hides the main window while
 #. keeping btText available in the notification area.
-#: ui/main_frame.py:355
+#: ui/main_frame.py:356
 msgid "&Close"
 msgstr "&Schließen"
 
 #. Translators: File-menu command that exits btText completely,
 #. including its notification-area icon.
-#: ui/main_frame.py:360
+#: ui/main_frame.py:361
 msgid "E&xit"
 msgstr "&Beenden"
 
 #. Translators: Main-window menu containing window-close and full-exit
 #. commands. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:364
+#: ui/main_frame.py:365
 msgid "&File"
 msgstr "&Datei"
 
 #. Translators: Edit-menu command that opens the snippet search
 #. dialog. "&" marks the mnemonic; keep F3 after "\t".
-#: ui/main_frame.py:370
+#: ui/main_frame.py:371
 msgid "&Search...\tF3"
 msgstr "&Suchen...\tF3"
 
 #. Translators: Edit-menu command that opens the settings dialog.
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
-#: ui/main_frame.py:377
+#: ui/main_frame.py:378
 msgid "&Settings...\tCtrl+,"
 msgstr "&Einstellungen...\tCtrl+,"
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:381
+#: ui/main_frame.py:382
 msgid "&Edit"
 msgstr "&Bearbeiten"
 
+#. Translators: Help-menu command that opens the user manual. Keep F1
+#. after "\t" so wxPython registers the standard help shortcut.
+#: ui/main_frame.py:386
+msgid "View user &manual\tF1"
+msgstr "Benutzer&handbuch anzeigen\tF1"
+
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:384
+#: ui/main_frame.py:390
 msgid "About"
 msgstr "Über btText"
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:388
+#: ui/main_frame.py:394
 msgid "&Help"
 msgstr "&Hilfe"
 
 #. Translators: Confirmation after choosing the database that btText
 #. should open following its next restart.
-#: ui/main_frame.py:433
+#: ui/main_frame.py:439
 msgid "The selected database will be used the next time btText starts."
 msgstr "Die ausgewählte Datenbank wird beim nächsten Start von btText verwendet."
 
 #. Translators: Title confirming that another database was selected.
-#: ui/main_frame.py:435
+#: ui/main_frame.py:441
 msgid "Database selected"
 msgstr "Datenbank ausgewählt"
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:474
+#: ui/main_frame.py:480
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr "F3: Textbausteine suchen    Eingabetaste: Ausgewählten Textbaustein einfügen"
+
+#. Translators: Error shown when the HTML user manual cannot be
+#. found or opened by the system.
+#: ui/main_frame.py:505
+#, python-brace-format
+msgid ""
+"The user manual could not be opened.\n"
+"\n"
+"{reason}"
+msgstr ""
+"Das Benutzerhandbuch konnte nicht geöffnet werden.\n"
+"\n"
+"{reason}"
+
+#. Translators: Title of the user-manual opening error.
+#: ui/main_frame.py:509
+msgid "User manual error"
+msgstr "Fehler beim Benutzerhandbuch"
 
 #. Translators: Error when no previously active external window is
 #. available as the destination for inserting a snippet.
@@ -1318,4 +1342,3 @@ msgstr "Hoch"
 #: ui/validators.py:26
 msgid "The input field must not be empty!"
 msgstr "Das Eingabefeld darf nicht leer sein!"
-

@@ -17,6 +17,28 @@ from ui.snippet_list import SnippetList
 
 
 class ApplicationMenuTestCase(unittest.TestCase):
+    @patch("ui.main_frame.wx.MessageBox")
+    @patch("ui.main_frame.open_manual")
+    def test_manual_command_opens_localized_documentation(
+        self, open_manual_mock, message_box
+    ):
+        MainFrame.on_open_manual(SimpleNamespace(), Mock())
+
+        open_manual_mock.assert_called_once_with()
+        message_box.assert_not_called()
+
+    @patch("ui.main_frame.wx.MessageBox")
+    @patch("ui.main_frame.open_manual", side_effect=FileNotFoundError("missing"))
+    def test_manual_command_reports_opening_error(
+        self, open_manual_mock, message_box
+    ):
+        frame = SimpleNamespace()
+
+        MainFrame.on_open_manual(frame, Mock())
+
+        open_manual_mock.assert_called_once_with()
+        message_box.assert_called_once()
+
     def test_close_command_keeps_application_running(self):
         frame = SimpleNamespace(Close=Mock())
 

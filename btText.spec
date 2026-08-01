@@ -1,5 +1,6 @@
 """PyInstaller definition for the portable btText Windows application."""
 
+import os
 from pathlib import Path
 import runpy
 
@@ -70,6 +71,17 @@ application_catalogs = sorted(
 data_files = [
     (str(project_root / "assets" / "icon.png"), "assets"),
 ]
+documentation_directory = Path(os.environ["BTTEXT_DOCUMENTATION_DIRECTORY"])
+documentation_files = sorted(documentation_directory.rglob("*.html"))
+if not documentation_files:
+    raise ValueError("No generated HTML documentation was provided")
+data_files.extend(
+    (
+        str(document),
+        str(Path("docs") / document.parent.relative_to(documentation_directory)),
+    )
+    for document in documentation_files
+)
 data_files.extend(
     (str(catalog), str(catalog.parent.relative_to(project_root)))
     for catalog in application_catalogs
