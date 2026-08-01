@@ -1,3 +1,5 @@
+import ctypes
+from ctypes import wintypes
 import unittest
 from unittest.mock import Mock, patch
 
@@ -82,6 +84,26 @@ class ThemeSelectionTestCase(unittest.TestCase):
             apply_title_bar.assert_called_once_with(frame, True)
         finally:
             frame.Destroy()
+
+    @patch("ui.theme.sys.platform", "win32")
+    @patch("ui.theme.ctypes.windll")
+    def test_windows_title_bar_uses_documented_windows_11_attribute(
+        self,
+        windll,
+    ):
+        window = Mock()
+        window.GetHandle.return_value = 123
+
+        theme._apply_windows_title_bar(window, True)
+
+        call = windll.dwmapi.DwmSetWindowAttribute.call_args
+        self.assertEqual(call.args[0].value, 123)
+        self.assertEqual(
+            call.args[1],
+            theme.DWMWA_USE_IMMERSIVE_DARK_MODE,
+        )
+        self.assertEqual(call.args[3], ctypes.sizeof(wintypes.BOOL()))
+        windll.dwmapi.DwmSetWindowAttribute.assert_called_once()
 
 
 if __name__ == "__main__":

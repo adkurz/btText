@@ -3,10 +3,14 @@
 from __future__ import annotations
 
 import ctypes
+from ctypes import wintypes
 from dataclasses import dataclass
 import sys
 
 import wx
+
+
+DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 
 
 @dataclass(frozen=True)
@@ -95,23 +99,14 @@ def _apply_windows_title_bar(window: wx.TopLevelWindow, dark: bool) -> None:
     if sys.platform != "win32":
         return
     try:
-        attribute_value = ctypes.c_int(int(dark))
+        attribute_value = wintypes.BOOL(dark)
         handle = ctypes.c_void_p(window.GetHandle())
-        # DWMWA_USE_IMMERSIVE_DARK_MODE is 20 on supported Windows versions;
-        # older Windows 10 builds used 19 for the same opt-in.
-        result = ctypes.windll.dwmapi.DwmSetWindowAttribute(
+        ctypes.windll.dwmapi.DwmSetWindowAttribute(
             handle,
-            20,
+            DWMWA_USE_IMMERSIVE_DARK_MODE,
             ctypes.byref(attribute_value),
             ctypes.sizeof(attribute_value),
         )
-        if result != 0:
-            ctypes.windll.dwmapi.DwmSetWindowAttribute(
-                handle,
-                19,
-                ctypes.byref(attribute_value),
-                ctypes.sizeof(attribute_value),
-            )
     except (AttributeError, OSError, TypeError, ValueError):
         # Colouring the client area is still useful on unsupported systems.
         return
