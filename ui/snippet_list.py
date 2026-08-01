@@ -98,26 +98,24 @@ class SnippetList(wx.ListView):
         if category_id == self.selected_category_id and not force:
             return
         self.selected_category_id = category_id
-        self.Freeze()
-        self.DeleteAllItems()
-        if category_id is None:
-            self.Thaw()
-            return
-        for snippet in self._model.get_snippets(category_id):
-            index = self.Append(
-                (
-                    snippet.name,
-                    utils.get_weight_string(snippet.weight),
-                    snippet.weight,
-                    utils.reduce_string(
-                        snippet.content,
-                        CONTENT_PREVIEW_LENGTH,
-                    ),
+        with utils.frozen(self):
+            self.DeleteAllItems()
+            if category_id is None:
+                return
+            for snippet in self._model.get_snippets(category_id):
+                index = self.Append(
+                    (
+                        snippet.name,
+                        utils.get_weight_string(snippet.weight),
+                        snippet.weight,
+                        utils.reduce_string(
+                            snippet.content,
+                            CONTENT_PREVIEW_LENGTH,
+                        ),
+                    )
                 )
-            )
-            self.SetItemData(index, snippet.id or 0)
-        self.sort()
-        self.Thaw()
+                self.SetItemData(index, snippet.id or 0)
+            self.sort()
 
     def context_menu(self, event: wx.ContextMenuEvent):
         """Show commands valid for the current row and transfer state."""
@@ -204,7 +202,7 @@ class SnippetList(wx.ListView):
                 ),
             )
             menu.Bind(wx.EVT_MENU, self.delete_snippet, delete_snippets)
-        self.PopupMenu(menu)
+        utils.popup_menu(self, menu)
 
     def key_handler(self, event: wx.KeyEvent):
         """Map keyboard shortcuts to snippet operations."""
@@ -530,20 +528,19 @@ class SnippetList(wx.ListView):
         if snippet.id is not None and self.FindItem(-1, snippet.id) != wx.NOT_FOUND:
             self.focus_id(snippet.id)
             return
-        self.Freeze()
-        snippet_index = self.Append(
-            (
-                snippet.name,
-                utils.get_weight_string(snippet.weight),
-                snippet.weight,
-                utils.reduce_string(snippet.content, CONTENT_PREVIEW_LENGTH),
+        with utils.frozen(self):
+            snippet_index = self.Append(
+                (
+                    snippet.name,
+                    utils.get_weight_string(snippet.weight),
+                    snippet.weight,
+                    utils.reduce_string(snippet.content, CONTENT_PREVIEW_LENGTH),
+                )
             )
-        )
-        self.SetItemData(snippet_index, snippet.id or 0)
-        self.Focus(snippet_index)
-        self.Select(snippet_index)
-        self.sort()
-        self.Thaw()
+            self.SetItemData(snippet_index, snippet.id or 0)
+            self.Focus(snippet_index)
+            self.Select(snippet_index)
+            self.sort()
 
     def edit_snippet_in_list(self, snippet: datamodel.Snippet):
         """Update, add, or remove a row after a snippet edit."""
@@ -556,18 +553,17 @@ class SnippetList(wx.ListView):
         if index == wx.NOT_FOUND:
             self.add_snippet_in_list(snippet)
             return
-        self.Freeze()
-        self.SetItem(index, 0, snippet.name)
-        self.SetItem(index, 1, utils.get_weight_string(snippet.weight))
-        self.SetItem(index, 2, str(snippet.weight))
-        self.SetItem(
-            index,
-            3,
-            utils.reduce_string(snippet.content, CONTENT_PREVIEW_LENGTH),
-        )
-        self.sort()
-        self.focus_id(snippet.id)
-        self.Thaw()
+        with utils.frozen(self):
+            self.SetItem(index, 0, snippet.name)
+            self.SetItem(index, 1, utils.get_weight_string(snippet.weight))
+            self.SetItem(index, 2, str(snippet.weight))
+            self.SetItem(
+                index,
+                3,
+                utils.reduce_string(snippet.content, CONTENT_PREVIEW_LENGTH),
+            )
+            self.sort()
+            self.focus_id(snippet.id)
 
     def _sort_compare(self, item1, item2):
         """Sort by descending weight and then by name."""

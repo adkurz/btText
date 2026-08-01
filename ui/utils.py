@@ -17,6 +17,24 @@ def managed_dialog(dialog):
         dialog.Destroy()
 
 
+@contextmanager
+def frozen(window):
+    """Freeze a window temporarily and always thaw it afterwards."""
+    window.Freeze()
+    try:
+        yield window
+    finally:
+        window.Thaw()
+
+
+def popup_menu(window, menu) -> None:
+    """Show a popup menu and always release its native resources."""
+    try:
+        window.PopupMenu(menu)
+    finally:
+        menu.Destroy()
+
+
 class YesNoConfirmationDialog(wx.Dialog):
     """Show an accessible two-choice confirmation with Escape mapped to No."""
     def __init__(

@@ -99,40 +99,39 @@ class CategoryTree(wx.TreeCtrl):
             for category_id, item in self._items.items()
             if self.IsExpanded(item)
         }
-        self.Freeze()
-        self.DeleteChildren(self._root)
-        self._items.clear()
-        self._empty_item = None
-        summaries_by_parent = {}
-        for summary in self._model.get_all_category_summaries():
-            summaries_by_parent.setdefault(
-                summary.category.parent_id,
-                [],
-            ).append(summary)
-        for summaries in summaries_by_parent.values():
-            summaries.sort(
-                key=lambda summary: (
-                    summary.category.name.casefold(),
-                    summary.category.id,
+        with utils.frozen(self):
+            self.DeleteChildren(self._root)
+            self._items.clear()
+            self._empty_item = None
+            summaries_by_parent = {}
+            for summary in self._model.get_all_category_summaries():
+                summaries_by_parent.setdefault(
+                    summary.category.parent_id,
+                    [],
+                ).append(summary)
+            for summaries in summaries_by_parent.values():
+                summaries.sort(
+                    key=lambda summary: (
+                        summary.category.name.casefold(),
+                        summary.category.id,
+                    )
                 )
-            )
-        self._append_children(self._root, None, summaries_by_parent)
-        if not self._items:
-            self._empty_item = self.AppendItem(
-                self._root,
-                # Translators: Category-tree placeholder shown when no category
-                # has been created yet.
-                _("No categories"),
-            )
-            self.SetItemData(self._empty_item, None)
-            self.SelectItem(self._empty_item)
-        for category_id in expanded_ids:
-            item = self._items.get(category_id)
-            if item is not None:
-                self.Expand(item)
-        if selected_id is not None:
-            self.focus_id(selected_id)
-        self.Thaw()
+            self._append_children(self._root, None, summaries_by_parent)
+            if not self._items:
+                self._empty_item = self.AppendItem(
+                    self._root,
+                    # Translators: Category-tree placeholder shown when no
+                    # category has been created yet.
+                    _("No categories"),
+                )
+                self.SetItemData(self._empty_item, None)
+                self.SelectItem(self._empty_item)
+            for category_id in expanded_ids:
+                item = self._items.get(category_id)
+                if item is not None:
+                    self.Expand(item)
+            if selected_id is not None:
+                self.focus_id(selected_id)
 
     def _append_children(self, parent_item, parent_id, summaries_by_parent):
         """Recursively append the model children below a tree item."""
@@ -232,8 +231,7 @@ class CategoryTree(wx.TreeCtrl):
             delete_item = menu.Append(wx.ID_DELETE, _("Delete\tDelete"))
             menu.Bind(wx.EVT_MENU, self.edit_category, edit_item)
             menu.Bind(wx.EVT_MENU, self.delete_category, delete_item)
-        self.PopupMenu(menu)
-        menu.Destroy()
+        utils.popup_menu(self, menu)
 
     def key_handler(self, event):
         """Map accessible keyboard commands to category operations."""

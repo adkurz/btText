@@ -139,42 +139,40 @@ class SearchDialog(wx.Dialog):
     def _run_search(self):
         """Populate the result list from the current literal search term."""
         term = self.search_input.GetValue()
-        self.result_list.Freeze()
-        try:
-            self.result_list.DeleteAllItems()
-            self._selected_snippet_id = None
-            self.open_button.Enable(False)
-            if not term:
-                return
+        with utils.frozen(self.result_list):
+            try:
+                self.result_list.DeleteAllItems()
+                self._selected_snippet_id = None
+                self.open_button.Enable(False)
+                if not term:
+                    return
 
-            category_names = {}
-            for snippet in self._model.search_snippets(term):
-                if snippet.category_id not in category_names:
-                    category_names[snippet.category_id] = (
-                        self._model.get_category_path(snippet.category_id)
+                category_names = {}
+                for snippet in self._model.search_snippets(term):
+                    if snippet.category_id not in category_names:
+                        category_names[snippet.category_id] = (
+                            self._model.get_category_path(snippet.category_id)
+                        )
+                    index = self.result_list.Append(
+                        (
+                            snippet.name,
+                            category_names[snippet.category_id],
+                            utils.get_weight_string(snippet.weight),
+                            utils.reduce_string(
+                                snippet.content,
+                                CONTENT_PREVIEW_LENGTH,
+                            ),
+                        )
                     )
-                index = self.result_list.Append(
-                    (
-                        snippet.name,
-                        category_names[snippet.category_id],
-                        utils.get_weight_string(snippet.weight),
-                        utils.reduce_string(
-                            snippet.content,
-                            CONTENT_PREVIEW_LENGTH,
-                        ),
-                    )
+                    self.result_list.SetItemData(index, snippet.id or 0)
+            except datamodel.DataModelError as error:
+                wx.MessageBox(
+                    format_user_error(error),
+                    # Translators: Title of an error while searching snippets.
+                    _("Search error"),
+                    wx.OK | wx.ICON_ERROR,
+                    self,
                 )
-                self.result_list.SetItemData(index, snippet.id or 0)
-        except datamodel.DataModelError as error:
-            wx.MessageBox(
-                format_user_error(error),
-                # Translators: Title of an error while searching snippets.
-                _("Search error"),
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
-        finally:
-            self.result_list.Thaw()
 
     def _on_result_focused(self, event: wx.ListEvent):
         """Remember the model ID associated with the focused result."""
