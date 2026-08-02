@@ -162,6 +162,7 @@ Die Tastenkürzel werden in der deutschen Oberfläche als `Strg`, `Umschalt`, `A
 ### Menü „Hilfe“
 
 - **Benutzerhandbuch anzeigen** (`F1`): Dieses Benutzerhandbuch im Standardbrowser öffnen.
+- **Protokollordner öffnen**: Den Ordner mit einem Diagnoseprotokoll öffnen. Portable Versionen speichern es neben dem Programm unter `logs`, installierte Versionen unter `%APPDATA%\btText\logs`. Inhalte von Textbausteinen, Hotstrings und der Zwischenablage werden nicht protokolliert.
 - **Über btText**: Version, Autor und Lizenz anzeigen.
 
 ### Kontextmenüs

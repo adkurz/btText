@@ -5,7 +5,7 @@ from collections.abc import Callable
 import logging
 
 
-logger = logging.getLogger(__name__)
+logger = logging.getLogger("bttext.events")
 EventListener = Callable[..., object]
 
 

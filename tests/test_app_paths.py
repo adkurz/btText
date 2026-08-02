@@ -49,6 +49,10 @@ class AppPathsTests(unittest.TestCase):
                     app_paths.get_database_file(),
                     root / "data.db",
                 )
+                self.assertEqual(
+                    app_paths.get_log_file(),
+                    root / "logs" / "btText.log",
+                )
 
     def test_frozen_build_with_marker_uses_appdata(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -80,6 +84,10 @@ class AppPathsTests(unittest.TestCase):
                 self.assertEqual(
                     app_paths.get_database_file(),
                     expected / "data.db",
+                )
+                self.assertEqual(
+                    app_paths.get_log_file(),
+                    expected / "logs" / "btText.log",
                 )
                 self.assertEqual(
                     app_paths.get_resource_directory(),

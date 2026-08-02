@@ -162,6 +162,7 @@ Keyboard shortcuts are displayed in the German interface as `Strg` (Ctrl), `Umsc
 ### "Help" (Hilfe) Menu
 
 - **View user manual** (`F1`): Opens this user manual in the default browser.
+- **Open log folder**: Opens the folder containing a diagnostic log. Portable versions store it beside the program under `logs`; installed versions use `%APPDATA%\btText\logs`. Snippet, hotstring, and clipboard contents are not written to the log.
 - **About btText** (Über btText): Shows version, author, and license.
 
 ### Context Menus

@@ -12,6 +12,7 @@ from core.error_messages import format_user_error
 from core.events import EventEmitter
 from i18n import _
 from platform_support.documentation import open_manual
+from platform_support.logging_support import open_log_directory
 from ui import utils
 from ui import theme
 from ui.category_tree import CategoryTree
@@ -383,6 +384,10 @@ class MainFrame(sc.SizedFrame):
         # after "\t" so wxPython registers the standard help shortcut.
         manual_item = help_menu.Append(wx.ID_HELP, _("View user &manual\tF1"))
         self.Bind(wx.EVT_MENU, self.on_open_manual, manual_item)
+        # Translators: Help-menu command that opens the local diagnostic-log
+        # directory in Windows Explorer. "&" marks the keyboard mnemonic.
+        log_item = help_menu.Append(wx.ID_ANY, _("Open &log folder"))
+        self.Bind(wx.EVT_MENU, self.on_open_log_directory, log_item)
         help_menu.AppendSeparator()
         # Translators: Help-menu command that opens application information.
         about_item = help_menu.Append(wx.ID_ABOUT, _("About"))
@@ -505,6 +510,23 @@ class MainFrame(sc.SizedFrame):
                 ),
                 # Translators: Title of the user-manual opening error.
                 _("User manual error"),
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+
+    def on_open_log_directory(self, event: wx.CommandEvent):
+        """Open the mode-aware directory containing diagnostic logs."""
+        try:
+            open_log_directory()
+        except OSError as error:
+            wx.MessageBox(
+                # Translators: Error shown when the local log directory cannot
+                # be created or opened. {reason} is a technical system message.
+                _("The log folder could not be opened.\n\n{reason}").format(
+                    reason=error
+                ),
+                # Translators: Title of an error opening the log directory.
+                _("Logging error"),
                 wx.OK | wx.ICON_ERROR,
                 self,
             )

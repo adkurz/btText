@@ -9,6 +9,8 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INSTALL_MODE_MARKER = "bttext-install-mode.json"
 USER_DATA_DIRECTORY_NAME = "btText"
+LOG_DIRECTORY_NAME = "logs"
+LOG_FILE_NAME = "btText.log"
 
 
 class ApplicationMode(Enum):
@@ -82,3 +84,13 @@ def get_locale_directory() -> Path:
 def get_settings_file() -> Path:
     """Return the INI file in the active writable data directory."""
     return get_data_directory() / "settings.ini"
+
+
+def get_log_directory() -> Path:
+    """Return the mode-aware directory reserved for application logs."""
+    return get_data_directory() / LOG_DIRECTORY_NAME
+
+
+def get_log_file() -> Path:
+    """Return the active rotating application-log file."""
+    return get_log_directory() / LOG_FILE_NAME

@@ -1,6 +1,7 @@
 """Application entry point and top-level resource lifetime management."""
 
 import dataclasses
+import logging
 
 import wx
 
@@ -9,6 +10,7 @@ from core import datamodel
 from core.app_settings import AppSettings, SettingsError, SettingsStore
 from core.events import EventEmitter
 from core.error_messages import format_user_error
+from core.logging_setup import configure_logging
 import i18n
 from i18n import _
 import info
@@ -84,6 +86,18 @@ def _open_database(ee, settings_store, settings):
 
 def main():
     """Initialize the wx application and release resources on shutdown."""
+    logging_error = None
+    try:
+        logger = configure_logging(app_paths.get_log_file())
+    except (OSError, RuntimeError) as error:
+        logger = logging.getLogger("bttext")
+        logging_error = error
+    logger.info(
+        "Starting %s %s in %s mode",
+        info.name,
+        info.version,
+        app_paths.get_application_mode().value,
+    )
     ee = EventEmitter()
     instance_checker = None
     model = None
@@ -115,6 +129,18 @@ def main():
             )
         except i18n.LanguageError as error:
             language_error = error
+        if logging_error is not None:
+            wx.MessageBox(
+                # Translators: Startup warning when the application could not
+                # create its local diagnostic log file. {reason} is technical.
+                _(
+                    "The application log could not be initialized. btText will "
+                    "continue without file logging.\n\n{reason}"
+                ).format(reason=logging_error),
+                # Translators: Title of the startup warning for log setup.
+                _("Logging error"),
+                wx.OK | wx.ICON_WARNING,
+            )
         if another_instance_running:
             wx.MessageBox(
                 # Translators: Information shown when the user tries to start
@@ -147,8 +173,11 @@ def main():
             )
         app.MainLoop()
     finally:
-        if model is not None:
-            model.close()
+        try:
+            if model is not None:
+                model.close()
+        finally:
+            logger.info("btText stopped")
 
 if __name__ == '__main__':
     main()

@@ -78,7 +78,7 @@ class DataModelTestCase(unittest.TestCase):
         self.model.ee = events
         category = Category("Committed before event")
 
-        with self.assertLogs("core.events", level="ERROR"):
+        with self.assertLogs("bttext.events", level="ERROR"):
             self.model.add_category(category)
 
         self.assertIsNotNone(category.id)

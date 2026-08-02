@@ -18,6 +18,35 @@ from ui.snippet_list import SnippetList
 
 class ApplicationMenuTestCase(unittest.TestCase):
     @patch("ui.main_frame.wx.MessageBox")
+    @patch("ui.main_frame.open_log_directory")
+    def test_log_directory_command_opens_directory(
+        self,
+        open_log_directory_mock,
+        message_box,
+    ):
+        MainFrame.on_open_log_directory(SimpleNamespace(), Mock())
+
+        open_log_directory_mock.assert_called_once_with()
+        message_box.assert_not_called()
+
+    @patch("ui.main_frame.wx.MessageBox")
+    @patch(
+        "ui.main_frame.open_log_directory",
+        side_effect=OSError("unavailable"),
+    )
+    def test_log_directory_command_reports_opening_error(
+        self,
+        open_log_directory_mock,
+        message_box,
+    ):
+        frame = SimpleNamespace()
+
+        MainFrame.on_open_log_directory(frame, Mock())
+
+        open_log_directory_mock.assert_called_once_with()
+        message_box.assert_called_once()
+
+    @patch("ui.main_frame.wx.MessageBox")
     @patch("ui.main_frame.open_manual")
     def test_manual_command_opens_localized_documentation(
         self, open_manual_mock, message_box

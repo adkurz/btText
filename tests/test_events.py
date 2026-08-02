@@ -12,7 +12,7 @@ class EventEmitterTestCase(unittest.TestCase):
         events.on("changed", failing_listener)
         events.on("changed", later_listener)
 
-        with self.assertLogs("core.events", level="ERROR") as logged:
+        with self.assertLogs("bttext.events", level="ERROR") as logged:
             events.emit("changed", 42)
 
         failing_listener.assert_called_once_with(42)

@@ -12,6 +12,8 @@ from ui.database_selection import DatabaseSelection
 
 
 class SingleInstanceTestCase(unittest.TestCase):
+    @patch("btText.app_paths.get_log_file")
+    @patch("btText.configure_logging")
     @patch("btText.theme.apply_to_app")
     @patch("btText.theme.initialize")
     @patch("btText.DataModel")
@@ -32,11 +34,14 @@ class SingleInstanceTestCase(unittest.TestCase):
         data_model,
         initialize_theme,
         apply_theme_to_app,
+        configure_logging,
+        get_log_file,
     ):
         checker_class.return_value.IsAnotherRunning.return_value = True
         settings_store.return_value.load.return_value = AppSettings(
             appearance=APPEARANCE_DARK
         )
+        configure_logging.return_value = Mock()
 
         btText.main()
 

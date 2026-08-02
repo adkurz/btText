@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-02 01:36+0200\n"
+"POT-Creation-Date: 2026-08-02 01:58+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,7 +20,7 @@ msgstr ""
 #. Translators: Title for an error opening a selected snippet
 #. database.
 #. Translators: Title for a failed database selection or creation.
-#: btText.py:59 ui/database_selection.py:101 ui/main_frame.py:421
+#: btText.py:61 ui/database_selection.py:101 ui/main_frame.py:426
 msgid "Database error"
 msgstr ""
 
@@ -28,19 +28,35 @@ msgstr ""
 #. database path in the application settings.
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:78 btText.py:135 ui/settings_controller.py:210
+#: btText.py:80 btText.py:161 ui/settings_controller.py:210
 msgid "Settings error"
+msgstr ""
+
+#. Translators: Startup warning when the application could not
+#. create its local diagnostic log file. {reason} is technical.
+#: btText.py:137
+#, python-brace-format
+msgid ""
+"The application log could not be initialized. btText will continue without file logging.\n"
+"\n"
+"{reason}"
+msgstr ""
+
+#. Translators: Title of the startup warning for log setup.
+#. Translators: Title of an error opening the log directory.
+#: btText.py:141 ui/main_frame.py:529
+msgid "Logging error"
 msgstr ""
 
 #. Translators: Information shown when the user tries to start
 #. the application while it is already running.
-#: btText.py:122
+#: btText.py:148
 msgid "btText is already running."
 msgstr ""
 
 #. Translators: Title of a startup warning after a translation
 #. catalog could not be loaded.
-#: btText.py:144
+#: btText.py:170
 msgid "Language error"
 msgstr ""
 
@@ -338,7 +354,7 @@ msgstr ""
 
 #. Translators: Root label of the main window's category tree.
 #. Translators: Accessible name for the main window's category tree.
-#: ui/category_tree.py:67 ui/main_frame.py:142
+#: ui/category_tree.py:67 ui/main_frame.py:143
 msgid "Categories"
 msgstr ""
 
@@ -584,19 +600,19 @@ msgstr ""
 
 #. Translators: Heading for the tree used to select a category.
 #. "&" marks the keyboard mnemonic for the category tree.
-#: ui/main_frame.py:132
+#: ui/main_frame.py:133
 msgid "&Categories"
 msgstr ""
 
 #. Translators: Heading for the list of snippets in the selected
 #. category. "&" marks the keyboard mnemonic for the snippet list.
-#: ui/main_frame.py:147
+#: ui/main_frame.py:148
 msgid "&Snippets"
 msgstr ""
 
 #. Translators: Accessible name for the main window list showing snippets
 #. from the selected category.
-#: ui/main_frame.py:166
+#: ui/main_frame.py:167
 msgid "Snippets in the selected category"
 msgstr ""
 
@@ -604,7 +620,7 @@ msgstr ""
 #. Translators: Generic title for a failed snippet operation.
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
-#: ui/main_frame.py:253 ui/main_frame.py:272 ui/main_frame.py:284
+#: ui/main_frame.py:254 ui/main_frame.py:273 ui/main_frame.py:285
 #: ui/paste_controller.py:62 ui/snippet_list.py:416 ui/snippet_list.py:446
 #: ui/snippet_list.py:478
 msgid "Error"
@@ -612,95 +628,101 @@ msgstr ""
 
 #. Translators: Error shown when a selected snippet points to a
 #. category that was deleted meanwhile.
-#: ui/main_frame.py:270
+#: ui/main_frame.py:271
 msgid "The category of the selected snippet no longer exists."
 msgstr ""
 
 #. Translators: Error shown when the selected snippet was deleted
 #. before it could be displayed or inserted.
-#: ui/main_frame.py:282
+#: ui/main_frame.py:283
 msgid "The selected snippet no longer exists."
 msgstr ""
 
 #. Translators: File-menu command for selecting another snippet
 #. database. The selection is used after restarting btText.
-#: ui/main_frame.py:349
+#: ui/main_frame.py:350
 msgid "Change &database..."
 msgstr ""
 
 #. Translators: File-menu command that hides the main window while
 #. keeping btText available in the notification area.
-#: ui/main_frame.py:354
+#: ui/main_frame.py:355
 msgid "&Close"
 msgstr ""
 
 #. Translators: File-menu command that exits btText completely,
 #. including its notification-area icon. Keep Ctrl+Q after "\t".
-#: ui/main_frame.py:359
+#: ui/main_frame.py:360
 msgid "E&xit\tCtrl+Q"
 msgstr ""
 
 #. Translators: Main-window menu containing window-close and full-exit
 #. commands. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:363
+#: ui/main_frame.py:364
 msgid "&File"
 msgstr ""
 
 #. Translators: Edit-menu command that opens the snippet search
 #. dialog. "&" marks the mnemonic; keep F3 after "\t".
-#: ui/main_frame.py:369
+#: ui/main_frame.py:370
 msgid "&Search...\tF3"
 msgstr ""
 
 #. Translators: Edit-menu command that opens the settings dialog.
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
-#: ui/main_frame.py:376
+#: ui/main_frame.py:377
 msgid "&Settings...\tCtrl+,"
 msgstr ""
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:380
+#: ui/main_frame.py:381
 msgid "&Edit"
 msgstr ""
 
 #. Translators: Help-menu command that opens the user manual. Keep F1
 #. after "\t" so wxPython registers the standard help shortcut.
-#: ui/main_frame.py:384
+#: ui/main_frame.py:385
 msgid "View user &manual\tF1"
 msgstr ""
 
+#. Translators: Help-menu command that opens the local diagnostic-log
+#. directory in Windows Explorer. "&" marks the keyboard mnemonic.
+#: ui/main_frame.py:389
+msgid "Open &log folder"
+msgstr ""
+
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:388
+#: ui/main_frame.py:393
 msgid "About"
 msgstr ""
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:392
+#: ui/main_frame.py:397
 msgid "&Help"
 msgstr ""
 
 #. Translators: Confirmation after choosing the database that btText
 #. should open following its next restart.
-#: ui/main_frame.py:437
+#: ui/main_frame.py:442
 msgid "The selected database will be used the next time btText starts."
 msgstr ""
 
 #. Translators: Title confirming that another database was selected.
-#: ui/main_frame.py:439
+#: ui/main_frame.py:444
 msgid "Database selected"
 msgstr ""
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:478
+#: ui/main_frame.py:483
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr ""
 
 #. Translators: Error shown when the HTML user manual cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:503
+#: ui/main_frame.py:508
 #, python-brace-format
 msgid ""
 "The user manual could not be opened.\n"
@@ -709,8 +731,18 @@ msgid ""
 msgstr ""
 
 #. Translators: Title of the user-manual opening error.
-#: ui/main_frame.py:507
+#: ui/main_frame.py:512
 msgid "User manual error"
+msgstr ""
+
+#. Translators: Error shown when the local log directory cannot
+#. be created or opened. {reason} is a technical system message.
+#: ui/main_frame.py:525
+#, python-brace-format
+msgid ""
+"The log folder could not be opened.\n"
+"\n"
+"{reason}"
 msgstr ""
 
 #. Translators: Error when no previously active external window is

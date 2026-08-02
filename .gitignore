@@ -10,3 +10,4 @@ ENV/
 build/
 settings.ini
 settings.ini.tmp
+logs/
