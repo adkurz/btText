@@ -429,7 +429,7 @@ msgstr "Löschen\tEntf"
 #. Translators: Prompt asking for the name of a category being created.
 #: ui/category_tree.py:258
 msgid "Enter the name of the new category"
-msgstr "Geben Sie den Namen der neuen Kategorie ein."
+msgstr "Geben Sie den Namen der neuen Kategorie ein"
 
 #. Translators: Title of the dialog for creating a category.
 #: ui/category_tree.py:260
@@ -440,7 +440,7 @@ msgstr "Kategorie hinzufügen"
 #: ui/category_tree.py:269
 #, python-brace-format
 msgid "Enter the name of the new subcategory of '{parent_name}'"
-msgstr "Geben Sie den Namen der neuen Unterkategorie von „{parent_name}“ ein."
+msgstr "Geben Sie den Namen der neuen Unterkategorie von „{parent_name}“ ein"
 
 #. Translators: Title of the dialog for creating a child category.
 #: ui/category_tree.py:273
@@ -450,7 +450,7 @@ msgstr "Neue Unterkategorie anlegen"
 #. Translators: Prompt asking for a replacement category name.
 #: ui/category_tree.py:306
 msgid "Enter the new name of the category"
-msgstr "Geben Sie den neuen Namen der Kategorie ein."
+msgstr "Geben Sie den neuen Namen der Kategorie ein"
 
 #. Translators: Title of the dialog for renaming a category.
 #: ui/category_tree.py:308
