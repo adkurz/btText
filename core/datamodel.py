@@ -29,6 +29,7 @@ class SnippetValidationError(DataModelError):
 def _translate_sqlite_errors(method):
     """Translate unexpected runtime SQLite failures at the model boundary."""
     if inspect.isgeneratorfunction(method):
+
         @functools.wraps(method)
         def generator_wrapper(*args, **kwargs):
             try:
@@ -55,6 +56,7 @@ def _translate_sqlite_errors(method):
 
     return wrapper
 
+
 @dataclasses.dataclass
 class Snippet:
     """A reusable text fragment assigned to one category.
@@ -62,24 +64,28 @@ class Snippet:
     ``id`` is absent until the snippet is persisted. Higher ``weight`` values
     sort before lower values.
     """
+
     name: str
     content: str
     category_id: int
     weight: int = 1
-    id: int|None = None
-    hotstring: str|None = None
+    id: int | None = None
+    hotstring: str | None = None
+
 
 @dataclasses.dataclass
 class Category:
     """A persisted node in the category tree."""
+
     name: str
-    id: int|None = None
-    parent_id: int|None = None
+    id: int | None = None
+    parent_id: int | None = None
 
 
 @dataclasses.dataclass(frozen=True)
 class CategorySummary:
     """A category projection with its direct snippet count."""
+
     category: Category
     number_of_snippets: int
 
@@ -191,9 +197,11 @@ class DataModel:
             )
             self._create_category_indexes(c)
             self._create_snippet_indexes(c)
-            c.execute("CREATE UNIQUE INDEX snippet_hotstring_unique "
-                      "ON snippet(hotstring) "
-                      "WHERE hotstring IS NOT NULL")
+            c.execute(
+                "CREATE UNIQUE INDEX snippet_hotstring_unique "
+                "ON snippet(hotstring) "
+                "WHERE hotstring IS NOT NULL"
+            )
             c.execute("PRAGMA user_version = 5")
 
     def _migrate_database(self) -> None:
@@ -548,9 +556,9 @@ class DataModel:
             sql += " ORDER BY name COLLATE NOCASE, id"
         for category in self._connection.execute(sql, parameters):
             yield Category(
-                id=category['id'],
+                id=category["id"],
                 parent_id=category["parent_id"],
-                name=category['name'],
+                name=category["name"],
             )
 
     @_translate_sqlite_errors
@@ -799,11 +807,7 @@ class DataModel:
             with self._connection as c:
                 c.execute(
                     "UPDATE category SET parent_id = ?, name = ? WHERE id = ?",
-                    (
-                        category.parent_id,
-                        category.name,
-                        category.id
-                    ),
+                    (category.parent_id, category.name, category.id),
                 )
         except sqlite3.IntegrityError as error:
             self._raise_category_integrity_error(error)
@@ -1011,7 +1015,7 @@ class DataModel:
         if old_id is not None and id != old_id:
             raise SnippetValidationError(
                 "snippet_name_duplicate",
-                "There is already a snippet with this name in this category"
+                "There is already a snippet with this name in this category",
             )
         # Check that weight is in the allowed range:
         if snippet.weight not in self.WEIGHTS:
@@ -1051,7 +1055,7 @@ class DataModel:
                         snippet.weight,
                         snippet.content,
                         snippet.hotstring,
-                    )
+                    ),
                 )
         except sqlite3.IntegrityError as error:
             self._raise_snippet_integrity_error(error)
@@ -1081,8 +1085,8 @@ class DataModel:
                         snippet.weight,
                         snippet.content,
                         snippet.hotstring,
-                        snippet.id
-                    )
+                        snippet.id,
+                    ),
                 )
         except sqlite3.IntegrityError as error:
             self._raise_snippet_integrity_error(error)
