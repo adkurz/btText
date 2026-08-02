@@ -1,6 +1,6 @@
 # btText
 
-btText is a lightweight Windows desktop application for managing and reusing
+btText is a lightweight and accessible Windows desktop application for managing and reusing
 text snippets. It keeps frequently used text in a searchable SQLite database
 and can paste snippets into other Windows applications through the clipboard.
 Optional hotstrings and configurable global hotkeys make common snippets
