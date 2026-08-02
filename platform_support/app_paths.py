@@ -5,12 +5,14 @@ import sys
 from enum import Enum
 from pathlib import Path
 
+import info
+
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
-INSTALL_MODE_MARKER = "bttext-install-mode.json"
-USER_DATA_DIRECTORY_NAME = "btText"
+INSTALL_MODE_MARKER = info.name + "-install-mode.json"
+USER_DATA_DIRECTORY_NAME = info.name
 LOG_DIRECTORY_NAME = "logs"
-LOG_FILE_NAME = "btText.log"
+LOG_FILE_NAME = info.name + ".log"
 
 
 class ApplicationMode(Enum):
