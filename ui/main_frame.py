@@ -11,7 +11,7 @@ from core.app_settings import AppSettings, SettingsStore
 from core.error_messages import format_user_error
 from core.events import EventEmitter
 from i18n import _
-from platform_support.documentation import open_manual
+from platform_support.documentation import open_changelog, open_manual
 from platform_support.logging_support import open_log_directory
 from ui import utils
 from ui import theme
@@ -384,6 +384,10 @@ class MainFrame(sc.SizedFrame):
         # after "\t" so wxPython registers the standard help shortcut.
         manual_item = help_menu.Append(wx.ID_HELP, _("View user &manual\tF1"))
         self.Bind(wx.EVT_MENU, self.on_open_manual, manual_item)
+        # Translators: Help-menu command that opens the version history.
+        # "&" marks the mnemonic.
+        changelog_item = help_menu.Append(wx.ID_ANY, _("View &changelog"))
+        self.Bind(wx.EVT_MENU, self.on_open_changelog, changelog_item)
         # Translators: Help-menu command that opens the local diagnostic-log
         # directory in Windows Explorer. "&" marks the keyboard mnemonic.
         log_item = help_menu.Append(wx.ID_ANY, _("Open &log folder"))
@@ -510,6 +514,23 @@ class MainFrame(sc.SizedFrame):
                 ),
                 # Translators: Title of the user-manual opening error.
                 _("User manual error"),
+                wx.OK | wx.ICON_ERROR,
+                self,
+            )
+
+    def on_open_changelog(self, event: wx.CommandEvent):
+        """Open the changelog matching the active user-interface language."""
+        try:
+            open_changelog()
+        except OSError as error:
+            wx.MessageBox(
+                # Translators: Error shown when the HTML changelog cannot be
+                # found or opened by the system.
+                _("The changelog could not be opened.\n\n{reason}").format(
+                    reason=error
+                ),
+                # Translators: Title of the changelog opening error.
+                _("Changelog error"),
                 wx.OK | wx.ICON_ERROR,
                 self,
             )

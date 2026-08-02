@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-02 01:58+0200\n"
+"POT-Creation-Date: 2026-08-02 16:25+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,7 +20,7 @@ msgstr ""
 #. Translators: Title for an error opening a selected snippet
 #. database.
 #. Translators: Title for a failed database selection or creation.
-#: btText.py:61 ui/database_selection.py:101 ui/main_frame.py:426
+#: btText.py:61 ui/database_selection.py:101 ui/main_frame.py:430
 msgid "Database error"
 msgstr ""
 
@@ -44,7 +44,7 @@ msgstr ""
 
 #. Translators: Title of the startup warning for log setup.
 #. Translators: Title of an error opening the log directory.
-#: btText.py:141 ui/main_frame.py:529
+#: btText.py:141 ui/main_frame.py:550
 msgid "Logging error"
 msgstr ""
 
@@ -686,43 +686,49 @@ msgstr ""
 msgid "View user &manual\tF1"
 msgstr ""
 
+#. Translators: Help-menu command that opens the version history.
+#. "&" marks the mnemonic.
+#: ui/main_frame.py:389
+msgid "View &changelog"
+msgstr ""
+
 #. Translators: Help-menu command that opens the local diagnostic-log
 #. directory in Windows Explorer. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:389
+#: ui/main_frame.py:393
 msgid "Open &log folder"
 msgstr ""
 
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:393
+#: ui/main_frame.py:397
 msgid "About"
 msgstr ""
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:397
+#: ui/main_frame.py:401
 msgid "&Help"
 msgstr ""
 
 #. Translators: Confirmation after choosing the database that btText
 #. should open following its next restart.
-#: ui/main_frame.py:442
+#: ui/main_frame.py:446
 msgid "The selected database will be used the next time btText starts."
 msgstr ""
 
 #. Translators: Title confirming that another database was selected.
-#: ui/main_frame.py:444
+#: ui/main_frame.py:448
 msgid "Database selected"
 msgstr ""
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:483
+#: ui/main_frame.py:487
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr ""
 
 #. Translators: Error shown when the HTML user manual cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:508
+#: ui/main_frame.py:512
 #, python-brace-format
 msgid ""
 "The user manual could not be opened.\n"
@@ -731,13 +737,28 @@ msgid ""
 msgstr ""
 
 #. Translators: Title of the user-manual opening error.
-#: ui/main_frame.py:512
+#: ui/main_frame.py:516
 msgid "User manual error"
+msgstr ""
+
+#. Translators: Error shown when the HTML changelog cannot be
+#. found or opened by the system.
+#: ui/main_frame.py:529
+#, python-brace-format
+msgid ""
+"The changelog could not be opened.\n"
+"\n"
+"{reason}"
+msgstr ""
+
+#. Translators: Title of the changelog opening error.
+#: ui/main_frame.py:533
+msgid "Changelog error"
 msgstr ""
 
 #. Translators: Error shown when the local log directory cannot
 #. be created or opened. {reason} is a technical system message.
-#: ui/main_frame.py:525
+#: ui/main_frame.py:546
 #, python-brace-format
 msgid ""
 "The log folder could not be opened.\n"

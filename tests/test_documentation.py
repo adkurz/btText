@@ -46,9 +46,16 @@ class ManualSelectionTests(unittest.TestCase):
         self.temporary_directory = tempfile.TemporaryDirectory()
         self.directory = Path(self.temporary_directory.name)
         (self.directory / "manual-en.html").touch()
+        (self.directory / "changelog-en.html").touch()
 
     def tearDown(self):
         self.temporary_directory.cleanup()
+
+    def test_language_candidates_are_normalized_and_unique(self):
+        self.assertEqual(
+            documentation._language_candidates("EN_us"),
+            ("en-us", "en"),
+        )
 
     def test_exact_language_is_preferred(self):
         german = self.directory / "manual-de-de.html"
@@ -74,6 +81,19 @@ class ManualSelectionTests(unittest.TestCase):
         with patch.object(documentation, "get_documentation_directory", return_value=self.directory):
             manual = documentation.open_manual("en")
         startfile.assert_called_once_with(manual)
+
+    def test_changelog_uses_base_language_before_english_fallback(self):
+        german = self.directory / "changelog-de.html"
+        german.touch()
+        with patch.object(documentation, "get_documentation_directory", return_value=self.directory):
+            self.assertEqual(documentation.get_changelog_file("de-AT"), german)
+
+    @patch("platform_support.documentation.os.startfile", create=True)
+    def test_open_changelog_uses_windows_file_association(self, startfile):
+        with patch.object(documentation, "get_documentation_directory", return_value=self.directory):
+            changelog = documentation.open_changelog("fr")
+        self.assertEqual(changelog, self.directory / "changelog-en.html")
+        startfile.assert_called_once_with(changelog)
 
 
 if __name__ == "__main__":

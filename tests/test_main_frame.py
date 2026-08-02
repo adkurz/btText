@@ -68,6 +68,28 @@ class ApplicationMenuTestCase(unittest.TestCase):
         open_manual_mock.assert_called_once_with()
         message_box.assert_called_once()
 
+    @patch("ui.main_frame.wx.MessageBox")
+    @patch("ui.main_frame.open_changelog")
+    def test_changelog_command_opens_localized_documentation(
+        self, open_changelog_mock, message_box
+    ):
+        MainFrame.on_open_changelog(SimpleNamespace(), Mock())
+
+        open_changelog_mock.assert_called_once_with()
+        message_box.assert_not_called()
+
+    @patch("ui.main_frame.wx.MessageBox")
+    @patch("ui.main_frame.open_changelog", side_effect=FileNotFoundError("missing"))
+    def test_changelog_command_reports_opening_error(
+        self, open_changelog_mock, message_box
+    ):
+        frame = SimpleNamespace()
+
+        MainFrame.on_open_changelog(frame, Mock())
+
+        open_changelog_mock.assert_called_once_with()
+        message_box.assert_called_once()
+
     def test_close_command_keeps_application_running(self):
         frame = SimpleNamespace(Close=Mock())
 
