@@ -1,5 +1,7 @@
 """Main-window coordination for navigation, hotkeys, and external paste."""
 
+from pathlib import Path
+
 import wx
 import wx.adv
 import wx.lib.sized_controls as sc
@@ -39,7 +41,9 @@ class MainFrame(sc.SizedFrame):
         settings: AppSettings,
     ):
         """Build the main views and register process-wide event handlers."""
-        super().__init__(None, title=wx.GetApp().GetAppName())
+        app_name = wx.GetApp().GetAppName()
+        database_name = Path(settings.database_file).name
+        super().__init__(None, title=f"{app_name} – {database_name}")
         self._ee = ee
         self._model = model
         self._settings_store = settings_store

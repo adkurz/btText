@@ -159,7 +159,10 @@ class MainFrameConstructionTestCase(unittest.TestCase):
         tray_icon_class,
     ):
         global_hotkey_class.return_value.hotkey_id = 1
-        settings = AppSettings(hotstrings_enabled=False)
+        settings = AppSettings(
+            database_file=str(Path("chosen-snippets.db").resolve()),
+            hotstrings_enabled=False,
+        )
         settings_controller_class.return_value.settings = settings
 
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -174,6 +177,10 @@ class MainFrameConstructionTestCase(unittest.TestCase):
 
                 self.assertIsInstance(frame.category_tree, CategoryTree)
                 self.assertIsInstance(frame.snippet_list, SnippetList)
+                self.assertEqual(
+                    frame.GetTitle(),
+                    "btText – chosen-snippets.db",
+                )
                 self.assertIsNotNone(frame.GetMenuBar())
                 self.assertIsNotNone(frame.GetStatusBar())
                 exit_item = frame.GetMenuBar().FindItemById(wx.ID_EXIT)
