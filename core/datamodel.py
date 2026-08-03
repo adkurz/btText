@@ -6,6 +6,10 @@ import inspect
 import sqlite3
 from pathlib import Path
 
+from core.database_schema import (
+    SCHEMA_VERSION as DATABASE_SCHEMA_VERSION,
+    create_current_schema,
+)
 from core.events import EventEmitter
 from core.model_errors import (
     CategoryValidationError,
@@ -13,11 +17,7 @@ from core.model_errors import (
     EntityNotFoundError,
     SnippetValidationError,
 )
-from core.migrations import (
-    SCHEMA_VERSION as DATABASE_SCHEMA_VERSION,
-    get_database_version,
-    migrate_database,
-)
+from core.migrations import get_database_version, migrate_database
 
 
 def _translate_sqlite_errors(method):
@@ -157,39 +157,7 @@ class DataModel:
 
     def create_tables(self):
         """Create the current schema in a new or empty database."""
-        with self._connection as c:
-            c.execute(
-                "CREATE TABLE category ("
-                "id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, "
-                "name TEXT NOT NULL CHECK (length(trim(name, "
-                "char(9) || char(10) || char(11) || char(12) || "
-                "char(13) || ' ')) > 0), "
-                "CHECK (parent_id IS NULL OR parent_id <> id), "
-                "FOREIGN KEY (parent_id) REFERENCES category (id) "
-                "ON DELETE CASCADE)"
-            )
-            c.execute(
-                "CREATE TABLE snippet ("
-                "id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, "
-                "name TEXT NOT NULL CHECK (length(trim(name, "
-                "char(9) || char(10) || char(11) || char(12) || "
-                "char(13) || ' ')) > 0), "
-                "content TEXT NOT NULL CHECK (length(content) > 0), "
-                "hotstring TEXT CHECK (hotstring IS NULL OR length(hotstring) > 0), "
-                "weight INTEGER NOT NULL DEFAULT 1 "
-                "CHECK (weight IN (1, 2, 3)), "
-                "UNIQUE (category_id, name), "
-                "FOREIGN KEY (category_id) REFERENCES category (id) "
-                "ON DELETE CASCADE)"
-            )
-            self._create_category_indexes(c)
-            self._create_snippet_indexes(c)
-            c.execute(
-                "CREATE UNIQUE INDEX snippet_hotstring_unique "
-                "ON snippet(hotstring) "
-                "WHERE hotstring IS NOT NULL"
-            )
-            c.execute("PRAGMA user_version = 5")
+        create_current_schema(self._connection)
 
     def _migrate_database(self) -> None:
         """Apply each schema migration exactly once and in version order."""
@@ -226,29 +194,6 @@ class DataModel:
                 "database_category_cycle",
                 "The database contains a cycle in the category hierarchy",
             )
-
-    @staticmethod
-    def _create_category_indexes(connection) -> None:
-        """Create indexes that enforce unique category names per tree level."""
-        # Separate partial indexes make names case-insensitively unique among
-        # siblings while still permitting the same name in different branches.
-        connection.execute(
-            "CREATE UNIQUE INDEX category_root_name_unique "
-            "ON category(name COLLATE NOCASE) WHERE parent_id IS NULL"
-        )
-        connection.execute(
-            "CREATE UNIQUE INDEX category_child_name_unique "
-            "ON category(parent_id, name COLLATE NOCASE) "
-            "WHERE parent_id IS NOT NULL"
-        )
-
-    @staticmethod
-    def _create_snippet_indexes(connection) -> None:
-        """Create indexes that enforce case-insensitive snippet uniqueness."""
-        connection.execute(
-            "CREATE UNIQUE INDEX snippet_category_name_unique "
-            "ON snippet(category_id, name COLLATE NOCASE)"
-        )
 
     @_translate_sqlite_errors
     def get_category(self, id: int) -> Category:

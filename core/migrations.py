@@ -3,10 +3,14 @@
 import sqlite3
 from collections.abc import Callable
 
+from core.database_schema import (
+    SCHEMA_VERSION,
+    create_category_indexes,
+    create_snippet_indexes,
+)
 from core.model_errors import DataModelError
 
 
-SCHEMA_VERSION = 5
 Migration = Callable[[sqlite3.Connection], None]
 
 
@@ -19,27 +23,6 @@ def _has_table_column(
         (table, column),
     )
     return result.fetchone()[0] > 0
-
-
-def _create_category_indexes(connection: sqlite3.Connection) -> None:
-    """Create indexes that enforce unique category names per tree level."""
-    connection.execute(
-        "CREATE UNIQUE INDEX category_root_name_unique "
-        "ON category(name COLLATE NOCASE) WHERE parent_id IS NULL"
-    )
-    connection.execute(
-        "CREATE UNIQUE INDEX category_child_name_unique "
-        "ON category(parent_id, name COLLATE NOCASE) "
-        "WHERE parent_id IS NOT NULL"
-    )
-
-
-def _create_snippet_indexes(connection: sqlite3.Connection) -> None:
-    """Create indexes that enforce case-insensitive snippet uniqueness."""
-    connection.execute(
-        "CREATE UNIQUE INDEX snippet_category_name_unique "
-        "ON snippet(category_id, name COLLATE NOCASE)"
-    )
 
 
 def migrate_from_0_to_1(connection: sqlite3.Connection) -> None:
@@ -138,7 +121,7 @@ def migrate_from_1_to_2(connection: sqlite3.Connection) -> None:
         c.execute("DROP TABLE category")
         c.execute("ALTER TABLE category_new RENAME TO category")
         c.execute("ALTER TABLE snippet_new RENAME TO snippet")
-        _create_category_indexes(c)
+        create_category_indexes(c)
         c.execute("PRAGMA user_version = 2")
 
 
@@ -234,8 +217,8 @@ def migrate_from_2_to_3(connection: sqlite3.Connection) -> None:
         c.execute("DROP TABLE category")
         c.execute("ALTER TABLE category_new RENAME TO category")
         c.execute("ALTER TABLE snippet_new RENAME TO snippet")
-        _create_category_indexes(c)
-        _create_snippet_indexes(c)
+        create_category_indexes(c)
+        create_snippet_indexes(c)
         c.execute("PRAGMA user_version = 3")
 
 
