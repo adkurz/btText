@@ -17,6 +17,12 @@ from core.datamodel import (
     SnippetValidationError,
 )
 from core.events import EventEmitter
+from core.model_errors import (
+    CategoryValidationError as ExtractedCategoryValidationError,
+    DataModelError as ExtractedDataModelError,
+    EntityNotFoundError as ExtractedEntityNotFoundError,
+    SnippetValidationError as ExtractedSnippetValidationError,
+)
 
 
 class RecordingEventEmitter:
@@ -25,6 +31,14 @@ class RecordingEventEmitter:
 
     def emit(self, name, value):
         self.events.append((name, value))
+
+
+class DataModelErrorExportTestCase(unittest.TestCase):
+    def test_datamodel_reexports_extracted_error_classes(self):
+        self.assertIs(DataModelError, ExtractedDataModelError)
+        self.assertIs(EntityNotFoundError, ExtractedEntityNotFoundError)
+        self.assertIs(CategoryValidationError, ExtractedCategoryValidationError)
+        self.assertIs(SnippetValidationError, ExtractedSnippetValidationError)
 
 
 class DataModelTestCase(unittest.TestCase):

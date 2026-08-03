@@ -7,23 +7,12 @@ import sqlite3
 from pathlib import Path
 
 from core.events import EventEmitter
-from core.user_errors import UserFacingError
-
-
-class DataModelError(UserFacingError):
-    """Base class for errors that can be shown to the user."""
-
-
-class EntityNotFoundError(DataModelError):
-    """Raised when an operation refers to an entity that no longer exists."""
-
-
-class CategoryValidationError(DataModelError):
-    """Raised when a category violates naming or tree constraints."""
-
-
-class SnippetValidationError(DataModelError):
-    """Raised when a snippet violates naming, weight, or category constraints."""
+from core.model_errors import (
+    CategoryValidationError,
+    DataModelError,
+    EntityNotFoundError,
+    SnippetValidationError,
+)
 
 
 def _translate_sqlite_errors(method):
