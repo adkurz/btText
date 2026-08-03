@@ -13,6 +13,11 @@ from core.model_errors import (
     EntityNotFoundError,
     SnippetValidationError,
 )
+from core.migrations import (
+    SCHEMA_VERSION as DATABASE_SCHEMA_VERSION,
+    get_database_version,
+    migrate_database,
+)
 
 
 def _translate_sqlite_errors(method):
@@ -87,14 +92,7 @@ class DataModel:
     """
 
     WEIGHTS = (1, 2, 3)
-    SCHEMA_VERSION = 5
-    MIGRATIONS = (
-        "_migrate_from_0_to_1",
-        "_migrate_from_1_to_2",
-        "_migrate_from_2_to_3",
-        "_migrate_from_3_to_4",
-        "_migrate_from_4_to_5",
-    )
+    SCHEMA_VERSION = DATABASE_SCHEMA_VERSION
 
     def __init__(
         self,
@@ -195,45 +193,11 @@ class DataModel:
 
     def _migrate_database(self) -> None:
         """Apply each schema migration exactly once and in version order."""
-        database_version = self._get_database_version()
-        if database_version > self.SCHEMA_VERSION:
-            raise DataModelError(
-                "database_version_too_new",
-                "The database was created by a newer version of the application "
-                "and cannot be opened (database schema version: "
-                "{database_version}; supported version: {supported_version}).",
-                database_version=database_version,
-                supported_version=self.SCHEMA_VERSION,
-            )
-
-        while database_version < self.SCHEMA_VERSION:
-            try:
-                migration_name = self.MIGRATIONS[database_version]
-            except IndexError as error:
-                raise DataModelError(
-                    "database_migration_unavailable",
-                    "No database migration is available from schema version "
-                    "{database_version}.",
-                    database_version=database_version,
-                ) from error
-
-            migration = getattr(self, migration_name)
-            migration()
-            migrated_version = self._get_database_version()
-            if migrated_version != database_version + 1:
-                raise DataModelError(
-                    "database_migration_failed",
-                    "Database migration {migration_name} did not advance the "
-                    "schema from version {old_version} to version {new_version}.",
-                    migration_name=migration_name,
-                    old_version=database_version,
-                    new_version=database_version + 1,
-                )
-            database_version = migrated_version
+        migrate_database(self._connection)
 
     def _get_database_version(self) -> int:
         """Return SQLite's application-defined schema version."""
-        return self._connection.execute("PRAGMA user_version").fetchone()[0]
+        return get_database_version(self._connection)
 
     def _validate_database_integrity(self) -> None:
         """Reject broken foreign keys and cycles in the category hierarchy."""
@@ -262,225 +226,6 @@ class DataModel:
                 "database_category_cycle",
                 "The database contains a cycle in the category hierarchy",
             )
-
-    def _migrate_from_0_to_1(self) -> None:
-        """Add snippet weights and rebuild legacy tables with constraints."""
-        # Validate legacy data before rebuilding tables with stricter
-        # constraints; otherwise SQLite would report an opaque copy failure.
-        if not self._has_table_column("snippet", "weight"):
-            self._connection.execute(
-                "ALTER TABLE snippet ADD COLUMN weight INTEGER DEFAULT 1"
-            )
-
-        invalid_category_names = self._connection.execute(
-            "SELECT COUNT(*) FROM category WHERE name IS NULL"
-        ).fetchone()[0]
-        if invalid_category_names:
-            raise DataModelError(
-                "database_category_name_missing",
-                "The database contains categories without a name",
-            )
-
-        invalid_weights = self._connection.execute(
-            "SELECT COUNT(*) FROM snippet "
-            "WHERE weight IS NULL OR weight NOT IN (1, 2, 3)"
-        ).fetchone()[0]
-        if invalid_weights:
-            raise DataModelError(
-                "database_snippet_weight_invalid",
-                "The database contains snippets with an invalid weight",
-            )
-
-        duplicate_snippet_names = self._connection.execute(
-            "SELECT COUNT(*) FROM ("
-            "SELECT 1 FROM snippet GROUP BY category_id, name HAVING COUNT(*) > 1"
-            ")"
-        ).fetchone()[0]
-        if duplicate_snippet_names:
-            raise DataModelError(
-                "database_snippet_names_duplicate",
-                "The database contains duplicate snippet names in a category",
-            )
-
-        orphaned_snippets = self._connection.execute(
-            "SELECT COUNT(*) FROM snippet s "
-            "LEFT JOIN category c ON c.id = s.category_id WHERE c.id IS NULL"
-        ).fetchone()[0]
-        if orphaned_snippets:
-            raise DataModelError(
-                "database_snippet_category_missing",
-                "The database contains snippets without a category",
-            )
-
-        with self._connection as c:
-            c.execute(
-                "CREATE TABLE category_new (id INTEGER NOT NULL PRIMARY KEY, name TEXT NOT NULL UNIQUE)"
-            )
-            c.execute(
-                "CREATE TABLE snippet_new (id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, name TEXT NOT NULL, content TEXT NOT NULL, weight INTEGER NOT NULL DEFAULT 1 CHECK (weight IN (1, 2, 3)), UNIQUE (category_id, name), FOREIGN KEY (category_id) REFERENCES category_new (id) ON DELETE CASCADE)"
-            )
-            c.execute(
-                "INSERT INTO category_new (id, name) SELECT id, name FROM category"
-            )
-            c.execute(
-                "INSERT INTO snippet_new (id, category_id, name, content, weight) "
-                "SELECT id, category_id, name, content, weight FROM snippet"
-            )
-            c.execute("DROP TABLE snippet")
-            c.execute("DROP TABLE category")
-            c.execute("ALTER TABLE category_new RENAME TO category")
-            c.execute("ALTER TABLE snippet_new RENAME TO snippet")
-            c.execute("PRAGMA user_version = 1")
-
-    def _migrate_from_1_to_2(self) -> None:
-        """Replace the flat category table with a hierarchical schema."""
-        # SQLite cannot add the self-referencing foreign key in place, so both
-        # related tables are rebuilt within one transaction.
-        with self._connection as c:
-            c.execute(
-                "CREATE TABLE category_new (id INTEGER NOT NULL PRIMARY KEY, "
-                "parent_id INTEGER, name TEXT NOT NULL, "
-                "FOREIGN KEY (parent_id) REFERENCES category_new (id) ON DELETE CASCADE)"
-            )
-            c.execute(
-                "INSERT INTO category_new (id, parent_id, name) "
-                "SELECT id, NULL, name FROM category"
-            )
-            c.execute(
-                "CREATE TABLE snippet_new (id INTEGER NOT NULL PRIMARY KEY, "
-                "category_id INTEGER NOT NULL, name TEXT NOT NULL, "
-                "content TEXT NOT NULL, weight INTEGER NOT NULL DEFAULT 1 "
-                "CHECK (weight IN (1, 2, 3)), UNIQUE (category_id, name), "
-                "FOREIGN KEY (category_id) REFERENCES category_new (id) "
-                "ON DELETE CASCADE)"
-            )
-            c.execute(
-                "INSERT INTO snippet_new (id, category_id, name, content, weight) "
-                "SELECT id, category_id, name, content, weight FROM snippet"
-            )
-            c.execute("DROP TABLE snippet")
-            c.execute("DROP TABLE category")
-            c.execute("ALTER TABLE category_new RENAME TO category")
-            c.execute("ALTER TABLE snippet_new RENAME TO snippet")
-            self._create_category_indexes(c)
-            c.execute("PRAGMA user_version = 2")
-
-    def _migrate_from_2_to_3(self) -> None:
-        """Add case-insensitive uniqueness and domain checks to the schema."""
-        invalid_category_names = self._connection.execute(
-            "SELECT COUNT(*) FROM category "
-            "WHERE length(trim(name, char(9) || char(10) || char(11) || "
-            "char(12) || char(13) || ' ')) = 0"
-        ).fetchone()[0]
-        if invalid_category_names:
-            raise DataModelError(
-                "database_category_name_empty",
-                "The database contains categories with an empty name",
-            )
-
-        invalid_category_parents = self._connection.execute(
-            "SELECT COUNT(*) FROM category WHERE parent_id = id"
-        ).fetchone()[0]
-        if invalid_category_parents:
-            raise DataModelError(
-                "database_category_own_parent",
-                "The database contains a category that is its own parent",
-            )
-
-        invalid_snippet_names = self._connection.execute(
-            "SELECT COUNT(*) FROM snippet "
-            "WHERE length(trim(name, char(9) || char(10) || char(11) || "
-            "char(12) || char(13) || ' ')) = 0"
-        ).fetchone()[0]
-        if invalid_snippet_names:
-            raise DataModelError(
-                "database_snippet_name_empty",
-                "The database contains snippets with an empty name",
-            )
-
-        invalid_snippet_contents = self._connection.execute(
-            "SELECT COUNT(*) FROM snippet WHERE length(content) = 0"
-        ).fetchone()[0]
-        if invalid_snippet_contents:
-            raise DataModelError(
-                "database_snippet_content_empty",
-                "The database contains snippets with empty content",
-            )
-
-        duplicate_snippet_names = self._connection.execute(
-            "SELECT COUNT(*) FROM ("
-            "SELECT 1 FROM snippet "
-            "GROUP BY category_id, name COLLATE NOCASE HAVING COUNT(*) > 1"
-            ")"
-        ).fetchone()[0]
-        if duplicate_snippet_names:
-            raise DataModelError(
-                "database_snippet_names_duplicate_case_insensitive",
-                "The database contains snippet names that differ only in "
-                "letter case within the same category",
-            )
-
-        with self._connection as c:
-            c.execute(
-                "CREATE TABLE category_new ("
-                "id INTEGER NOT NULL PRIMARY KEY, parent_id INTEGER, "
-                "name TEXT NOT NULL CHECK (length(trim(name, "
-                "char(9) || char(10) || char(11) || char(12) || "
-                "char(13) || ' ')) > 0), "
-                "CHECK (parent_id IS NULL OR parent_id <> id), "
-                "FOREIGN KEY (parent_id) REFERENCES category_new (id) "
-                "ON DELETE CASCADE)"
-            )
-            c.execute(
-                "INSERT INTO category_new (id, parent_id, name) "
-                "SELECT id, parent_id, name FROM category"
-            )
-            c.execute(
-                "CREATE TABLE snippet_new ("
-                "id INTEGER NOT NULL PRIMARY KEY, category_id INTEGER NOT NULL, "
-                "name TEXT NOT NULL CHECK (length(trim(name, "
-                "char(9) || char(10) || char(11) || char(12) || "
-                "char(13) || ' ')) > 0), "
-                "content TEXT NOT NULL CHECK (length(content) > 0), "
-                "weight INTEGER NOT NULL DEFAULT 1 "
-                "CHECK (weight IN (1, 2, 3)), "
-                "UNIQUE (category_id, name), "
-                "FOREIGN KEY (category_id) REFERENCES category_new (id) "
-                "ON DELETE CASCADE)"
-            )
-            c.execute(
-                "INSERT INTO snippet_new "
-                "(id, category_id, name, content, weight) "
-                "SELECT id, category_id, name, content, weight FROM snippet"
-            )
-            c.execute("DROP TABLE snippet")
-            c.execute("DROP TABLE category")
-            c.execute("ALTER TABLE category_new RENAME TO category")
-            c.execute("ALTER TABLE snippet_new RENAME TO snippet")
-            self._create_category_indexes(c)
-            self._create_snippet_indexes(c)
-            c.execute("PRAGMA user_version = 3")
-
-    def _migrate_from_3_to_4(self) -> None:
-        """Add optional globally unique hotstrings to snippets."""
-        with self._connection as c:
-            c.execute("ALTER TABLE snippet ADD COLUMN hotstring TEXT")
-            c.execute(
-                "CREATE UNIQUE INDEX snippet_hotstring_unique "
-                "ON snippet(hotstring COLLATE NOCASE) "
-                "WHERE hotstring IS NOT NULL"
-            )
-            c.execute("PRAGMA user_version = 4")
-
-    def _migrate_from_4_to_5(self) -> None:
-        """Make hotstring uniqueness case-sensitive."""
-        with self._connection as c:
-            c.execute("DROP INDEX snippet_hotstring_unique")
-            c.execute(
-                "CREATE UNIQUE INDEX snippet_hotstring_unique "
-                "ON snippet(hotstring) WHERE hotstring IS NOT NULL"
-            )
-            c.execute("PRAGMA user_version = 5")
 
     @staticmethod
     def _create_category_indexes(connection) -> None:
@@ -1134,14 +879,6 @@ class DataModel:
         for snippet in snippets:
             self.ee.emit("snippet.deleted", snippet)
         return snippets
-
-    def _has_table_column(self, table: str, column: str) -> bool:
-        """Return whether a SQLite table contains a named column."""
-        result = self._connection.execute(
-            "SELECT COUNT(*) AS CNTREC FROM pragma_table_info(?) WHERE name=?",
-            (table, column),
-        )
-        return result.fetchone()["CNTREC"] > 0
 
     @staticmethod
     def _raise_category_integrity_error(error: sqlite3.IntegrityError) -> None:
