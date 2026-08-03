@@ -3,11 +3,8 @@
 import unittest
 from pathlib import Path
 
-
 BUILD_SCRIPT = Path(__file__).resolve().parents[1] / "build.ps1"
-INSTALLER_SCRIPT = (
-    Path(__file__).resolve().parents[1] / "installer" / "btText.iss"
-)
+INSTALLER_SCRIPT = Path(__file__).resolve().parents[1] / "installer" / "btText.iss"
 
 
 class BuildScriptTests(unittest.TestCase):
@@ -26,7 +23,7 @@ class BuildScriptTests(unittest.TestCase):
         self.assertIn("installer\\btText.iss", self.script)
         self.assertNotIn("MyOutputBaseFilename", self.script)
         self.assertIn(
-            '#define MyOutputBaseFilename '
+            "#define MyOutputBaseFilename "
             '"btText-" + MyAppVersion + "-setup-windows"',
             self.installer_script,
         )

@@ -84,6 +84,7 @@ def _open_database(ee, settings_store, settings):
             settings = new_settings
         return model, settings
 
+
 def main():
     """Initialize the wx application and release resources on shutdown."""
     logging_error = None
@@ -104,9 +105,7 @@ def main():
     try:
         app = wx.App()
         app.SetAppName(info.name)
-        instance_checker = wx.SingleInstanceChecker(
-            f"{info.name}-{wx.GetUserId()}"
-        )
+        instance_checker = wx.SingleInstanceChecker(f"{info.name}-{wx.GetUserId()}")
         another_instance_running = instance_checker.IsAnotherRunning()
         settings_store = SettingsStore(
             app_paths.get_settings_file(),
@@ -179,5 +178,6 @@ def main():
         finally:
             logger.info("btText stopped")
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

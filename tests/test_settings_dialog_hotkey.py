@@ -99,8 +99,6 @@ class SettingsDialogHotkeyRecordingTestCase(unittest.TestCase):
         SettingsDialog._on_character(dialog, event)
 
         self.assertEqual(dialog._candidate_hotkey, DEFAULT_TOGGLE_HOTKEY)
-        dialog.hotkey_display.SetValue.assert_called_once_with(
-            "Ctrl+Shift+Alt+T"
-        )
+        dialog.hotkey_display.SetValue.assert_called_once_with("Ctrl+Shift+Alt+T")
         dialog._update_apply_button.assert_called_once_with()
         dialog._finish_recording.assert_called_once()

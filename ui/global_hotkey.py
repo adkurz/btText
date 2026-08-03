@@ -55,10 +55,7 @@ class WxGlobalHotkeyBinding:
     def refresh_keyboard_layout(self) -> Hotkey | None:
         """Re-register after a layout change and return a failed hotkey."""
         keyboard_layout = get_foreground_keyboard_layout()
-        if (
-            keyboard_layout is None
-            or keyboard_layout == self._keyboard_layout
-        ):
+        if keyboard_layout is None or keyboard_layout == self._keyboard_layout:
             return None
         self._keyboard_layout = keyboard_layout
         activate_keyboard_layout(keyboard_layout)

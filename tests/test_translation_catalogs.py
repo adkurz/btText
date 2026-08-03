@@ -2,16 +2,9 @@ import gettext
 import unittest
 from pathlib import Path
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_FILE = PROJECT_ROOT / "locale" / "bttext.pot"
-GERMAN_CATALOG = (
-    PROJECT_ROOT
-    / "locale"
-    / "de"
-    / "LC_MESSAGES"
-    / "bttext.po"
-)
+GERMAN_CATALOG = PROJECT_ROOT / "locale" / "de" / "LC_MESSAGES" / "bttext.po"
 GERMAN_COMPILED_CATALOG = GERMAN_CATALOG.with_suffix(".mo")
 
 
@@ -21,8 +14,7 @@ class TranslationCatalogsTestCase(unittest.TestCase):
         return tuple(
             block
             for block in catalog.replace("\r\n", "\n").split("\n\n")
-            if "\n#:" in "\n" + block
-            and "\nmsgid " in "\n" + block
+            if "\n#:" in "\n" + block and "\nmsgid " in "\n" + block
         )
 
     def test_template_contains_project_metadata_and_translator_guidance(self):
@@ -127,8 +119,7 @@ class TranslationCatalogsTestCase(unittest.TestCase):
             with self.subTest(group=group):
                 labels = tuple(translation.gettext(message) for message in group)
                 mnemonics = tuple(
-                    label.split("&", 1)[1][0].casefold()
-                    for label in labels
+                    label.split("&", 1)[1][0].casefold() for label in labels
                 )
                 self.assertEqual(len(mnemonics), len(set(mnemonics)))
 

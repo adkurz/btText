@@ -8,14 +8,12 @@ import tempfile
 from pathlib import Path
 from typing import Sequence
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
 import i18n
 import info
-
 
 MAPPING_FILE = PROJECT_ROOT / "babel.cfg"
 LOCALE_DIRECTORY = PROJECT_ROOT / "locale"
@@ -170,9 +168,7 @@ def check_catalogs() -> None:
         for po_file in _catalog_files():
             _validate_catalog(extracted_template, po_file)
             language = po_file.parents[1].name
-            compiled_catalog = temporary_path / language / "{}.mo".format(
-                i18n.DOMAIN
-            )
+            compiled_catalog = temporary_path / language / "{}.mo".format(i18n.DOMAIN)
             compiled_catalog.parent.mkdir(parents=True, exist_ok=True)
             _run_babel(
                 (
@@ -200,9 +196,7 @@ def _validate_catalog(template_file: Path, catalog_file: Path) -> None:
     language = catalog_file.parents[1].name
     try:
         normalized_language = i18n.validate_language(language)
-        expected_plural_forms = Catalog(
-            locale=normalized_language
-        ).plural_forms
+        expected_plural_forms = Catalog(locale=normalized_language).plural_forms
     except (UnknownLocaleError, ValueError) as error:
         raise TranslationCheckError(
             "{} has an invalid or unknown language directory: {}".format(
@@ -218,11 +212,7 @@ def _validate_catalog(template_file: Path, catalog_file: Path) -> None:
             )
         )
 
-    catalog_language = (
-        str(catalog.locale)
-        if catalog.locale is not None
-        else None
-    )
+    catalog_language = str(catalog.locale) if catalog.locale is not None else None
     if catalog_language != language:
         raise TranslationCheckError(
             "{} declares language {!r}, expected {!r}".format(
@@ -242,14 +232,10 @@ def _validate_catalog(template_file: Path, catalog_file: Path) -> None:
         )
 
     template_keys = {
-        (message.context, message.id)
-        for message in template
-        if message.id
+        (message.context, message.id) for message in template if message.id
     }
     messages = {
-        (message.context, message.id): message
-        for message in catalog
-        if message.id
+        (message.context, message.id): message for message in catalog if message.id
     }
     missing = template_keys - set(messages)
     extra = set(messages) - template_keys
@@ -272,14 +258,8 @@ def _validate_catalog(template_file: Path, catalog_file: Path) -> None:
         message
         for message in messages.values()
         if message.fuzzy
-        or (
-            isinstance(message.string, tuple)
-            and not all(message.string)
-        )
-        or (
-            isinstance(message.string, str)
-            and not message.string
-        )
+        or (isinstance(message.string, tuple) and not all(message.string))
+        or (isinstance(message.string, str) and not message.string)
     ]
     if incomplete:
         details = "\n".join(
@@ -302,9 +282,7 @@ def _validate_catalog(template_file: Path, catalog_file: Path) -> None:
         )
 
     errors = [
-        error
-        for message, message_errors in catalog.check()
-        for error in message_errors
+        error for message, message_errors in catalog.check() for error in message_errors
     ]
     if errors:
         raise TranslationCheckError(
@@ -327,11 +305,7 @@ def _message_description(message) -> str:
 def _catalog_files() -> tuple[Path, ...]:
     """Return all PO catalogs in stable language order."""
     return tuple(
-        sorted(
-            LOCALE_DIRECTORY.glob(
-                "*/LC_MESSAGES/{}.po".format(i18n.DOMAIN)
-            )
-        )
+        sorted(LOCALE_DIRECTORY.glob("*/LC_MESSAGES/{}.po".format(i18n.DOMAIN)))
     )
 
 
@@ -339,9 +313,7 @@ def _comparable_template(template_file: Path) -> str:
     """Read a POT file while ignoring its generated creation timestamp."""
     return "".join(
         line
-        for line in template_file.read_text(encoding="utf-8").splitlines(
-            keepends=True
-        )
+        for line in template_file.read_text(encoding="utf-8").splitlines(keepends=True)
         if not line.startswith('"POT-Creation-Date:')
     )
 

@@ -7,7 +7,6 @@ from pathlib import Path
 
 import info
 
-
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 INSTALL_MODE_MARKER = info.name + "-install-mode.json"
 USER_DATA_DIRECTORY_NAME = info.name

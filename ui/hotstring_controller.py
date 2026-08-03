@@ -32,9 +32,7 @@ class HotstringController:
         self._notify_expansion = notify_expansion
         self._hook = hotstrings.KeyboardHook(
             self._queue_expansion,
-            lambda: windows.is_external_window(
-                windows.get_foreground_window()
-            ),
+            lambda: windows.is_external_window(windows.get_foreground_window()),
         )
         ee.on("snippet.added", self.refresh)
         ee.on("snippet.edited", self.refresh)
@@ -64,11 +62,7 @@ class HotstringController:
         """Reload active hotstrings after any snippet mutation."""
         snippets = self._model.get_hotstring_snippets()
         self._hook.update(
-            {
-                snippet.hotstring: snippet
-                for snippet in snippets
-                if snippet.hotstring
-            }
+            {snippet.hotstring: snippet for snippet in snippets if snippet.hotstring}
         )
 
     def _queue_expansion(

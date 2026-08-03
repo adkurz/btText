@@ -104,9 +104,7 @@ class SnippetEditorUnsavedChangesTestCase(unittest.TestCase):
     def test_two_cancel_events_ask_only_once(self):
         dialog = SimpleNamespace(
             _confirm_discard_changes=Mock(
-                side_effect=lambda: SnippetEditor._confirm_discard_changes(
-                    dialog
-                )
+                side_effect=lambda: SnippetEditor._confirm_discard_changes(dialog)
             ),
             _has_unsaved_changes=lambda: True,
             _closing_allowed=False,

@@ -9,7 +9,6 @@ from typing import Any
 
 from core.user_errors import UserFacingError
 
-
 DOMAIN = "bttext"
 DEFAULT_LANGUAGE = "en"
 SYSTEM_LANGUAGE = "system"
@@ -33,17 +32,11 @@ def get_available_languages(locale_directory: str | Path) -> tuple[str, ...]:
         except OSError:
             language_directories = ()
         for language_directory in language_directories:
-            catalog = (
-                language_directory
-                / "LC_MESSAGES"
-                / "{}.mo".format(DOMAIN)
-            )
+            catalog = language_directory / "LC_MESSAGES" / "{}.mo".format(DOMAIN)
             if not catalog.is_file():
                 continue
             try:
-                normalized_language = _normalize_language_code(
-                    language_directory.name
-                )
+                normalized_language = _normalize_language_code(language_directory.name)
             except ValueError:
                 continue
             if normalized_language == language_directory.name:
@@ -163,8 +156,7 @@ def initialize(
         catalog_exception = error
         catalog_error = LanguageError(
             "language_catalog_load_failed",
-            "The translation catalog for {language} could not be loaded: "
-            "{reason}",
+            "The translation catalog for {language} could not be loaded: " "{reason}",
             language=active_language,
             reason=error,
         )
@@ -212,9 +204,7 @@ def _normalize_language_code(language: str) -> str:
         and parts[0].isascii()
         and parts[0].isalpha()
         and all(
-            2 <= len(part) <= 8
-            and part.isascii()
-            and part.isalnum()
+            2 <= len(part) <= 8 and part.isascii() and part.isalnum()
             for part in parts[1:]
         )
     ):

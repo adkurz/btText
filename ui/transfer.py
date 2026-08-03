@@ -6,6 +6,7 @@ from dataclasses import dataclass
 @dataclass
 class Transfer:
     """Description of an application-local category or snippet transfer."""
+
     kind: str
     entity_ids: tuple[int, ...]
     copy: bool

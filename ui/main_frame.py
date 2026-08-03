@@ -31,8 +31,10 @@ from ui.transfer import TransferBuffer
 
 HOTKEY_LAYOUT_CHECK_INTERVAL_MS = 500
 
+
 class MainFrame(sc.SizedFrame):
     """Coordinate the application's views and process-wide integrations."""
+
     def __init__(
         self,
         ee: EventEmitter,
@@ -93,9 +95,7 @@ class MainFrame(sc.SizedFrame):
             model,
             lambda: self._settings_controller.settings,
             self._paste_controller.schedule_restore,
-            lambda snippet: self.tray_icon.show_hotstring_notification(
-                snippet
-            ),
+            lambda snippet: self.tray_icon.show_hotstring_notification(snippet),
         )
         self._settings_controller = SettingsController(
             self,
@@ -158,13 +158,9 @@ class MainFrame(sc.SizedFrame):
             model,
             self.transfer_buffer,
             lambda: (
-                self._settings_controller.settings
-                .include_copied_text_in_clipboard_history
+                self._settings_controller.settings.include_copied_text_in_clipboard_history
             ),
-            lambda: (
-                self._settings_controller.settings
-                .allow_copied_text_cloud_upload
-            ),
+            lambda: (self._settings_controller.settings.allow_copied_text_cloud_upload),
         )
         # Translators: Accessible name for the main window list showing snippets
         # from the selected category.
@@ -297,9 +293,7 @@ class MainFrame(sc.SizedFrame):
         """Re-register the global hotkey after the input layout changes."""
         failed_hotkey = self._global_hotkey.refresh_keyboard_layout()
         if failed_hotkey is not None:
-            self._settings_controller.show_hotkey_registration_error(
-                failed_hotkey
-            )
+            self._settings_controller.show_hotkey_registration_error(failed_hotkey)
 
     def on_global_hotkey(self, event):
         """Toggle main-window visibility in response to the global shortcut."""
@@ -440,9 +434,7 @@ class MainFrame(sc.SizedFrame):
             if candidate is not None:
                 candidate.close()
 
-        if not self._settings_controller.save_database_file(
-            str(selection.path)
-        ):
+        if not self._settings_controller.save_database_file(str(selection.path)):
             return
         wx.MessageBox(
             # Translators: Confirmation after choosing the database that btText

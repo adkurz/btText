@@ -19,6 +19,7 @@ from ui import theme
 
 class FocusableReadOnlyTextCtrl(wx.TextCtrl):
     """Read-only text that remains reachable during keyboard navigation."""
+
     def __init__(self, parent, value: str = ""):
         """Create a read-only control that still participates in tab order."""
         super().__init__(parent, value=value, style=wx.TE_READONLY)
@@ -30,6 +31,7 @@ class FocusableReadOnlyTextCtrl(wx.TextCtrl):
 
 class SettingsDialog(wx.Dialog):
     """Edit general settings and the global window-toggle hotkey."""
+
     def __init__(
         self,
         parent,
@@ -67,12 +69,8 @@ class SettingsDialog(wx.Dialog):
         self._candidate_include_copied_text_in_clipboard_history = (
             include_copied_text_in_clipboard_history
         )
-        self._current_allow_copied_text_cloud_upload = (
-            allow_copied_text_cloud_upload
-        )
-        self._candidate_allow_copied_text_cloud_upload = (
-            allow_copied_text_cloud_upload
-        )
+        self._current_allow_copied_text_cloud_upload = allow_copied_text_cloud_upload
+        self._candidate_allow_copied_text_cloud_upload = allow_copied_text_cloud_upload
         self._current_hotstrings_enabled = hotstrings_enabled
         self._candidate_hotstrings_enabled = hotstrings_enabled
         self._current_preserve_hotstring_boundary = preserve_hotstring_boundary
@@ -151,8 +149,7 @@ class SettingsDialog(wx.Dialog):
             *self._available_languages,
         )
         language_labels = tuple(
-            get_language_display_name(language, wx)
-            for language in language_values
+            get_language_display_name(language, wx) for language in language_values
         )
         self.language_choice = wx.Choice(page, choices=language_labels)
         try:
@@ -176,9 +173,7 @@ class SettingsDialog(wx.Dialog):
             # Translators: General setting that controls whether text copied from
             # a snippet is added to the Windows clipboard history. "&" marks the
             # keyboard mnemonic.
-            label=_(
-                "Include copied snippet &text in the Windows clipboard history"
-            ),
+            label=_("Include copied snippet &text in the Windows clipboard history"),
         )
         self.clipboard_history_checkbox.SetValue(
             self._candidate_include_copied_text_in_clipboard_history
@@ -192,9 +187,7 @@ class SettingsDialog(wx.Dialog):
             # Translators: General setting that controls whether copied snippet
             # text may be synchronized through the Windows cloud clipboard.
             # "&" marks the keyboard mnemonic.
-            label=_(
-                "Allow copied snippet text to be stored in the Windows &cloud"
-            ),
+            label=_("Allow copied snippet text to be stored in the Windows &cloud"),
         )
         self.cloud_clipboard_checkbox.SetValue(
             self._candidate_allow_copied_text_cloud_upload
@@ -257,9 +250,7 @@ class SettingsDialog(wx.Dialog):
             style=wx.RA_SPECIFY_COLS,
         )
         try:
-            selection = self._appearance_values.index(
-                self._candidate_appearance
-            )
+            selection = self._appearance_values.index(self._candidate_appearance)
         except ValueError:
             selection = 0
         self.appearance_choice.SetSelection(selection)
@@ -309,9 +300,7 @@ class SettingsDialog(wx.Dialog):
             label=_("&Enable hotstrings"),
         )
         self.hotstrings_checkbox.SetValue(self._candidate_hotstrings_enabled)
-        self.hotstrings_checkbox.Bind(
-            wx.EVT_CHECKBOX, self._on_hotstrings_changed
-        )
+        self.hotstrings_checkbox.Bind(wx.EVT_CHECKBOX, self._on_hotstrings_changed)
         self.preserve_hotstring_boundary_checkbox = wx.CheckBox(
             page,
             # Translators: Hotstring setting that keeps the typed Space, Enter,
@@ -418,8 +407,7 @@ class SettingsDialog(wx.Dialog):
             != self._current_include_copied_text_in_clipboard_history
             or self._candidate_allow_copied_text_cloud_upload
             != self._current_allow_copied_text_cloud_upload
-            or self._candidate_hotstrings_enabled
-            != self._current_hotstrings_enabled
+            or self._candidate_hotstrings_enabled != self._current_hotstrings_enabled
             or self._candidate_preserve_hotstring_boundary
             != self._current_preserve_hotstring_boundary
             or self._candidate_notify_hotstring_expansion
@@ -594,9 +582,9 @@ class SettingsDialog(wx.Dialog):
             self._finish_recording(
                 # Translators: Status announced after an invalid shortcut ends
                 # recording. {error} explains why the key was rejected.
-                _(
-                    "Shortcut not accepted: {error}. Recording has stopped."
-                ).format(error=format_user_error(error))
+                _("Shortcut not accepted: {error}. Recording has stopped.").format(
+                    error=format_user_error(error)
+                )
             )
             return
 
@@ -607,8 +595,7 @@ class SettingsDialog(wx.Dialog):
             # Translators: Status after recording succeeds. The shortcut is not
             # active until Apply or OK saves it. {shortcut} is such as Ctrl+Alt+T.
             _(
-                "Shortcut {shortcut} recorded. Choose Apply or OK to activate "
-                "it."
+                "Shortcut {shortcut} recorded. Choose Apply or OK to activate " "it."
             ).format(shortcut=format_hotkey(hotkey))
         )
 
@@ -618,9 +605,7 @@ class SettingsDialog(wx.Dialog):
             return False
 
         focused_window = wx.Window.FindFocus()
-        keyboard_page_selected = (
-            self.notebook.GetCurrentPage() is self.hotkey_page
-        )
+        keyboard_page_selected = self.notebook.GetCurrentPage() is self.hotkey_page
         if (
             keyboard_page_selected
             and focused_window is self.notebook
@@ -643,16 +628,12 @@ class SettingsDialog(wx.Dialog):
         """Reset the pending hotkey to the application default."""
         self._cancel_recording()
         self._candidate_hotkey = DEFAULT_TOGGLE_HOTKEY
-        self.hotkey_display.SetValue(
-            format_hotkey(self._candidate_hotkey)
-        )
+        self.hotkey_display.SetValue(format_hotkey(self._candidate_hotkey))
         self._update_apply_button()
         self.recording_status.SetLabel(
             # Translators: Status after selecting btText's default shortcut; it
             # is only activated when Apply or OK saves the setting.
-            _(
-                "Default shortcut selected. Choose Apply or OK to activate it."
-            )
+            _("Default shortcut selected. Choose Apply or OK to activate it.")
         )
 
     def _apply(self) -> bool:
@@ -666,8 +647,7 @@ class SettingsDialog(wx.Dialog):
             == self._current_include_copied_text_in_clipboard_history
             and self._candidate_allow_copied_text_cloud_upload
             == self._current_allow_copied_text_cloud_upload
-            and self._candidate_hotstrings_enabled
-            == self._current_hotstrings_enabled
+            and self._candidate_hotstrings_enabled == self._current_hotstrings_enabled
             and self._candidate_preserve_hotstring_boundary
             == self._current_preserve_hotstring_boundary
             and self._candidate_notify_hotstring_expansion

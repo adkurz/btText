@@ -42,9 +42,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         return result, pending, prepare, send_ctrl_v, send_virtual_key
 
     def test_boundary_key_is_replayed_when_requested(self):
-        result, pending, prepare, send_ctrl_v, send_virtual_key = self._expand(
-            0x20
-        )
+        result, pending, prepare, send_ctrl_v, send_virtual_key = self._expand(0x20)
 
         self.assertIs(result, pending)
         prepare.assert_called_once_with("Expanded")
@@ -55,9 +53,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         )
 
     def test_boundary_key_can_be_discarded(self):
-        _result, _pending, _prepare, send_ctrl_v, send_virtual_key = (
-            self._expand(None)
-        )
+        _result, _pending, _prepare, send_ctrl_v, send_virtual_key = self._expand(None)
 
         send_ctrl_v.assert_called_once_with()
         send_virtual_key.assert_called_once_with(0x08, 3)

@@ -148,9 +148,7 @@ class AppPathsTests(unittest.TestCase):
             ):
                 store = SettingsStore(app_paths.get_settings_file())
 
-                store.save(
-                    AppSettings(database_file=str(external_database))
-                )
+                store.save(AppSettings(database_file=str(external_database)))
 
                 contents = store.settings_file.read_text(encoding="utf-8")
                 self.assertIn(

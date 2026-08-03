@@ -34,8 +34,7 @@ def select_database(
         if first_start
         # Translators: Question shown when changing the snippet database.
         else _(
-            "Would you like to create a new database or open an existing "
-            "database?"
+            "Would you like to create a new database or open an existing " "database?"
         )
     )
     with utils.managed_dialog(

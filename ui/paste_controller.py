@@ -9,7 +9,6 @@ from core.error_messages import format_user_error
 from i18n import _
 from platform_support import clipboard_paste, windows
 
-
 CLIPBOARD_RESTORE_DELAY_MS = 500
 PASTE_AFTER_HIDE_DELAY_MS = 50
 CLIPBOARD_RESTORE_ATTEMPTS = 3

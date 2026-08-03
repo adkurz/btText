@@ -30,17 +30,13 @@ class HotstringControllerTestCase(unittest.TestCase):
 
         controller.refresh()
 
-        keyboard_hook.return_value.update.assert_called_once_with(
-            {"hello": snippet}
-        )
+        keyboard_hook.return_value.update.assert_called_once_with({"hello": snippet})
         self.assertEqual(ee.on.call_count, 3)
 
     @patch("ui.hotstring_controller.wx.MessageBox")
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
     def test_start_failure_is_reported(self, keyboard_hook, message_box):
-        keyboard_hook.return_value.start.side_effect = OSError(
-            "hook unavailable"
-        )
+        keyboard_hook.return_value.start.side_effect = OSError("hook unavailable")
         controller = HotstringController(
             Mock(),
             Mock(),
@@ -129,9 +125,7 @@ class HotstringControllerTestCase(unittest.TestCase):
         expand_hotstring,
         message_box,
     ):
-        expand_hotstring.side_effect = clipboard.ClipboardError(
-            "clipboard unavailable"
-        )
+        expand_hotstring.side_effect = clipboard.ClipboardError("clipboard unavailable")
         schedule_restore = Mock()
         controller = HotstringController(
             Mock(),

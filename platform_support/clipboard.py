@@ -4,7 +4,6 @@ import ctypes
 import time
 from ctypes import wintypes
 
-
 CF_UNICODETEXT = 13
 GMEM_MOVEABLE = 0x0002
 
@@ -45,9 +44,7 @@ _CLIPBOARD_HISTORY_FORMAT = user32.RegisterClipboardFormatW(
 )
 if not _CLIPBOARD_HISTORY_FORMAT:
     raise ctypes.WinError(ctypes.get_last_error())
-_CLOUD_CLIPBOARD_FORMAT = user32.RegisterClipboardFormatW(
-    "CanUploadToCloudClipboard"
-)
+_CLOUD_CLIPBOARD_FORMAT = user32.RegisterClipboardFormatW("CanUploadToCloudClipboard")
 if not _CLOUD_CLIPBOARD_FORMAT:
     raise ctypes.WinError(ctypes.get_last_error())
 

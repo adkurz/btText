@@ -58,9 +58,7 @@ class ApplicationMenuTestCase(unittest.TestCase):
 
     @patch("ui.main_frame.wx.MessageBox")
     @patch("ui.main_frame.open_manual", side_effect=FileNotFoundError("missing"))
-    def test_manual_command_reports_opening_error(
-        self, open_manual_mock, message_box
-    ):
+    def test_manual_command_reports_opening_error(self, open_manual_mock, message_box):
         frame = SimpleNamespace()
 
         MainFrame.on_open_manual(frame, Mock())
@@ -191,13 +189,10 @@ class MainFrameConstructionTestCase(unittest.TestCase):
                     _("Snippets in the selected category"),
                 )
                 (
-                    settings_controller_class.return_value
-                    .register_initial_hotkey.assert_called_once_with()
+                    settings_controller_class.return_value.register_initial_hotkey.assert_called_once_with()
                 )
                 (
-                    settings_controller_class.return_value
-                    .start_initial_hotstrings
-                    .assert_called_once_with()
+                    settings_controller_class.return_value.start_initial_hotstrings.assert_called_once_with()
                 )
                 tray_icon_class.assert_called_once_with(frame)
             finally:
@@ -210,26 +205,19 @@ class MainFrameConstructionTestCase(unittest.TestCase):
 class HotkeyLayoutChangeTestCase(unittest.TestCase):
     def test_layout_timer_delegates_to_binding(self):
         frame = SimpleNamespace(
-            _global_hotkey=Mock(
-                refresh_keyboard_layout=Mock(return_value=None)
-            ),
+            _global_hotkey=Mock(refresh_keyboard_layout=Mock(return_value=None)),
             _settings_controller=Mock(),
         )
 
         MainFrame._on_hotkey_layout_timer(frame, Mock())
 
         frame._global_hotkey.refresh_keyboard_layout.assert_called_once_with()
-        (
-            frame._settings_controller.show_hotkey_registration_error
-            .assert_not_called()
-        )
+        (frame._settings_controller.show_hotkey_registration_error.assert_not_called())
 
     def test_layout_timer_reports_failed_registration(self):
         frame = SimpleNamespace(
             _global_hotkey=Mock(
-                refresh_keyboard_layout=Mock(
-                    return_value=DEFAULT_TOGGLE_HOTKEY
-                )
+                refresh_keyboard_layout=Mock(return_value=DEFAULT_TOGGLE_HOTKEY)
             ),
             _settings_controller=Mock(),
         )
@@ -237,8 +225,9 @@ class HotkeyLayoutChangeTestCase(unittest.TestCase):
         MainFrame._on_hotkey_layout_timer(frame, Mock())
 
         (
-            frame._settings_controller.show_hotkey_registration_error
-            .assert_called_once_with(DEFAULT_TOGGLE_HOTKEY)
+            frame._settings_controller.show_hotkey_registration_error.assert_called_once_with(
+                DEFAULT_TOGGLE_HOTKEY
+            )
         )
 
 

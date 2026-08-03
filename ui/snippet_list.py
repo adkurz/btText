@@ -18,6 +18,7 @@ CONTENT_PREVIEW_LENGTH = 40
 
 class SnippetList(wx.ListView):
     """Present snippets and synchronize rows with model events."""
+
     def __init__(
         self,
         parent,
@@ -207,11 +208,7 @@ class SnippetList(wx.ListView):
     def key_handler(self, event: wx.KeyEvent):
         """Map keyboard shortcuts to snippet operations."""
         key = event.GetKeyCode()
-        if (
-            event.ControlDown()
-            and event.ShiftDown()
-            and key in (ord("C"), 3)
-        ):
+        if event.ControlDown() and event.ShiftDown() and key in (ord("C"), 3):
             self.copy_text_to_clipboard(event)
         elif event.ControlDown() and key in (ord("C"), 3, ord("X"), 24):
             self.copy_or_cut(key in (ord("C"), 3))
@@ -244,9 +241,7 @@ class SnippetList(wx.ListView):
             snippet = self._model.get_snippet(snippet_ids[0])
             clipboard.copy_text(
                 snippet.content,
-                include_in_history=(
-                    self._include_copied_text_in_clipboard_history()
-                ),
+                include_in_history=(self._include_copied_text_in_clipboard_history()),
                 allow_cloud_upload=self._allow_copied_text_cloud_upload(),
             )
         except (datamodel.DataModelError, clipboard.ClipboardError) as error:
@@ -436,8 +431,7 @@ class SnippetList(wx.ListView):
             return
         try:
             snippets = [
-                self._model.get_snippet(snippet_id)
-                for snippet_id in snippet_ids
+                self._model.get_snippet(snippet_id) for snippet_id in snippet_ids
             ]
         except datamodel.EntityNotFoundError as error:
             wx.MessageBox(
@@ -451,9 +445,9 @@ class SnippetList(wx.ListView):
         if len(snippets) == 1:
             # Translators: Confirmation before permanently deleting one snippet.
             # {name} is the snippet's name.
-            message = _(
-                "Do you want to delete the snippet '{name}'?"
-            ).format(name=snippets[0].name)
+            message = _("Do you want to delete the snippet '{name}'?").format(
+                name=snippets[0].name
+            )
             # Translators: Title of the confirmation for deleting one snippet.
             title = _("Delete snippet?")
         else:

@@ -8,7 +8,6 @@ import i18n
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY, Hotkey
 from core.user_errors import UserFacingError
 
-
 APPEARANCE_SYSTEM = "system"
 APPEARANCE_LIGHT = "light"
 APPEARANCE_DARK = "dark"
@@ -22,6 +21,7 @@ class SettingsError(UserFacingError):
 @dataclasses.dataclass(frozen=True)
 class AppSettings:
     """Immutable collection of user-configurable application settings."""
+
     database_file: str | None = None
     toggle_window_hotkey: Hotkey = DEFAULT_TOGGLE_HOTKEY
     language: str = i18n.SYSTEM_LANGUAGE
@@ -44,6 +44,7 @@ class AppSettings:
 
 class SettingsStore:
     """Load and atomically replace settings in the active data directory."""
+
     def __init__(
         self,
         settings_file: str | Path,
@@ -52,9 +53,7 @@ class SettingsStore:
         """Store settings and optionally validate languages against catalogs."""
         self.settings_file = Path(settings_file)
         self.locale_directory = (
-            Path(locale_directory)
-            if locale_directory is not None
-            else None
+            Path(locale_directory) if locale_directory is not None else None
         )
 
     def load(self) -> AppSettings:
@@ -179,9 +178,7 @@ class SettingsStore:
                 )
             parser["hotstrings"] = {
                 "enabled": str(settings.hotstrings_enabled),
-                "preserve_boundary": str(
-                    settings.preserve_hotstring_boundary
-                ),
+                "preserve_boundary": str(settings.preserve_hotstring_boundary),
                 "notify_expansion": str(settings.notify_hotstring_expansion),
             }
             parser["hotkeys"] = {

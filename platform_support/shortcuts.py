@@ -6,7 +6,6 @@ from ctypes import create_unicode_buffer, windll, wintypes
 
 from core.shortcuts import Hotkey
 
-
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 user32.GetForegroundWindow.restype = wintypes.HWND
 user32.GetWindowThreadProcessId.argtypes = (
@@ -61,7 +60,4 @@ def is_windows_key_down() -> bool:
     """Return whether either physical Windows key is currently pressed."""
     left_windows_key = user32.GetAsyncKeyState(0x5B)
     right_windows_key = user32.GetAsyncKeyState(0x5C)
-    return bool(
-        left_windows_key & 0x8000
-        or right_windows_key & 0x8000
-    )
+    return bool(left_windows_key & 0x8000 or right_windows_key & 0x8000)

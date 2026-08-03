@@ -13,7 +13,15 @@ from ui import theme
 
 class SnippetEditor(wx.Dialog):
     """Edit one snippet and delegate validation to the data model."""
-    def __init__(self, parent, ee: EventEmitter, model: datamodel.DataModel, category_id: int, snippet: datamodel.Snippet|None = None):
+
+    def __init__(
+        self,
+        parent,
+        ee: EventEmitter,
+        model: datamodel.DataModel,
+        category_id: int,
+        snippet: datamodel.Snippet | None = None,
+    ):
         """Build an editor for a new snippet or an existing snippet."""
         super().__init__(
             parent,
@@ -30,7 +38,9 @@ class SnippetEditor(wx.Dialog):
         self._model = model
         self._snippet = snippet
         self.pane = wx.Panel(self)
-        form_sizer = wx.FlexGridSizer(cols=2, vgap=self.FromDIP(10), hgap=self.FromDIP(12))
+        form_sizer = wx.FlexGridSizer(
+            cols=2, vgap=self.FromDIP(10), hgap=self.FromDIP(12)
+        )
         form_sizer.AddGrowableCol(1, 1)
         form_sizer.AddGrowableRow(4, 1)
 
@@ -38,7 +48,9 @@ class SnippetEditor(wx.Dialog):
         # Translators: Label for the editable snippet name. "&" marks the
         # keyboard mnemonic for the adjacent text field.
         self.name_label = wx.StaticText(self.pane, label=_("&Name"))
-        self.name_input = wx.TextCtrl(self.pane, validator=validators.NonEmptyValidator())
+        self.name_input = wx.TextCtrl(
+            self.pane, validator=validators.NonEmptyValidator()
+        )
         # Translators: Label for the category in which the snippet is stored.
         # "&" marks the mnemonic for the adjacent category selector.
         self.category_label = wx.StaticText(self.pane, label=_("&Category"))
@@ -48,9 +60,7 @@ class SnippetEditor(wx.Dialog):
             if category.id is not None
         ]
         categories_with_paths.sort(key=lambda item: item[0].casefold())
-        self._categories = [
-            category for _path, category in categories_with_paths
-        ]
+        self._categories = [category for _path, category in categories_with_paths]
         self.category_input = wx.Choice(
             self.pane,
             choices=[path for path, _category in categories_with_paths],
@@ -68,10 +78,7 @@ class SnippetEditor(wx.Dialog):
             # Translators: Group label for the snippet's ranking in search
             # results. "&" marks the keyboard mnemonic.
             label=_("&Weight"),
-            choices=[
-                utils.get_weight_string(weight)
-                for weight in self._model.WEIGHTS
-            ],
+            choices=[utils.get_weight_string(weight) for weight in self._model.WEIGHTS],
         )
         # Translators: Label for the optional abbreviation that expands after
         # the user types a boundary key. "&" marks the keyboard mnemonic.
@@ -84,7 +91,11 @@ class SnippetEditor(wx.Dialog):
         # Translators: Label for the snippet text that will be inserted.
         # "&" marks the mnemonic for the adjacent multiline editor.
         self.content_label = wx.StaticText(self.pane, label=_("C&ontent"))
-        self.content_input = wx.TextCtrl(self.pane, style=wx.TE_MULTILINE | wx.TE_RICH2, validator=validators.NonEmptyValidator())
+        self.content_input = wx.TextCtrl(
+            self.pane,
+            style=wx.TE_MULTILINE | wx.TE_RICH2,
+            validator=validators.NonEmptyValidator(),
+        )
         form_sizer.Add(self.name_label, 0, wx.ALIGN_CENTER_VERTICAL)
         form_sizer.Add(self.name_input, 0, wx.EXPAND)
         form_sizer.Add(self.category_label, 0, wx.ALIGN_CENTER_VERTICAL)
@@ -216,9 +227,9 @@ class SnippetEditor(wx.Dialog):
             hotstring=snippet_hotstring or None,
         )
         try:
-            if self._snippet is None: # Add new snippet
+            if self._snippet is None:  # Add new snippet
                 self._model.add_snippet(snippet)
-            else: # Edit existing snippet
+            else:  # Edit existing snippet
                 snippet.id = self._snippet.id
                 self._model.edit_snippet(snippet)
             self._closing_allowed = True

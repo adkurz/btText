@@ -95,8 +95,7 @@ class ErrorMessagesTestCase(unittest.TestCase):
     def test_catalog_load_error_explains_english_fallback(self):
         error = i18n.LanguageError(
             "language_catalog_load_failed",
-            "The translation catalog for {language} could not be loaded: "
-            "{reason}",
+            "The translation catalog for {language} could not be loaded: " "{reason}",
             language="de",
             reason=OSError("damaged catalog"),
         )
@@ -125,9 +124,7 @@ class ErrorMessagesTestCase(unittest.TestCase):
             "core/shortcuts.py",
             "i18n.py",
         ):
-            tree = ast.parse(
-                (project_root / relative_file).read_text(encoding="utf-8")
-            )
+            tree = ast.parse((project_root / relative_file).read_text(encoding="utf-8"))
             for node in ast.walk(tree):
                 if not (
                     isinstance(node, ast.Call)

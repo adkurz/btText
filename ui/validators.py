@@ -7,6 +7,7 @@ from i18n import _
 
 class NonEmptyValidator(wx.Validator):
     """Reject text controls whose value is empty or whitespace-only."""
+
     def __init__(self):
         """Create a validator for one text control."""
         super().__init__()
@@ -18,7 +19,7 @@ class NonEmptyValidator(wx.Validator):
     def Validate(self, parent):
         """Show an error and focus the control when its value is blank."""
         input = self.GetWindow()
-        text = input.GetValue().strip() # type: ignore
+        text = input.GetValue().strip()  # type: ignore
         if not text:
             wx.MessageBox(
                 # Translators: Validation message shown below an empty required
@@ -37,7 +38,7 @@ class NonEmptyValidator(wx.Validator):
 
     def TransferToWindow(self):
         """Report success because the validator owns no external data."""
-        return True  
+        return True
 
     def TransferFromWindow(self):
         """Report success because the validator owns no external data."""

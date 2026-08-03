@@ -12,6 +12,7 @@ from ui.transfer import TransferBuffer
 
 class _CategoryDropTarget(wx.TextDropTarget):
     """Decode internal drag payloads and route them to the category tree."""
+
     def __init__(self, tree):
         """Attach the drop target to its owning category tree."""
         super().__init__()
@@ -266,9 +267,9 @@ class CategoryTree(wx.TreeCtrl):
                 self.update()
                 return
             # Translators: Prompt for a new child category. {parent_name} is its parent.
-            message = _("Enter the name of the new subcategory of '{parent_name}'").format(
-                parent_name=parent_category.name
-            )
+            message = _(
+                "Enter the name of the new subcategory of '{parent_name}'"
+            ).format(parent_name=parent_category.name)
             # Translators: Title of the dialog for creating a child category.
             title = _("Add subcategory")
         with utils.managed_dialog(
@@ -314,9 +315,9 @@ class CategoryTree(wx.TreeCtrl):
                 self.update()
                 return
             # Translators: Rename prompt for a child category. {parent_name} is its parent.
-            message = _("Enter the new name of the subcategory of '{parent_name}'").format(
-                parent_name=parent_category.name
-            )
+            message = _(
+                "Enter the new name of the subcategory of '{parent_name}'"
+            ).format(parent_name=parent_category.name)
             # Translators: Title of the dialog for renaming a child category.
             title = _("Rename subcategory")
         with utils.managed_dialog(
@@ -343,9 +344,7 @@ class CategoryTree(wx.TreeCtrl):
         focus_target_id = self._get_focus_target_after_delete(category_id)
         try:
             category = self._model.get_category(category_id)
-            descendants, snippets = self._model.get_category_subtree_stats(
-                category_id
-            )
+            descendants, snippets = self._model.get_category_subtree_stats(category_id)
         except datamodel.DataModelError as error:
             self._show_error(error)
             self.update()
@@ -388,10 +387,7 @@ class CategoryTree(wx.TreeCtrl):
 
     def _focus_after_delete(self, preferred_category_id):
         """Restore a valid keyboard selection after a tree deletion."""
-        if (
-            preferred_category_id is not None
-            and self.focus_id(preferred_category_id)
-        ):
+        if preferred_category_id is not None and self.focus_id(preferred_category_id):
             self.SetFocus()
             return
         root_categories = list(self._model.get_category_children(None))
@@ -419,9 +415,7 @@ class CategoryTree(wx.TreeCtrl):
         else:
             # Translators: Status after cutting a category; it remains pending
             # until the user selects a destination and presses Ctrl+V.
-            message = _(
-                "Cut category. Select a destination and press Ctrl+V."
-            )
+            message = _("Cut category. Select a destination and press Ctrl+V.")
         self._ee.emit(
             "status.changed",
             message,
@@ -445,12 +439,15 @@ class CategoryTree(wx.TreeCtrl):
                 self,
             )
             return
-        if self.transfer_to(
-            transfer.kind,
-            transfer.entity_ids,
-            destination_id,
-            transfer.copy,
-        ) and not transfer.copy:
+        if (
+            self.transfer_to(
+                transfer.kind,
+                transfer.entity_ids,
+                destination_id,
+                transfer.copy,
+            )
+            and not transfer.copy
+        ):
             self._transfer_buffer.clear()
 
     def transfer_to(self, kind, entity_ids, destination_id, copy):
@@ -536,17 +533,25 @@ class CategoryTree(wx.TreeCtrl):
         if descendants == 1 and snippets == 1:
             # Translators: Confirmation before deleting a category and all its
             # contents. {name} is its name; both displayed counts are exactly 1.
-            template = _("Delete category '{name}', {descendants} subcategory and {snippets} snippet?")
+            template = _(
+                "Delete category '{name}', {descendants} subcategory and {snippets} snippet?"
+            )
         elif descendants == 1:
             # Translators: Confirmation before deleting a category and all its
             # contents. {name} is its name; descendants is 1, snippets is not 1.
-            template = _("Delete category '{name}', {descendants} subcategory and {snippets} snippets?")
+            template = _(
+                "Delete category '{name}', {descendants} subcategory and {snippets} snippets?"
+            )
         elif snippets == 1:
             # Translators: Confirmation before deleting a category and all its
             # contents. {name} is its name; descendants is not 1, snippets is 1.
-            template = _("Delete category '{name}', {descendants} subcategories and {snippets} snippet?")
+            template = _(
+                "Delete category '{name}', {descendants} subcategories and {snippets} snippet?"
+            )
         else:
             # Translators: Confirmation before deleting a category and all its
             # contents. {name} is its name; neither displayed count is 1.
-            template = _("Delete category '{name}', {descendants} subcategories and {snippets} snippets?")
+            template = _(
+                "Delete category '{name}', {descendants} subcategories and {snippets} snippets?"
+            )
         return template.format(**parameters)

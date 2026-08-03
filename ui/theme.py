@@ -15,7 +15,6 @@ from core.app_settings import (
     APPEARANCE_SYSTEM,
 )
 
-
 DWMWA_USE_IMMERSIVE_DARK_MODE = 20
 
 
@@ -75,12 +74,8 @@ def _windows_uses_dark_mode() -> bool | None:
 def initialize(appearance: str = APPEARANCE_SYSTEM) -> Theme:
     """Select and retain the configured appearance for this application run."""
     global _active_theme
-    use_dark_theme = (
-        appearance == APPEARANCE_DARK
-        or (
-            appearance == APPEARANCE_SYSTEM
-            and system_uses_dark_mode()
-        )
+    use_dark_theme = appearance == APPEARANCE_DARK or (
+        appearance == APPEARANCE_SYSTEM and system_uses_dark_mode()
     )
     if use_dark_theme:
         _active_theme = _DARK_THEME
@@ -98,9 +93,7 @@ def apply_to_app(app: wx.App) -> None:
     """Request the selected native appearance before creating any windows."""
     active_theme = get_active_theme()
     appearance = (
-        wx.PyApp.Appearance.Dark
-        if active_theme.dark
-        else wx.PyApp.Appearance.Light
+        wx.PyApp.Appearance.Dark if active_theme.dark else wx.PyApp.Appearance.Light
     )
     app.SetAppearance(appearance)
 

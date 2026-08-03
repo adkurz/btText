@@ -4,7 +4,6 @@ import ctypes
 from ctypes import wintypes
 import os
 
-
 SW_RESTORE = 9
 
 

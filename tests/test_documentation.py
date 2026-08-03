@@ -60,17 +60,23 @@ class ManualSelectionTests(unittest.TestCase):
     def test_exact_language_is_preferred(self):
         german = self.directory / "manual-de-de.html"
         german.touch()
-        with patch.object(documentation, "get_documentation_directory", return_value=self.directory):
+        with patch.object(
+            documentation, "get_documentation_directory", return_value=self.directory
+        ):
             self.assertEqual(documentation.get_manual_file("de_DE"), german)
 
     def test_base_language_precedes_english_fallback(self):
         german = self.directory / "manual-de.html"
         german.touch()
-        with patch.object(documentation, "get_documentation_directory", return_value=self.directory):
+        with patch.object(
+            documentation, "get_documentation_directory", return_value=self.directory
+        ):
             self.assertEqual(documentation.get_manual_file("de-AT"), german)
 
     def test_missing_language_falls_back_to_english(self):
-        with patch.object(documentation, "get_documentation_directory", return_value=self.directory):
+        with patch.object(
+            documentation, "get_documentation_directory", return_value=self.directory
+        ):
             self.assertEqual(
                 documentation.get_manual_file("fr"),
                 self.directory / "manual-en.html",
@@ -78,19 +84,25 @@ class ManualSelectionTests(unittest.TestCase):
 
     @patch("platform_support.documentation.os.startfile", create=True)
     def test_open_manual_uses_windows_file_association(self, startfile):
-        with patch.object(documentation, "get_documentation_directory", return_value=self.directory):
+        with patch.object(
+            documentation, "get_documentation_directory", return_value=self.directory
+        ):
             manual = documentation.open_manual("en")
         startfile.assert_called_once_with(manual)
 
     def test_changelog_uses_base_language_before_english_fallback(self):
         german = self.directory / "changelog-de.html"
         german.touch()
-        with patch.object(documentation, "get_documentation_directory", return_value=self.directory):
+        with patch.object(
+            documentation, "get_documentation_directory", return_value=self.directory
+        ):
             self.assertEqual(documentation.get_changelog_file("de-AT"), german)
 
     @patch("platform_support.documentation.os.startfile", create=True)
     def test_open_changelog_uses_windows_file_association(self, startfile):
-        with patch.object(documentation, "get_documentation_directory", return_value=self.directory):
+        with patch.object(
+            documentation, "get_documentation_directory", return_value=self.directory
+        ):
             changelog = documentation.open_changelog("fr")
         self.assertEqual(changelog, self.directory / "changelog-en.html")
         startfile.assert_called_once_with(changelog)

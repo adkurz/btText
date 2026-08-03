@@ -8,13 +8,13 @@ from i18n import _
 from ui import utils
 from ui import theme
 
-
 SEARCH_DELAY_MS = 300
 CONTENT_PREVIEW_LENGTH = 60
 
 
 class SearchDialog(wx.Dialog):
     """Search snippets without querying SQLite on every keystroke."""
+
     def __init__(self, parent, model: datamodel.DataModel):
         """Build the search controls and delayed-query timer."""
         super().__init__(
@@ -176,9 +176,7 @@ class SearchDialog(wx.Dialog):
 
     def _on_result_focused(self, event: wx.ListEvent):
         """Remember the model ID associated with the focused result."""
-        self._selected_snippet_id = self.result_list.GetItemData(
-            event.GetIndex()
-        )
+        self._selected_snippet_id = self.result_list.GetItemData(event.GetIndex())
         self.open_button.Enable(True)
 
     def _on_result_activated(self, event: wx.ListEvent):
