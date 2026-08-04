@@ -3,8 +3,11 @@
 import ctypes
 from ctypes import wintypes
 from dataclasses import dataclass
+import logging
+import time
 
 from platform_support.clipboard import (
+    CF_UNICODETEXT,
     GMEM_MOVEABLE,
     ClipboardError,
     _open_clipboard,
@@ -23,6 +26,11 @@ CF_DSPBITMAP = 0x0082
 CF_DSPMETAFILEPICT = 0x0083
 CF_DSPENHMETAFILE = 0x008E
 IMAGE_BITMAP = 0
+ERROR_CLIPBOARD_FORMAT_NOT_AVAILABLE = 1418
+CAPTURE_ATTEMPTS = 3
+CAPTURE_RETRY_DELAY = 0.02
+
+logger = logging.getLogger("bttext.clipboard")
 
 
 gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
@@ -50,6 +58,46 @@ gdi32.CopyEnhMetaFileW.restype = wintypes.HANDLE
 gdi32.DeleteObject.argtypes = (wintypes.HANDLE,)
 gdi32.DeleteMetaFile.argtypes = (wintypes.HANDLE,)
 gdi32.DeleteEnhMetaFile.argtypes = (wintypes.HANDLE,)
+user32.GetClipboardFormatNameW.argtypes = (
+    wintypes.UINT,
+    wintypes.LPWSTR,
+    ctypes.c_int,
+)
+user32.GetClipboardFormatNameW.restype = ctypes.c_int
+
+
+class _ClipboardFormatError(ClipboardError):
+    """Identify one format that could not be copied from the clipboard."""
+
+    def __init__(self, format_id: int, message: str, error_code: int = 0):
+        """Retain non-content diagnostics for retry and logging."""
+        self.format_id = format_id
+        self.error_code = error_code
+        super().__init__(message)
+
+
+def _clipboard_format_name(format_id: int) -> str:
+    """Return a diagnostic format name without reading clipboard contents."""
+    standard_names = {
+        CF_UNICODETEXT: "CF_UNICODETEXT",
+        CF_BITMAP: "CF_BITMAP",
+        CF_METAFILEPICT: "CF_METAFILEPICT",
+        CF_PALETTE: "CF_PALETTE",
+        CF_ENHMETAFILE: "CF_ENHMETAFILE",
+        CF_OWNERDISPLAY: "CF_OWNERDISPLAY",
+        CF_DSPBITMAP: "CF_DSPBITMAP",
+        CF_DSPMETAFILEPICT: "CF_DSPMETAFILEPICT",
+        CF_DSPENHMETAFILE: "CF_DSPENHMETAFILE",
+    }
+    if format_id in standard_names:
+        return standard_names[format_id]
+    buffer = ctypes.create_unicode_buffer(256)
+    if user32.GetClipboardFormatNameW(format_id, buffer, len(buffer)):
+        return "".join(
+            character if character.isprintable() else "?"
+            for character in buffer.value
+        )
+    return "unregistered"
 
 
 class METAFILEPICT(ctypes.Structure):
@@ -116,7 +164,14 @@ class ClipboardSnapshot:
     @classmethod
     def capture(cls) -> ClipboardSnapshot:
         """Capture all transferable formats from the current clipboard."""
-        return cls(_copy_clipboard_formats())
+        for attempt in range(CAPTURE_ATTEMPTS):
+            try:
+                return cls(_copy_clipboard_formats())
+            except _ClipboardFormatError:
+                if attempt + 1 == CAPTURE_ATTEMPTS:
+                    break
+                time.sleep(CAPTURE_RETRY_DELAY)
+        return cls(_copy_clipboard_formats(skip_unavailable=True))
 
     def restore(self) -> None:
         """Replace the clipboard with this snapshot and close it."""
@@ -147,12 +202,18 @@ class ClipboardSnapshot:
 
 def _copy_clipboard_format(format_id: int) -> _ClipboardFormatCopy | None:
     """Copy one format according to the ownership rules of its storage type."""
+    ctypes.set_last_error(0)
     handle = user32.GetClipboardData(format_id)
     if not handle:
         # CF_OWNERDISPLAY deliberately has no transferable data handle.
         if format_id == CF_OWNERDISPLAY:
             return None
-        raise ClipboardError("A clipboard format could not be read.")
+        error_code = ctypes.get_last_error()
+        raise _ClipboardFormatError(
+            format_id,
+            "A clipboard format could not be read.",
+            error_code or ERROR_CLIPBOARD_FORMAT_NOT_AVAILABLE,
+        )
 
     if format_id in (CF_BITMAP, CF_DSPBITMAP):
         copy = user32.CopyImage(handle, IMAGE_BITMAP, 0, 0, 0)
@@ -184,10 +245,13 @@ def _copy_clipboard_format(format_id: int) -> _ClipboardFormatCopy | None:
         finally:
             kernel32.GlobalUnlock(handle)
     else:
+        ctypes.set_last_error(0)
         size = kernel32.GlobalSize(handle)
         if not size:
-            raise ClipboardError(
-                "A clipboard memory block could not be measured."
+            raise _ClipboardFormatError(
+                format_id,
+                "A clipboard memory block could not be measured.",
+                ctypes.get_last_error(),
             )
         pointer = kernel32.GlobalLock(handle)
         if not pointer:
@@ -208,19 +272,48 @@ def _copy_clipboard_format(format_id: int) -> _ClipboardFormatCopy | None:
     return _ClipboardFormatCopy(format_id, kind, int(copy))
 
 
-def _copy_clipboard_formats() -> list[_ClipboardFormatCopy]:
+def _copy_clipboard_formats(
+    *,
+    skip_unavailable: bool = False,
+) -> list[_ClipboardFormatCopy]:
     """Deep-copy every transferable clipboard format by its storage type."""
     copied_formats: list[_ClipboardFormatCopy] = []
+    skipped_formats: list[_ClipboardFormatError] = []
     _open_clipboard()
     try:
         format_id = 0
         while True:
+            ctypes.set_last_error(0)
             format_id = user32.EnumClipboardFormats(format_id)
             if not format_id:
+                error_code = ctypes.get_last_error()
+                if error_code:
+                    raise ClipboardError(
+                        "The clipboard formats could not be enumerated "
+                        f"(Windows error {error_code})."
+                    )
                 break
-            copied_format = _copy_clipboard_format(format_id)
+            try:
+                copied_format = _copy_clipboard_format(format_id)
+            except _ClipboardFormatError as error:
+                if not skip_unavailable:
+                    raise
+                skipped_formats.append(error)
+                logger.warning(
+                    "Skipping unavailable clipboard format id=%d name=%s "
+                    "windows_error=%d",
+                    error.format_id,
+                    _clipboard_format_name(error.format_id),
+                    error.error_code,
+                )
+                continue
             if copied_format is not None:
                 copied_formats.append(copied_format)
+        if skipped_formats and not copied_formats:
+            raise ClipboardError(
+                "The available clipboard formats could not be preserved. "
+                "Please copy plain text or clear the clipboard and try again."
+            )
     except Exception:
         for copied_format in copied_formats:
             copied_format.release()
