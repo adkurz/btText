@@ -167,6 +167,36 @@ class HotstringControllerTestCase(unittest.TestCase):
             32,
         )
 
+    @patch("ui.hotstring_controller.keyboard_input.move_cursor_left")
+    @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
+    @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
+    def test_cursor_moves_across_suffix_and_preserved_boundary(
+        self,
+        keyboard_hook,
+        expand_hotstring,
+        move_cursor_left,
+    ):
+        expand_hotstring.return_value = Mock()
+        controller = HotstringController(
+            Mock(),
+            Mock(),
+            Mock(),
+            lambda: AppSettings(preserve_hotstring_boundary=True),
+            Mock(),
+            Mock(),
+            Mock(return_value=RenderedSnippet("ABC", 2)),
+        )
+        snippet = datamodel.Snippet(
+            category_id=1,
+            name="Cursor",
+            content="A{{cursor}}BC",
+            hotstring="cursor",
+        )
+
+        controller._expand(42, snippet, 32)
+
+        move_cursor_left.assert_called_once_with(3)
+
     @patch("ui.hotstring_controller.show_variable_error")
     @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")

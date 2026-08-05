@@ -63,6 +63,7 @@ class PasteControllerTestCase(unittest.TestCase):
             50,
             controller._paste_after_hide,
             "Example",
+            None,
         )
 
     @patch("ui.paste_controller.wx.CallLater")
@@ -100,6 +101,35 @@ class PasteControllerTestCase(unittest.TestCase):
             50,
             controller._paste_after_hide,
             "Today is 6. August 2026.",
+            None,
+        )
+
+    @patch("ui.paste_controller.wx.CallLater")
+    @patch("ui.paste_controller.windows.is_external_window", return_value=True)
+    @patch("ui.paste_controller.windows.get_foreground_window", return_value=42)
+    def test_cursor_offset_is_forwarded_to_delayed_paste(
+        self,
+        get_foreground_window,
+        is_external_window,
+        call_later,
+    ):
+        model = Mock()
+        model.get_snippet.return_value = SimpleNamespace(content="A{{cursor}}BC")
+        controller = PasteController(
+            Mock(),
+            model,
+            Mock(),
+            Mock(),
+            Mock(return_value=RenderedSnippet("ABC", 2)),
+        )
+
+        controller.insert_snippet(7)
+
+        call_later.assert_called_once_with(
+            50,
+            controller._paste_after_hide,
+            "ABC",
+            2,
         )
 
     @patch("ui.paste_controller.show_variable_error")
@@ -177,6 +207,24 @@ class PasteControllerTestCase(unittest.TestCase):
         controller._paste_after_hide("Example")
 
         paste_text.assert_called_once_with(42, "Example")
+        controller.schedule_restore.assert_called_once_with(pending)
+
+    @patch("ui.paste_controller.keyboard_input.move_cursor_left")
+    @patch("ui.paste_controller.clipboard_paste.paste_text")
+    def test_successful_paste_moves_cursor_before_scheduling_restore(
+        self,
+        paste_text,
+        move_cursor_left,
+    ):
+        pending = Mock()
+        paste_text.return_value = pending
+        controller = PasteController.__new__(PasteController)
+        controller._target_window = 42
+        controller.schedule_restore = Mock()
+
+        controller._paste_after_hide("ABC", 2)
+
+        move_cursor_left.assert_called_once_with(2)
         controller.schedule_restore.assert_called_once_with(pending)
 
     @patch("ui.paste_controller.wx.MessageBox")

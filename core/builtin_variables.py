@@ -7,6 +7,7 @@ from babel.dates import format_date, format_datetime, format_time
 
 from core.variables import (
     ResolutionContext,
+    ResolvedVariable,
     VariableDefinition,
     VariableEngine,
     VariableRegistry,
@@ -18,8 +19,12 @@ from core.variables import (
 TEMPORAL_VARIABLE_NAMES = ("date", "time", "datetime")
 CONTEXT_VARIABLE_NAMES = ("clipboard", "app")
 INTERACTIVE_VARIABLE_NAMES = ("input",)
+INSTRUCTION_VARIABLE_NAMES = ("cursor",)
 BUILTIN_VARIABLE_NAMES = (
-    TEMPORAL_VARIABLE_NAMES + CONTEXT_VARIABLE_NAMES + INTERACTIVE_VARIABLE_NAMES
+    TEMPORAL_VARIABLE_NAMES
+    + CONTEXT_VARIABLE_NAMES
+    + INTERACTIVE_VARIABLE_NAMES
+    + INSTRUCTION_VARIABLE_NAMES
 )
 BUILTIN_VARIABLE_FORMATS = ("short", "medium", "long", "full", "iso")
 _LOCALIZED_FORMATS = frozenset(BUILTIN_VARIABLE_FORMATS[:-1])
@@ -186,6 +191,14 @@ def _resolve_input(
     return value
 
 
+def _resolve_cursor(
+    context: ResolutionContext,
+    arguments: tuple[str, ...],
+) -> ResolvedVariable:
+    _reject_arguments("cursor", arguments)
+    return ResolvedVariable(cursor_position=True)
+
+
 def create_builtin_variable_engine() -> VariableEngine:
     """Create an engine containing every built-in snippet variable."""
     resolvers = {
@@ -195,6 +208,7 @@ def create_builtin_variable_engine() -> VariableEngine:
         "clipboard": _resolve_clipboard,
         "app": _resolve_app,
         "input": _resolve_input,
+        "cursor": _resolve_cursor,
     }
     argument_validators = {
         "date": lambda arguments: _requested_format("date", arguments),
@@ -203,6 +217,7 @@ def create_builtin_variable_engine() -> VariableEngine:
         "clipboard": lambda arguments: _reject_arguments("clipboard", arguments),
         "app": lambda arguments: _reject_arguments("app", arguments),
         "input": _input_label,
+        "cursor": lambda arguments: _reject_arguments("cursor", arguments),
     }
     return VariableEngine(
         VariableRegistry(
@@ -211,6 +226,7 @@ def create_builtin_variable_engine() -> VariableEngine:
                     name,
                     resolvers[name],
                     argument_validators[name],
+                    1 if name in INSTRUCTION_VARIABLE_NAMES else None,
                 )
                 for name in BUILTIN_VARIABLE_NAMES
             )

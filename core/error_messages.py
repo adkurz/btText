@@ -280,6 +280,11 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "variable_input_label_required": lambda parameters: _(
         "The variable 'input' requires exactly one non-empty label."
     ),
+    # Translators: Validation error when a snippet contains {{cursor}} more
+    # than once. The technical variable name remains English.
+    "variable_occurrence_limit": lambda parameters: _(
+        "The variable '{name}' may occur only once in a snippet."
+    ).format(**parameters),
     # Translators: Validation error when a global shortcut contains an
     # unsupported keyboard key.
     "hotkey_key_unsupported": lambda parameters: _(

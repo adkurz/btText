@@ -42,7 +42,18 @@ class ResolutionContext:
     request_input: Callable[[str], str | None] | None = None
 
 
-VariableResolver = Callable[[ResolutionContext, tuple[str, ...]], str]
+@dataclass(frozen=True)
+class ResolvedVariable:
+    """Return variable text and optional rendering instructions."""
+
+    text: str = ""
+    cursor_position: bool = False
+
+
+VariableResolver = Callable[
+    [ResolutionContext, tuple[str, ...]],
+    str | ResolvedVariable,
+]
 VariableArgumentValidator = Callable[[tuple[str, ...]], None]
 
 
@@ -53,6 +64,7 @@ class VariableDefinition:
     name: str
     resolver: VariableResolver
     validate_arguments: VariableArgumentValidator | None = None
+    maximum_occurrences: int | None = None
 
 
 @dataclass(frozen=True)
@@ -99,6 +111,11 @@ class VariableRegistry:
             and not callable(definition.validate_arguments)
         ):
             raise TypeError("The variable argument validator must be callable.")
+        if (
+            definition.maximum_occurrences is not None
+            and definition.maximum_occurrences < 1
+        ):
+            raise ValueError("The variable occurrence limit must be positive.")
         self._definitions[definition.name] = definition
 
     def get(self, name: str) -> VariableDefinition | None:
@@ -119,14 +136,23 @@ class VariableEngine:
     ) -> RenderedSnippet:
         """Resolve variables once without recursively interpreting results."""
         parts: list[str] = []
+        cursor_position: int | None = None
+        occurrences: dict[str, int] = {}
         for part in self._parse(template):
             if isinstance(part, str):
                 parts.append(part)
                 continue
             definition = self._get_validated_definition(part)
+            self._validate_occurrence(definition, part, occurrences)
             try:
-                value = definition.resolver(context, part.arguments)
-                if not isinstance(value, str):
+                resolved = definition.resolver(context, part.arguments)
+                if isinstance(resolved, ResolvedVariable):
+                    value = resolved.text
+                    if resolved.cursor_position:
+                        cursor_position = sum(len(item) for item in parts) + len(value)
+                elif isinstance(resolved, str):
+                    value = resolved
+                else:
                     raise TypeError("The variable resolver did not return text.")
             except VariableRenderingCancelled:
                 raise
@@ -142,13 +168,41 @@ class VariableEngine:
                     reason=error,
                 ) from error
             parts.append(value)
-        return RenderedSnippet(text="".join(parts))
+        text = "".join(parts)
+        return RenderedSnippet(
+            text=text,
+            cursor_offset_from_end=(
+                None if cursor_position is None else len(text) - cursor_position
+            ),
+        )
 
     def validate(self, template: str) -> None:
         """Validate syntax, names, and arguments without resolving values."""
+        occurrences: dict[str, int] = {}
         for part in self._parse(template):
             if isinstance(part, _VariableToken):
-                self._get_validated_definition(part)
+                definition = self._get_validated_definition(part)
+                self._validate_occurrence(definition, part, occurrences)
+
+    @staticmethod
+    def _validate_occurrence(
+        definition: VariableDefinition,
+        token: _VariableToken,
+        occurrences: dict[str, int],
+    ) -> None:
+        """Enforce an optional per-template occurrence limit."""
+        count = occurrences.get(token.name, 0) + 1
+        occurrences[token.name] = count
+        if (
+            definition.maximum_occurrences is not None
+            and count > definition.maximum_occurrences
+        ):
+            raise VariableResolutionError(
+                "variable_occurrence_limit",
+                "Variable {name!r} exceeds its occurrence limit",
+                name=token.name,
+                maximum=definition.maximum_occurrences,
+            )
 
     def _get_validated_definition(
         self,

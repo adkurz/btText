@@ -8,6 +8,7 @@ from core.builtin_variables import (
     BUILTIN_VARIABLE_FORMATS,
     BUILTIN_VARIABLE_NAMES,
     CONTEXT_VARIABLE_NAMES,
+    INSTRUCTION_VARIABLE_NAMES,
     INTERACTIVE_VARIABLE_NAMES,
     TEMPORAL_VARIABLE_NAMES,
 )
@@ -41,11 +42,13 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
         "app": _("Executable filename of the target application"),
         # Translators: Description used in the snippet variable picker.
         "input": _("Text requested during insertion"),
+        # Translators: Description used in the snippet variable picker.
+        "cursor": _("Final cursor position after insertion"),
     }
     suggestions = []
     for name in BUILTIN_VARIABLE_NAMES:
         value_description = value_descriptions[name]
-        if name in CONTEXT_VARIABLE_NAMES:
+        if name in CONTEXT_VARIABLE_NAMES or name in INSTRUCTION_VARIABLE_NAMES:
             suggestions.append(
                 VariableSuggestion(
                     "{{" + name + "}}",

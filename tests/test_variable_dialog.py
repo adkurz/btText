@@ -26,7 +26,7 @@ class VariableDialogTestCase(unittest.TestCase):
         suggestions = get_builtin_variable_suggestions()
         expressions = {suggestion.expression for suggestion in suggestions}
 
-        self.assertEqual(len(suggestions), 21)
+        self.assertEqual(len(suggestions), 22)
         for name in BUILTIN_VARIABLE_NAMES:
             if name in INTERACTIVE_VARIABLE_NAMES:
                 continue

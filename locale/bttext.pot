@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-06 01:17+0200\n"
+"POT-Creation-Date: 2026-08-06 01:32+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -350,51 +350,58 @@ msgstr ""
 msgid "The variable 'input' requires exactly one non-empty label."
 msgstr ""
 
+#. Translators: Validation error when a snippet contains {{cursor}} more
+#. than once. The technical variable name remains English.
+#: core/error_messages.py:286
+#, python-brace-format
+msgid "The variable '{name}' may occur only once in a snippet."
+msgstr ""
+
 #. Translators: Validation error when a global shortcut contains an
 #. unsupported keyboard key.
-#: core/error_messages.py:286
+#: core/error_messages.py:291
 msgid "The shortcut contains an unsupported key."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut has no Ctrl, Shift,
 #. Alt, or Windows modifier.
-#: core/error_messages.py:291
+#: core/error_messages.py:296
 msgid "The shortcut requires at least one modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut from settings cannot be
 #. parsed.
-#: core/error_messages.py:295
+#: core/error_messages.py:300
 msgid "The shortcut has an invalid format."
 msgstr ""
 
 #. Translators: Validation error when a shortcut repeats the same modifier.
-#: core/error_messages.py:299
+#: core/error_messages.py:304
 msgid "The shortcut contains a duplicate modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut has zero or multiple main
 #. keys.
-#: core/error_messages.py:303
+#: core/error_messages.py:308
 msgid "The shortcut must contain exactly one key."
 msgstr ""
 
 #. Translators: Validation error when a key cannot be used for a global
 #. shortcut.
-#: core/error_messages.py:307
+#: core/error_messages.py:312
 msgid "This key cannot be used as a shortcut."
 msgstr ""
 
 #. Translators: Settings error when the selected UI language has no installed
 #. gettext catalog.
-#: core/error_messages.py:312
+#: core/error_messages.py:317
 msgid "No translation catalog is available for the selected language."
 msgstr ""
 
 #. Translators: Startup warning after a damaged translation catalog forced
 #. btText to continue in English. {language} is a locale code such as de;
 #. {reason} is a technical catalog-loading error.
-#: core/error_messages.py:318
+#: core/error_messages.py:323
 #, python-brace-format
 msgid ""
 "The translation catalog for {language} could not be loaded. btText will continue in English.\n"
@@ -403,13 +410,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Settings error when the saved UI language code is malformed.
-#: core/error_messages.py:326
+#: core/error_messages.py:331
 msgid "The language setting has an invalid format."
 msgstr ""
 
 #. Translators: Safe fallback when no specific localized application-error
 #. message is available.
-#: core/error_messages.py:341
+#: core/error_messages.py:346
 msgid "An unexpected application error occurred."
 msgstr ""
 
@@ -634,7 +641,7 @@ msgstr ""
 #. Translators: Snippet-editor button that discards unsaved changes and
 #. Translators: Button that closes the variable picker without inserting.
 #: ui/database_selection.py:57 ui/search_dialog.py:61 ui/settings_dialog.py:98
-#: ui/snippet_editor.py:165 ui/variable_dialog.py:172
+#: ui/snippet_editor.py:165 ui/variable_dialog.py:175
 msgid "&Cancel"
 msgstr ""
 
@@ -662,7 +669,7 @@ msgstr ""
 
 #. Translators: Title for a failure to monitor or expand a
 #. globally typed snippet hotstring.
-#: ui/hotstring_controller.py:58 ui/hotstring_controller.py:120
+#: ui/hotstring_controller.py:64 ui/hotstring_controller.py:137
 msgid "Hotstring error"
 msgstr ""
 
@@ -842,13 +849,18 @@ msgstr ""
 
 #. Translators: Title of an error inserting a snippet externally.
 #. Translators: Title of an error while pasting copied or cut items.
-#: ui/paste_controller.py:62 ui/paste_controller.py:103 ui/snippet_list.py:356
+#: ui/paste_controller.py:62 ui/paste_controller.py:108 ui/snippet_list.py:356
 msgid "Paste error"
+msgstr ""
+
+#. Translators: Title for a failed cursor instruction after paste.
+#: ui/paste_controller.py:122
+msgid "Cursor movement error"
 msgstr ""
 
 #. Translators: Error after inserting a snippet when restoring the
 #. user's old clipboard repeatedly failed. {} is a technical error.
-#: ui/paste_controller.py:144
+#: ui/paste_controller.py:163
 #, python-brace-format
 msgid ""
 "The previous clipboard contents could not be restored after multiple attempts. The clipboard may still contain the inserted snippet.\n"
@@ -858,7 +870,7 @@ msgstr ""
 
 #. Translators: Title of an error restoring the user's clipboard
 #. after a snippet was inserted.
-#: ui/paste_controller.py:150
+#: ui/paste_controller.py:169
 msgid "Clipboard restore error"
 msgstr ""
 
@@ -1474,45 +1486,50 @@ msgid "The input field must not be empty!"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:32
+#: ui/variable_dialog.py:33
 msgid "Current date"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:34
+#: ui/variable_dialog.py:35
 msgid "Current time"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:36
+#: ui/variable_dialog.py:37
 msgid "Current date and time"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:38
+#: ui/variable_dialog.py:39
 msgid "Current Unicode text from the Windows clipboard"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker. This is
 #. the executable filename, not a possibly private window title.
-#: ui/variable_dialog.py:41
+#: ui/variable_dialog.py:42
 msgid "Executable filename of the target application"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:43
+#: ui/variable_dialog.py:44
 msgid "Text requested during insertion"
+msgstr ""
+
+#. Translators: Description used in the snippet variable picker.
+#: ui/variable_dialog.py:46
+msgid "Final cursor position after insertion"
 msgstr ""
 
 #. Translators: Description for the editable placeholder in
 #. an interactive input variable expression.
-#: ui/variable_dialog.py:63
+#: ui/variable_dialog.py:66
 msgid "Replace 'Prompt' with the requested value's label."
 msgstr ""
 
 #. Translators: Description for a variable without an explicit
 #. format. {value} is a localized date/time value description.
-#: ui/variable_dialog.py:73
+#: ui/variable_dialog.py:76
 #, python-brace-format
 msgid "{value} using the default localized short format."
 msgstr ""
@@ -1520,77 +1537,77 @@ msgstr ""
 #. Translators: Description for a localized date/time
 #. variable. {value} is its value type; {format} is a
 #. language-independent technical format name.
-#: ui/variable_dialog.py:90
+#: ui/variable_dialog.py:93
 #, python-brace-format
 msgid "{value} using the localized '{format}' format."
 msgstr ""
 
 #. Translators: Description for a language-independent date/time
 #. variable. {value} is a localized value description.
-#: ui/variable_dialog.py:102
+#: ui/variable_dialog.py:105
 #, python-brace-format
 msgid "{value} using the language-independent ISO format."
 msgstr ""
 
 #. Translators: Window title for choosing a snippet variable.
-#: ui/variable_dialog.py:122
+#: ui/variable_dialog.py:125
 msgid "Insert variable"
 msgstr ""
 
 #. Translators: Label for the list of variables available to insert.
-#: ui/variable_dialog.py:129
+#: ui/variable_dialog.py:132
 msgid "&Available variables"
 msgstr ""
 
 #. Translators: Accessible name for the snippet variable picker list.
-#: ui/variable_dialog.py:139
+#: ui/variable_dialog.py:142
 msgid "Available snippet variables"
 msgstr ""
 
 #. Translators: Label for optional variable formats or settings.
-#: ui/variable_dialog.py:148
+#: ui/variable_dialog.py:151
 msgid "Possible &formats or settings"
 msgstr ""
 
 #. Translators: Accessible name for optional variable
 #. formats/settings.
-#: ui/variable_dialog.py:154
+#: ui/variable_dialog.py:157
 msgid "Available variable formats or settings"
 msgstr ""
 
 #. Translators: Label for the prompt stored in an interactive input
 #. variable. "&" marks the keyboard mnemonic.
-#: ui/variable_dialog.py:158
+#: ui/variable_dialog.py:161
 msgid "&Prompt"
 msgstr ""
 
 #. Translators: Accessible name for the editable prompt of {{input}}.
-#: ui/variable_dialog.py:161
+#: ui/variable_dialog.py:164
 msgid "Interactive variable prompt"
 msgstr ""
 
 #. Translators: Button that inserts the selected variable expression.
-#: ui/variable_dialog.py:170
+#: ui/variable_dialog.py:173
 msgid "&Insert"
 msgstr ""
 
 #. Translators: Default choice for a variable with optional formats.
-#: ui/variable_dialog.py:250
+#: ui/variable_dialog.py:253
 msgid "Default"
 msgstr ""
 
 #. Translators: Window title for rendered snippet variable output.
-#: ui/variable_dialog.py:327
+#: ui/variable_dialog.py:330
 msgid "Variable preview"
 msgstr ""
 
 #. Translators: Label for the rendered snippet text in the preview.
-#: ui/variable_dialog.py:331
+#: ui/variable_dialog.py:334
 msgid "Resolved &text"
 msgstr ""
 
 #. Translators: Accessible name for rendered snippet preview text.
-#: ui/variable_dialog.py:338
+#: ui/variable_dialog.py:341
 msgid "Resolved snippet text"
 msgstr ""
 

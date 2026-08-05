@@ -11,7 +11,7 @@ from core.variables import (
     VariableRenderingCancelled,
 )
 from i18n import _
-from platform_support import clipboard_paste, windows
+from platform_support import clipboard_paste, keyboard_input, windows
 from ui.variable_resolver import show_variable_error
 
 CLIPBOARD_RESTORE_DELAY_MS = 500
@@ -89,9 +89,14 @@ class PasteController:
             PASTE_AFTER_HIDE_DELAY_MS,
             self._paste_after_hide,
             rendered.text,
+            rendered.cursor_offset_from_end,
         )
 
-    def _paste_after_hide(self, text: str) -> None:
+    def _paste_after_hide(
+        self,
+        text: str,
+        cursor_offset_from_end: int | None = None,
+    ) -> None:
         """Paste after native window activation has settled."""
         try:
             pending = clipboard_paste.paste_text(self._target_window, text)
@@ -101,6 +106,20 @@ class PasteController:
                 str(error),
                 # Translators: Title of an error inserting a snippet externally.
                 _("Paste error"),
+                wx.OK | wx.ICON_ERROR,
+                self._parent,
+            )
+            return
+        try:
+            if cursor_offset_from_end is not None:
+                keyboard_input.move_cursor_left(cursor_offset_from_end)
+        except clipboard_paste.PasteError as error:
+            self.schedule_restore(pending)
+            self._reveal_after_error()
+            wx.MessageBox(
+                str(error),
+                # Translators: Title for a failed cursor instruction after paste.
+                _("Cursor movement error"),
                 wx.OK | wx.ICON_ERROR,
                 self._parent,
             )

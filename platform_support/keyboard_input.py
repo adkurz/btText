@@ -9,6 +9,7 @@ from platform_support.clipboard import ClipboardError, user32
 INPUT_KEYBOARD = 1
 KEYEVENTF_KEYUP = 0x0002
 VK_CONTROL = 0x11
+VK_LEFT = 0x25
 VK_V = 0x56
 
 
@@ -102,3 +103,11 @@ def send_virtual_key(key: int, repetitions: int = 1) -> None:
         ctypes.sizeof(INPUT),
     ) != len(inputs):
         raise ClipboardError("A keyboard input could not be sent.")
+
+
+def move_cursor_left(characters: int) -> None:
+    """Move the foreground text caret left by ``characters`` positions."""
+    if characters < 0:
+        raise ValueError("The cursor movement cannot be negative.")
+    if characters:
+        send_virtual_key(VK_LEFT, characters)

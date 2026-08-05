@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from core.builtin_variables import create_builtin_variable_engine
 from core.variables import (
+    RenderedSnippet,
     ResolutionContext,
     VariableRenderingCancelled,
     VariableResolutionError,
@@ -190,6 +191,36 @@ class BuiltinVariableTestCase(unittest.TestCase):
                 "{{input:Kundennummer}}",
                 request_input=lambda label: None,
             )
+
+    def test_cursor_is_removed_and_records_offset_from_end(self):
+        rendered = self.engine.render(
+            "Greeting {{cursor}}🙂\nEnd",
+            ResolutionContext(self.timestamp, "de"),
+        )
+
+        self.assertEqual(rendered.text, "Greeting 🙂\nEnd")
+        self.assertEqual(rendered.cursor_offset_from_end, 5)
+
+    def test_cursor_at_end_records_zero_offset(self):
+        rendered = self.engine.render(
+            "Greeting{{cursor}}",
+            ResolutionContext(self.timestamp, "de"),
+        )
+
+        self.assertEqual(rendered, RenderedSnippet("Greeting", 0))
+
+    def test_cursor_rejects_arguments(self):
+        with self.assertRaises(VariableResolutionError) as raised:
+            self.engine.validate("{{cursor:left}}")
+
+        self.assertEqual(raised.exception.code, "variable_arguments_unsupported")
+
+    def test_cursor_may_occur_only_once_and_is_checked_when_saving(self):
+        with self.assertRaises(VariableResolutionError) as raised:
+            self.engine.validate("{{cursor}}middle{{cursor}}")
+
+        self.assertEqual(raised.exception.code, "variable_occurrence_limit")
+        self.assertEqual(raised.exception.parameters["name"], "cursor")
 
 
 if __name__ == "__main__":

@@ -13,7 +13,13 @@ from core.variables import (
     VariableRenderingCancelled,
 )
 from i18n import _
-from platform_support import clipboard, hotstring_expansion, hotstrings, windows
+from platform_support import (
+    clipboard,
+    hotstring_expansion,
+    hotstrings,
+    keyboard_input,
+    windows,
+)
 from platform_support.clipboard_paste import PendingPaste
 from ui.variable_resolver import show_variable_error
 
@@ -105,6 +111,7 @@ class HotstringController:
         except VariableError as error:
             show_variable_error(self._parent, error)
             return
+        pending = None
         try:
             pending = hotstring_expansion.expand_hotstring(
                 target_window,
@@ -112,7 +119,17 @@ class HotstringController:
                 len(snippet.hotstring or ""),
                 boundary_key if settings.preserve_hotstring_boundary else None,
             )
+            if rendered.cursor_offset_from_end is not None:
+                boundary_offset = int(
+                    settings.preserve_hotstring_boundary
+                    and boundary_key is not None
+                )
+                keyboard_input.move_cursor_left(
+                    rendered.cursor_offset_from_end + boundary_offset
+                )
         except clipboard.ClipboardError as error:
+            if pending is not None:
+                self._schedule_clipboard_restore(pending)
             wx.MessageBox(
                 str(error),
                 # Translators: Title for a failure to monitor or expand a

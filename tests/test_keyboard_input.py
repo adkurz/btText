@@ -75,3 +75,15 @@ class KeyboardInputTestCase(unittest.TestCase):
         ):
             with self.assertRaises(clipboard.ClipboardError):
                 keyboard_input.send_ctrl_v()
+
+    @patch("platform_support.keyboard_input.send_virtual_key")
+    def test_move_cursor_left_sends_left_arrow_repetitions(self, send_virtual_key):
+        keyboard_input.move_cursor_left(3)
+
+        send_virtual_key.assert_called_once_with(keyboard_input.VK_LEFT, 3)
+
+    @patch("platform_support.keyboard_input.send_virtual_key")
+    def test_zero_cursor_offset_sends_no_input(self, send_virtual_key):
+        keyboard_input.move_cursor_left(0)
+
+        send_virtual_key.assert_not_called()
