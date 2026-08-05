@@ -49,6 +49,13 @@ if not _CLOUD_CLIPBOARD_FORMAT:
     raise ctypes.WinError(ctypes.get_last_error())
 
 
+def _exclude_current_item_from_history_and_cloud() -> None:
+    """Keep the open clipboard's current item out of Windows storage."""
+    disabled = b"\0\0\0\0"
+    _set_clipboard_data(_CLIPBOARD_HISTORY_FORMAT, disabled)
+    _set_clipboard_data(_CLOUD_CLIPBOARD_FORMAT, disabled)
+
+
 def _open_clipboard(attempts: int = 6, delay: float = 0.01) -> None:
     """Open the process-wide clipboard, retrying short-lived contention."""
     for attempt in range(attempts):

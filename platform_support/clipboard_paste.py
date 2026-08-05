@@ -10,6 +10,7 @@ from platform_support import keyboard_input, windows
 from platform_support.clipboard import (
     CF_UNICODETEXT,
     ClipboardError,
+    _exclude_current_item_from_history_and_cloud,
     _open_clipboard,
     _set_clipboard_data,
     _set_clipboard_text,
@@ -98,6 +99,7 @@ def _replace_clipboard(text: str, marker: bytes) -> ClipboardSnapshot:
                 raise PasteError("The clipboard could not be cleared.")
             _set_clipboard_text(text)
             _set_clipboard_data(_MARKER_FORMAT, marker)
+            _exclude_current_item_from_history_and_cloud()
         finally:
             user32.CloseClipboard()
         return snapshot

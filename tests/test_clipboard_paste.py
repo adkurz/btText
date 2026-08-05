@@ -23,6 +23,33 @@ class ClipboardPasteCompatibilityTestCase(unittest.TestCase):
 
 
 class PendingPasteTestCase(unittest.TestCase):
+    def test_prepare_excludes_temporary_text_from_history_and_cloud(self):
+        snapshot = RecordingClipboardSnapshot()
+
+        with (
+            patch.object(
+                clipboard_paste.ClipboardSnapshot,
+                "capture",
+                return_value=snapshot,
+            ),
+            patch.object(clipboard_paste, "_open_clipboard"),
+            patch.object(
+                clipboard_paste.user32,
+                "EmptyClipboard",
+                return_value=True,
+            ),
+            patch.object(clipboard_paste.user32, "CloseClipboard"),
+            patch.object(clipboard_paste, "_set_clipboard_text"),
+            patch.object(clipboard_paste, "_set_clipboard_data"),
+            patch.object(
+                clipboard_paste,
+                "_exclude_current_item_from_history_and_cloud",
+            ) as exclude_from_storage,
+        ):
+            PendingPaste.prepare("private snippet")
+
+        exclude_from_storage.assert_called_once_with()
+
     def test_prepare_replaces_clipboard_with_generated_marker(self):
         snapshot = RecordingClipboardSnapshot()
         marker = b"generated marker"
