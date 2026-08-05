@@ -25,7 +25,7 @@ class PasteController:
         model: datamodel.DataModel,
         before_paste: Callable[[], None],
         reveal_after_error: Callable[[], None],
-        render_snippet: Callable[[str], RenderedSnippet],
+        render_snippet: Callable[[str, int | None], RenderedSnippet],
     ):
         """Initialize paste coordination with explicit frame callbacks."""
         self._parent = parent
@@ -41,6 +41,11 @@ class PasteController:
         foreground_window = windows.get_foreground_window()
         if windows.is_external_window(foreground_window):
             self._target_window = foreground_window
+
+    @property
+    def target_window(self) -> int | None:
+        """Return the currently remembered external paste target."""
+        return self._target_window
 
     def insert_snippet(self, snippet_id: int) -> None:
         """Hide the frame and schedule insertion into the previous window."""
@@ -68,7 +73,7 @@ class PasteController:
             return
 
         try:
-            rendered = self._render_snippet(snippet.content)
+            rendered = self._render_snippet(snippet.content, self._target_window)
         except VariableError as error:
             show_variable_error(self._parent, error)
             return

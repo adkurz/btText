@@ -87,3 +87,84 @@ class CopyTextTestCase(unittest.TestCase):
             clipboard._CLOUD_CLIPBOARD_FORMAT,
             b"\0\0\0\0",
         )
+
+
+class ReadTextTestCase(unittest.TestCase):
+    def test_read_text_opens_and_closes_clipboard(self):
+        with (
+            patch.object(clipboard, "_open_clipboard") as open_clipboard,
+            patch.object(
+                clipboard,
+                "_read_open_clipboard_text",
+                return_value="Copied text",
+            ),
+            patch.object(
+                clipboard.user32,
+                "CloseClipboard",
+            ) as close_clipboard,
+        ):
+            result = clipboard.read_text()
+
+        self.assertEqual(result, "Copied text")
+        open_clipboard.assert_called_once_with()
+        close_clipboard.assert_called_once_with()
+
+    def test_read_text_closes_clipboard_after_failure(self):
+        with (
+            patch.object(clipboard, "_open_clipboard"),
+            patch.object(
+                clipboard,
+                "_read_open_clipboard_text",
+                side_effect=clipboard.ClipboardError("unavailable"),
+            ),
+            patch.object(
+                clipboard.user32,
+                "CloseClipboard",
+            ) as close_clipboard,
+        ):
+            with self.assertRaises(clipboard.ClipboardError):
+                clipboard.read_text()
+
+        close_clipboard.assert_called_once_with()
+
+    def test_open_clipboard_without_unicode_text_returns_none(self):
+        with patch.object(
+            clipboard.user32,
+            "IsClipboardFormatAvailable",
+            return_value=False,
+        ):
+            self.assertIsNone(clipboard._read_open_clipboard_text())
+
+    def test_open_clipboard_reads_unicode_text_without_modifying_it(self):
+        encoded = "Text \N{CHECK MARK}\0".encode("utf-16-le")
+        with (
+            patch.object(
+                clipboard.user32,
+                "IsClipboardFormatAvailable",
+                return_value=True,
+            ),
+            patch.object(
+                clipboard.user32,
+                "GetClipboardData",
+                return_value=123,
+            ),
+            patch.object(
+                clipboard.kernel32,
+                "GlobalLock",
+                return_value=456,
+            ),
+            patch.object(
+                clipboard.kernel32,
+                "GlobalSize",
+                return_value=len(encoded),
+            ),
+            patch.object(clipboard.ctypes, "string_at", return_value=encoded),
+            patch.object(
+                clipboard.kernel32,
+                "GlobalUnlock",
+            ) as global_unlock,
+        ):
+            result = clipboard._read_open_clipboard_text()
+
+        self.assertEqual(result, "Text \N{CHECK MARK}")
+        global_unlock.assert_called_once_with(123)

@@ -109,3 +109,81 @@ class NativeWindowTestCase(unittest.TestCase):
 
         show_window.assert_not_called()
         set_foreground_window.assert_not_called()
+
+    def test_window_application_name_returns_executable_basename(self):
+        def set_process_id(_handle, process_id_pointer):
+            process_id = ctypes.cast(
+                process_id_pointer,
+                ctypes.POINTER(wintypes.DWORD),
+            )
+            process_id.contents.value = 456
+            return 1
+
+        def set_image_name(_process, _flags, path_buffer, size_pointer):
+            path_buffer.value = r"C:\Windows\System32\notepad.exe"
+            size = ctypes.cast(size_pointer, ctypes.POINTER(wintypes.DWORD))
+            size.contents.value = len(path_buffer.value)
+            return True
+
+        with (
+            patch.object(windows.user32, "IsWindow", return_value=True),
+            patch.object(
+                windows.user32,
+                "GetWindowThreadProcessId",
+                side_effect=set_process_id,
+            ),
+            patch.object(
+                windows.kernel32,
+                "OpenProcess",
+                return_value=789,
+            ),
+            patch.object(
+                windows.kernel32,
+                "QueryFullProcessImageNameW",
+                side_effect=set_image_name,
+            ),
+            patch.object(windows.kernel32, "CloseHandle") as close_handle,
+        ):
+            result = windows.get_window_application_name(123)
+
+        self.assertEqual(result, "notepad.exe")
+        close_handle.assert_called_once_with(789)
+
+    def test_window_application_name_closes_process_after_query_failure(self):
+        def set_process_id(_handle, process_id_pointer):
+            process_id = ctypes.cast(
+                process_id_pointer,
+                ctypes.POINTER(wintypes.DWORD),
+            )
+            process_id.contents.value = 456
+            return 1
+
+        with (
+            patch.object(windows.user32, "IsWindow", return_value=True),
+            patch.object(
+                windows.user32,
+                "GetWindowThreadProcessId",
+                side_effect=set_process_id,
+            ),
+            patch.object(windows.kernel32, "OpenProcess", return_value=789),
+            patch.object(
+                windows.kernel32,
+                "QueryFullProcessImageNameW",
+                return_value=False,
+            ),
+            patch.object(windows.kernel32, "CloseHandle") as close_handle,
+        ):
+            result = windows.get_window_application_name(123)
+
+        self.assertIsNone(result)
+        close_handle.assert_called_once_with(789)
+
+    def test_invalid_window_has_no_application_name(self):
+        with (
+            patch.object(windows.user32, "IsWindow", return_value=False),
+            patch.object(windows.kernel32, "OpenProcess") as open_process,
+        ):
+            result = windows.get_window_application_name(123)
+
+        self.assertIsNone(result)
+        open_process.assert_not_called()

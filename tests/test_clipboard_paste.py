@@ -108,10 +108,12 @@ class PendingPasteTestCase(unittest.TestCase):
             patch.object(
                 clipboard_paste,
                 "_read_clipboard_bytes",
-                side_effect=[
-                    b"different marker",
-                    "new value\0".encode("utf-16-le"),
-                ],
+                return_value=b"different marker",
+            ),
+            patch.object(
+                clipboard_paste,
+                "_read_open_clipboard_text",
+                return_value="new value",
             ),
             patch.object(clipboard_paste.user32, "CloseClipboard"),
         ):
@@ -129,7 +131,12 @@ class PendingPasteTestCase(unittest.TestCase):
             patch.object(
                 clipboard_paste,
                 "_read_clipboard_bytes",
-                side_effect=[None, "snippet\0".encode("utf-16-le")],
+                return_value=None,
+            ),
+            patch.object(
+                clipboard_paste,
+                "_read_open_clipboard_text",
+                return_value="snippet",
             ),
             patch.object(clipboard_paste.user32, "CloseClipboard"),
         ):

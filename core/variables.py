@@ -33,9 +33,12 @@ class ResolutionContext:
 
     timestamp: datetime
     locale: str
+    get_clipboard_text: Callable[[], str | None] | None = None
+    get_application_name: Callable[[], str | None] | None = None
 
 
 VariableResolver = Callable[[ResolutionContext, tuple[str, ...]], str]
+VariableArgumentValidator = Callable[[tuple[str, ...]], None]
 
 
 @dataclass(frozen=True)
@@ -44,6 +47,7 @@ class VariableDefinition:
 
     name: str
     resolver: VariableResolver
+    validate_arguments: VariableArgumentValidator | None = None
 
 
 @dataclass(frozen=True)
@@ -85,6 +89,11 @@ class VariableRegistry:
             )
         if not callable(definition.resolver):
             raise TypeError("The variable resolver must be callable.")
+        if (
+            definition.validate_arguments is not None
+            and not callable(definition.validate_arguments)
+        ):
+            raise TypeError("The variable argument validator must be callable.")
         self._definitions[definition.name] = definition
 
     def get(self, name: str) -> VariableDefinition | None:
@@ -109,14 +118,7 @@ class VariableEngine:
             if isinstance(part, str):
                 parts.append(part)
                 continue
-            definition = self._registry.get(part.name)
-            if definition is None:
-                raise UnknownVariableError(
-                    "variable_unknown",
-                    "Unknown variable {name!r} at position {position}",
-                    name=part.name,
-                    position=part.position,
-                )
+            definition = self._get_validated_definition(part)
             try:
                 value = definition.resolver(context, part.arguments)
                 if not isinstance(value, str):
@@ -134,6 +136,29 @@ class VariableEngine:
                 ) from error
             parts.append(value)
         return RenderedSnippet(text="".join(parts))
+
+    def validate(self, template: str) -> None:
+        """Validate syntax, names, and arguments without resolving values."""
+        for part in self._parse(template):
+            if isinstance(part, _VariableToken):
+                self._get_validated_definition(part)
+
+    def _get_validated_definition(
+        self,
+        token: _VariableToken,
+    ) -> VariableDefinition:
+        """Return a known definition after validating its arguments."""
+        definition = self._registry.get(token.name)
+        if definition is None:
+            raise UnknownVariableError(
+                "variable_unknown",
+                "Unknown variable {name!r} at position {position}",
+                name=token.name,
+                position=token.position,
+            )
+        if definition.validate_arguments is not None:
+            definition.validate_arguments(token.arguments)
+        return definition
 
     @staticmethod
     def _parse(template: str) -> list[str | _VariableToken]:

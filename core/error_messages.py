@@ -256,11 +256,25 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "variable_argument_count_invalid": lambda parameters: _(
         "The variable '{name}' accepts at most one format."
     ).format(**parameters),
+    # Translators: Error when a context variable receives an argument although
+    # it supports only its parameterless form. {name} is its technical name.
+    "variable_arguments_unsupported": lambda parameters: _(
+        "The variable '{name}' does not accept arguments."
+    ).format(**parameters),
     # Translators: Error for an unsupported date or time variable format.
     # {format} and {name} are language-independent technical identifiers.
     "variable_format_invalid": lambda parameters: _(
         "The format '{format}' is not supported for the variable '{name}'."
     ).format(**parameters),
+    # Translators: Error when a contextual variable is previewed or resolved
+    # where its source is unavailable. {name} is its technical name.
+    "variable_context_unavailable": lambda parameters: _(
+        "The context required by the variable '{name}' is not available."
+    ).format(**parameters),
+    # Translators: Error when {{app}} cannot identify the target executable.
+    "variable_target_application_unavailable": lambda parameters: _(
+        "The target application could not be identified."
+    ),
     # Translators: Validation error when a global shortcut contains an
     # unsupported keyboard key.
     "hotkey_key_unsupported": lambda parameters: _(

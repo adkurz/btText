@@ -1,14 +1,23 @@
 """Modal editor for creating and updating snippets."""
 
+from collections.abc import Callable
+
 import wx
 
 from core import datamodel
 from core.events import EventEmitter
 import ui.validators as validators
 from core.error_messages import format_user_error
+from core.variables import RenderedSnippet, VariableError
 from i18n import _
 from ui import utils
 from ui import theme
+from ui.variable_dialog import (
+    VariablePickerDialog,
+    VariablePreviewDialog,
+    VariableSuggestion,
+)
+from ui.variable_resolver import show_variable_error
 
 
 class SnippetEditor(wx.Dialog):
@@ -20,6 +29,9 @@ class SnippetEditor(wx.Dialog):
         ee: EventEmitter,
         model: datamodel.DataModel,
         category_id: int,
+        render_snippet: Callable[[str], RenderedSnippet],
+        validate_snippet: Callable[[str], None],
+        variable_suggestions: tuple[VariableSuggestion, ...],
         snippet: datamodel.Snippet | None = None,
     ):
         """Build an editor for a new snippet or an existing snippet."""
@@ -37,6 +49,9 @@ class SnippetEditor(wx.Dialog):
         self.ee = ee
         self._model = model
         self._snippet = snippet
+        self._render_snippet = render_snippet
+        self._validate_snippet = validate_snippet
+        self._variable_suggestions = variable_suggestions
         self.pane = wx.Panel(self)
         form_sizer = wx.FlexGridSizer(
             cols=2, vgap=self.FromDIP(10), hgap=self.FromDIP(12)
@@ -96,6 +111,20 @@ class SnippetEditor(wx.Dialog):
             style=wx.TE_MULTILINE | wx.TE_RICH2,
             validator=validators.NonEmptyValidator(),
         )
+        self.insert_variable_button = wx.Button(
+            self.pane,
+            # Translators: Snippet-editor button that opens the variable picker.
+            # "&" marks the keyboard mnemonic.
+            label=_("Insert &variable..."),
+        )
+        self.insert_variable_button.Bind(wx.EVT_BUTTON, self._on_insert_variable)
+        self.preview_button = wx.Button(
+            self.pane,
+            # Translators: Snippet-editor button that previews resolved variables.
+            # "&" marks the keyboard mnemonic.
+            label=_("&Preview..."),
+        )
+        self.preview_button.Bind(wx.EVT_BUTTON, self._on_preview)
         form_sizer.Add(self.name_label, 0, wx.ALIGN_CENTER_VERTICAL)
         form_sizer.Add(self.name_input, 0, wx.EXPAND)
         form_sizer.Add(self.category_label, 0, wx.ALIGN_CENTER_VERTICAL)
@@ -105,7 +134,18 @@ class SnippetEditor(wx.Dialog):
         form_sizer.Add(self.hotstring_label, 0, wx.ALIGN_CENTER_VERTICAL)
         form_sizer.Add(self.hotstring_input, 0, wx.EXPAND)
         form_sizer.Add(self.content_label, 0, wx.ALIGN_TOP)
-        form_sizer.Add(self.content_input, 0, wx.EXPAND)
+        content_sizer = wx.BoxSizer(wx.VERTICAL)
+        content_sizer.Add(self.content_input, 1, wx.EXPAND)
+        content_action_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        content_action_sizer.Add(
+            self.insert_variable_button,
+            0,
+            wx.RIGHT,
+            self.FromDIP(8),
+        )
+        content_action_sizer.Add(self.preview_button)
+        content_sizer.Add(content_action_sizer, 0, wx.TOP, self.FromDIP(8))
+        form_sizer.Add(content_sizer, 1, wx.EXPAND)
         pane_sizer = wx.BoxSizer(wx.VERTICAL)
         pane_sizer.Add(form_sizer, 1, wx.EXPAND | wx.ALL, self.FromDIP(12))
         self.pane.SetSizer(pane_sizer)
@@ -205,6 +245,51 @@ class SnippetEditor(wx.Dialog):
             self._closing_allowed = True
             self.EndModal(wx.ID_CANCEL)
 
+    def _on_insert_variable(self, event: wx.CommandEvent) -> None:
+        """Choose and insert a complete variable at the current selection."""
+        with utils.managed_dialog(
+            VariablePickerDialog(self, self._variable_suggestions)
+        ) as dialog:
+            if dialog.ShowModal() != wx.ID_OK:
+                return
+            expression = dialog.get_selected_expression()
+        if expression is not None:
+            self._insert_expression(expression)
+
+    def _insert_expression(self, expression: str) -> None:
+        """Replace the current content selection with one expression."""
+        selection_start, selection_end = self.content_input.GetSelection()
+        self.content_input.Replace(selection_start, selection_end, expression)
+        self.content_input.SetInsertionPoint(selection_start + len(expression))
+        self.content_input.SetFocus()
+
+    def _on_preview(self, event: wx.CommandEvent) -> None:
+        """Resolve current content and show it without changing the editor."""
+        rendered = self._render_variables(self.content_input.GetValue())
+        if rendered is None:
+            return
+        with utils.managed_dialog(
+            VariablePreviewDialog(self, rendered.text)
+        ) as dialog:
+            dialog.ShowModal()
+
+    def _render_variables(self, content: str) -> RenderedSnippet | None:
+        """Render content or present one localized variable error."""
+        try:
+            return self._render_snippet(content)
+        except VariableError as error:
+            show_variable_error(self, error)
+            return None
+
+    def _variables_are_valid(self, content: str) -> bool:
+        """Validate template structure without resolving contextual values."""
+        try:
+            self._validate_snippet(content)
+        except VariableError as error:
+            show_variable_error(self, error)
+            return False
+        return True
+
     def save(self, event):
         """Validate controls and persist the edited snippet."""
         if not self.Validate():
@@ -218,6 +303,8 @@ class SnippetEditor(wx.Dialog):
             return
         snippet_weight = self.weight_input.GetSelection() + 1
         snippet_content = self.content_input.GetValue()
+        if not self._variables_are_valid(snippet_content):
+            return
         snippet_hotstring = self.hotstring_input.GetValue()
         snippet = datamodel.Snippet(
             name=snippet_name,

@@ -1,5 +1,6 @@
 import unittest
 from datetime import datetime, timezone
+from unittest.mock import Mock
 
 from core.variables import (
     RenderedSnippet,
@@ -139,6 +140,20 @@ class VariableEngineTestCase(unittest.TestCase):
 
         with self.assertRaises(VariableResolutionError):
             engine.render("{{number}}", self.context)
+
+    def test_validation_checks_arguments_without_calling_resolver(self):
+        resolver = Mock(return_value="resolved")
+        validator = Mock()
+        engine = VariableEngine(
+            VariableRegistry(
+                [VariableDefinition("value", resolver, validator)]
+            )
+        )
+
+        engine.validate("{{value:format}}")
+
+        validator.assert_called_once_with(("format",))
+        resolver.assert_not_called()
 
 
 class VariableRegistryTestCase(unittest.TestCase):

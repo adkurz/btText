@@ -89,6 +89,35 @@ def _set_clipboard_text(text: str) -> None:
     _set_clipboard_data(CF_UNICODETEXT, (text + "\0").encode("utf-16-le"))
 
 
+def _read_open_clipboard_text() -> str | None:
+    """Read Unicode text while the caller owns the open clipboard."""
+    if not user32.IsClipboardFormatAvailable(CF_UNICODETEXT):
+        return None
+    handle = user32.GetClipboardData(CF_UNICODETEXT)
+    if not handle:
+        raise ClipboardError("The clipboard text could not be accessed.")
+    pointer = kernel32.GlobalLock(handle)
+    if not pointer:
+        raise ClipboardError("The clipboard text could not be accessed.")
+    try:
+        data = ctypes.string_at(pointer, kernel32.GlobalSize(handle))
+    finally:
+        kernel32.GlobalUnlock(handle)
+    try:
+        return data.decode("utf-16-le").split("\0", 1)[0]
+    except UnicodeDecodeError as error:
+        raise ClipboardError("The clipboard text is not valid Unicode.") from error
+
+
+def read_text() -> str | None:
+    """Return current Unicode clipboard text without changing the clipboard."""
+    _open_clipboard()
+    try:
+        return _read_open_clipboard_text()
+    finally:
+        user32.CloseClipboard()
+
+
 def copy_text(
     text: str,
     include_in_history: bool = True,

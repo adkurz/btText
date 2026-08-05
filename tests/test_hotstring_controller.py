@@ -8,7 +8,7 @@ from platform_support import clipboard
 from ui.hotstring_controller import HotstringController
 
 
-def render_unchanged(text):
+def render_unchanged(text, target_window=None):
     return RenderedSnippet(text)
 
 
@@ -155,7 +155,7 @@ class HotstringControllerTestCase(unittest.TestCase):
 
         controller._expand(42, snippet, 32)
 
-        render_snippet.assert_called_once_with("Today is {{date:long}}.")
+        render_snippet.assert_called_once_with("Today is {{date:long}}.", 42)
         expand_hotstring.assert_called_once_with(
             42,
             "Today is 6. August 2026.",

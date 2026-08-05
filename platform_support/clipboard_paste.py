@@ -8,10 +8,10 @@ import uuid
 
 from platform_support import keyboard_input, windows
 from platform_support.clipboard import (
-    CF_UNICODETEXT,
     ClipboardError,
     _exclude_current_item_from_history_and_cloud,
     _open_clipboard,
+    _read_open_clipboard_text,
     _set_clipboard_data,
     _set_clipboard_text,
     kernel32,
@@ -78,15 +78,12 @@ def _read_clipboard_bytes(format_id: int) -> bytes | None:
         kernel32.GlobalUnlock(handle)
 
 
-def _read_clipboard_text() -> str | None:
-    """Read Unicode text while the clipboard is open, if decodable."""
-    data = _read_clipboard_bytes(CF_UNICODETEXT)
-    if data is None:
-        return None
+def _clipboard_text_matches(expected: str) -> bool:
+    """Compare temporary text while tolerating an unavailable text format."""
     try:
-        return data.decode("utf-16-le").split("\0", 1)[0]
-    except UnicodeDecodeError:
-        return None
+        return _read_open_clipboard_text() == expected
+    except ClipboardError:
+        return False
 
 
 def _replace_clipboard(text: str, marker: bytes) -> ClipboardSnapshot:
@@ -134,7 +131,7 @@ class PendingPaste:
         _open_clipboard()
         try:
             marker_matches = _read_clipboard_bytes(_MARKER_FORMAT) == self._marker
-            text_matches = _read_clipboard_text() == self._pasted_text
+            text_matches = _clipboard_text_matches(self._pasted_text)
         finally:
             user32.CloseClipboard()
         if marker_matches or text_matches:

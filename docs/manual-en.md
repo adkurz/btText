@@ -116,7 +116,7 @@ Click **Save** to apply changes. The name and content must not be empty. A hotst
 
 To edit, select a single text snippet and select **Edit text snippet** (Textbaustein bearbeiten) from the context menu or press `F2`.
 
-### Date and Time Variables
+### Variables
 
 Text snippets can contain variables that btText replaces immediately before insertion. Variable and format names are always English, independently of the user-interface language. For example, `{{date}}` inserts the current date and `{{time}}` inserts the current time.
 
@@ -129,7 +129,16 @@ The following variables are available for dates, times, and their combination:
 
 Localized formats follow the language currently used by btText. For example, `{{date:long}}` may produce `6. August 2026` in German and `August 6, 2026` in English. Every date and time variable in one insertion uses the same captured point in time.
 
+Two context variables are also available:
+
+- `{{clipboard}}` inserts the current Unicode text from the Windows clipboard. If the clipboard does not contain text, the variable is replaced with an empty string. The variable reads the content only for a preview or immediately before insertion and does not modify it while doing so.
+- `{{app}}` inserts the executable filename of the target application, for example `notepad.exe`. Window titles and full application paths are not exposed. The target is the window that was active before btText was opened.
+
+Context variables do not accept a format. When saving, btText validates only their syntax and does not access the clipboard or target application. A preview requires the relevant context and may therefore report an error. Inserted context values are not evaluated again as variables.
+
 To insert the characters `{{` or `}}` literally, double the corresponding sequence as `{{{{` or `}}}}`. Unknown variables, unsupported formats, and malformed braces prevent insertion and are reported as errors.
+
+In the text snippet editor, **Insert variable** opens a list of every supported expression with a description. The chosen expression replaces the current selection or is inserted at the caret. **Preview** displays the fully resolved text in a focusable read-only field where it can also be copied. btText validates variables again when saving, but continues to store the original expression rather than the currently displayed value.
 
 ### Inserting or Copying Text
 

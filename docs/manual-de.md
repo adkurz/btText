@@ -116,7 +116,7 @@ Mit **Speichern** übernehmen Sie die Änderungen. Der Name und der Inhalt dürf
 
 Zum Bearbeiten markieren Sie einen einzelnen Textbaustein und wählen im Kontextmenü **Textbaustein bearbeiten** oder drücken `F2`.
 
-### Variablen für Datum und Uhrzeit
+### Variablen
 
 Textbausteine können Variablen enthalten, die btText unmittelbar vor dem Einfügen ersetzt. Variablennamen und Formatnamen sind unabhängig von der Sprache der Benutzeroberfläche immer Englisch. Beispielsweise fügt `{{date}}` das aktuelle Datum und `{{time}}` die aktuelle Uhrzeit ein.
 
@@ -129,7 +129,16 @@ Für Datum, Uhrzeit und deren Kombination stehen folgende Variablen zur Verfügu
 
 Die sprachabhängigen Formate richten sich nach der aktuell von btText verwendeten Sprache. So kann `{{date:long}}` auf Deutsch beispielsweise `6. August 2026` und auf Englisch `August 6, 2026` ergeben. Alle Datums- und Zeitvariablen eines Einfügevorgangs verwenden denselben Zeitpunkt.
 
+Zusätzlich stehen zwei Kontextvariablen zur Verfügung:
+
+- `{{clipboard}}` fügt den aktuellen Unicode-Text aus der Windows-Zwischenablage ein. Enthält die Zwischenablage keinen Text, wird die Variable durch eine leere Zeichenfolge ersetzt. Die Variable liest den Inhalt erst für die Vorschau oder unmittelbar vor dem Einfügen und verändert ihn dabei nicht.
+- `{{app}}` fügt den Dateinamen der ausführbaren Datei der Zielanwendung ein, beispielsweise `notepad.exe`. Fenstertitel und vollständige Programmpfade werden nicht ausgegeben. Als Ziel gilt das Fenster, das vor dem Öffnen von btText aktiv war.
+
+Kontextvariablen unterstützen keine Formatangabe. Beim Speichern prüft btText lediglich ihre Schreibweise und greift dabei weder auf die Zwischenablage noch auf die Zielanwendung zu. Eine Vorschau benötigt dagegen den jeweiligen Kontext und kann deshalb einen Fehler melden. Eingefügte Kontextwerte werden nicht erneut als Variablen ausgewertet.
+
 Um die Zeichen `{{` oder `}}` unverändert auszugeben, verdoppeln Sie die jeweilige Zeichenfolge zu `{{{{` beziehungsweise `}}}}`. Unbekannte Variablen, ungültige Formate und fehlerhafte Klammern verhindern das Einfügen und werden als Fehler gemeldet.
+
+Im Textbaustein-Editor öffnet **Variable einfügen** eine Liste aller unterstützten Ausdrücke mit Beschreibungen. Der gewählte Ausdruck ersetzt die aktuelle Markierung oder wird an der Schreibmarke eingefügt. Mit **Vorschau** können Sie den vollständig aufgelösten Text in einem schreibgeschützten, fokussierbaren Textfeld prüfen und bei Bedarf kopieren. Beim Speichern prüft btText die Variablen erneut, speichert jedoch weiterhin den ursprünglichen Ausdruck und nicht den momentan angezeigten Wert.
 
 ### Text einfügen oder kopieren
 

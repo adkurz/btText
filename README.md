@@ -12,7 +12,7 @@ available without leaving the active application.
 - Organize snippets in a hierarchical category tree.
 - Search, create, edit, move, copy, and delete snippets and categories.
 - Assign a weight and an optional hotstring to each snippet.
-- Insert localized date and time variables with optional ISO formatting.
+- Insert localized date and time variables, clipboard text, and the target application's executable name.
 - Paste Unicode text into the active Windows application.
 - Preserve and restore the previous clipboard contents after a paste.
 - Configure global hotkeys and react to the active keyboard layout.

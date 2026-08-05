@@ -7,7 +7,7 @@ from platform_support import clipboard_paste
 from ui.paste_controller import PasteController
 
 
-def render_unchanged(text):
+def render_unchanged(text, target_window=None):
     return RenderedSnippet(text)
 
 
@@ -27,6 +27,7 @@ class PasteControllerTestCase(unittest.TestCase):
         )
 
         self.assertEqual(controller._target_window, 42)
+        self.assertEqual(controller.target_window, 42)
 
     @patch("ui.paste_controller.wx.CallLater")
     @patch("ui.paste_controller.windows.is_external_window")
@@ -89,7 +90,7 @@ class PasteControllerTestCase(unittest.TestCase):
 
         controller.insert_snippet(7)
 
-        render_snippet.assert_called_once_with("Today is {{date:long}}.")
+        render_snippet.assert_called_once_with("Today is {{date:long}}.", 42)
         before_paste.assert_called_once_with()
         call_later.assert_called_once_with(
             50,

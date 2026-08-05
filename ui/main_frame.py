@@ -29,6 +29,7 @@ from ui.settings_dialog import SettingsDialog
 from ui.snippet_list import SnippetList
 from ui.tray_icon import TrayIcon
 from ui.transfer import TransferBuffer
+from ui.variable_dialog import get_builtin_variable_suggestions
 from ui.variable_resolver import SnippetVariableResolver
 
 HOTKEY_LAYOUT_CHECK_INTERVAL_MS = 500
@@ -168,6 +169,12 @@ class MainFrame(sc.SizedFrame):
                 self._settings_controller.settings.include_copied_text_in_clipboard_history
             ),
             lambda: (self._settings_controller.settings.allow_copied_text_cloud_upload),
+            lambda text: self._variable_resolver.render(
+                text,
+                self._paste_controller.target_window,
+            ),
+            self._variable_resolver.validate,
+            get_builtin_variable_suggestions(),
         )
         # Translators: Accessible name for the main window list showing snippets
         # from the selected category.

@@ -34,6 +34,51 @@ class SnippetVariableResolverTestCase(unittest.TestCase):
         self.assertIsNotNone(timestamp.tzinfo)
         self.assertIsNotNone(timestamp.utcoffset())
 
+    def test_validation_does_not_read_runtime_context(self):
+        engine = Mock()
+        resolver = SnippetVariableResolver(engine)
+
+        with (
+            patch("ui.variable_resolver.clipboard.read_text") as read_text,
+            patch(
+                "ui.variable_resolver.windows.get_window_application_name"
+            ) as get_application_name,
+        ):
+            resolver.validate("{{clipboard}} {{app}}")
+
+        engine.validate.assert_called_once_with("{{clipboard}} {{app}}")
+        read_text.assert_not_called()
+        get_application_name.assert_not_called()
+
+    def test_context_values_are_lazy_and_memoized_per_rendering(self):
+        engine = Mock()
+
+        def render(_template, context):
+            return RenderedSnippet(
+                context.get_clipboard_text()
+                + context.get_clipboard_text()
+                + context.get_application_name()
+                + context.get_application_name()
+            )
+
+        engine.render.side_effect = render
+        resolver = SnippetVariableResolver(engine)
+        with (
+            patch(
+                "ui.variable_resolver.clipboard.read_text",
+                return_value="clip",
+            ) as read_text,
+            patch(
+                "ui.variable_resolver.windows.get_window_application_name",
+                return_value="notepad.exe",
+            ) as get_application_name,
+        ):
+            result = resolver.render("template", target_window=42)
+
+        self.assertEqual(result.text, "clipclipnotepad.exenotepad.exe")
+        read_text.assert_called_once_with()
+        get_application_name.assert_called_once_with(42)
+
     @patch("ui.variable_resolver.wx.MessageBox")
     def test_variable_errors_are_formatted_at_one_ui_boundary(self, message_box):
         parent = Mock()

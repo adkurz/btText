@@ -18,10 +18,21 @@ class BuiltinVariableTestCase(unittest.TestCase):
             tzinfo=timezone.utc,
         )
 
-    def render(self, template, locale="de"):
+    def render(
+        self,
+        template,
+        locale="de",
+        get_clipboard_text=None,
+        get_application_name=None,
+    ):
         return self.engine.render(
             template,
-            ResolutionContext(self.timestamp, locale),
+            ResolutionContext(
+                self.timestamp,
+                locale,
+                get_clipboard_text,
+                get_application_name,
+            ),
         ).text
 
     def test_date_defaults_to_localized_short_format(self):
@@ -83,6 +94,58 @@ class BuiltinVariableTestCase(unittest.TestCase):
             raised.exception.code,
             "variable_argument_count_invalid",
         )
+
+    def test_clipboard_inserts_current_unicode_text_verbatim(self):
+        self.assertEqual(
+            self.render(
+                "Before {{clipboard}} after",
+                get_clipboard_text=lambda: "Copied {{date}} text",
+            ),
+            "Before Copied {{date}} text after",
+        )
+
+    def test_empty_clipboard_text_is_a_valid_value(self):
+        self.assertEqual(
+            self.render("{{clipboard}}", get_clipboard_text=lambda: ""),
+            "",
+        )
+
+    def test_non_text_clipboard_resolves_to_empty_string(self):
+        self.assertEqual(
+            self.render(
+                "before{{clipboard}}after",
+                get_clipboard_text=lambda: None,
+            ),
+            "beforeafter",
+        )
+
+    def test_app_inserts_target_executable_filename(self):
+        self.assertEqual(
+            self.render("{{app}}", get_application_name=lambda: "notepad.exe"),
+            "notepad.exe",
+        )
+
+    def test_missing_target_application_is_reported(self):
+        with self.assertRaises(VariableResolutionError) as raised:
+            self.render("{{app}}", get_application_name=lambda: None)
+
+        self.assertEqual(
+            raised.exception.code,
+            "variable_target_application_unavailable",
+        )
+
+    def test_context_variables_reject_arguments_during_validation(self):
+        for template in ("{{clipboard:text}}", "{{app:name}}"):
+            with self.subTest(template=template):
+                with self.assertRaises(VariableResolutionError) as raised:
+                    self.engine.validate(template)
+                self.assertEqual(
+                    raised.exception.code,
+                    "variable_arguments_unsupported",
+                )
+
+    def test_validation_does_not_require_runtime_context(self):
+        self.engine.validate("{{clipboard}} {{app}} {{date:long}}")
 
 
 if __name__ == "__main__":

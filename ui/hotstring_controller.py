@@ -25,7 +25,7 @@ class HotstringController:
         get_settings: Callable[[], AppSettings],
         schedule_clipboard_restore: Callable[[PendingPaste], None],
         notify_expansion: Callable[[datamodel.Snippet], None],
-        render_snippet: Callable[[str], RenderedSnippet],
+        render_snippet: Callable[[str, int | None], RenderedSnippet],
     ):
         """Create the hook and subscribe to snippet mutations."""
         self._parent = parent
@@ -95,7 +95,7 @@ class HotstringController:
         """Replace a recognized hotstring through the clipboard paste path."""
         settings = self._get_settings()
         try:
-            rendered = self._render_snippet(snippet.content)
+            rendered = self._render_snippet(snippet.content, target_window)
         except VariableError as error:
             show_variable_error(self._parent, error)
             return

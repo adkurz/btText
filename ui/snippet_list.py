@@ -8,10 +8,12 @@ from platform_support import clipboard, clipboard_paste
 from core import datamodel
 from core.error_messages import format_user_error
 from core.events import EventEmitter
+from core.variables import RenderedSnippet
 from i18n import _, ngettext
 from ui import utils
 from ui.snippet_editor import SnippetEditor
 from ui.transfer import TransferBuffer
+from ui.variable_dialog import VariableSuggestion
 
 CONTENT_PREVIEW_LENGTH = 40
 
@@ -27,6 +29,9 @@ class SnippetList(wx.ListView):
         transfer_buffer: TransferBuffer,
         include_copied_text_in_clipboard_history: Callable[[], bool],
         allow_copied_text_cloud_upload: Callable[[], bool],
+        render_snippet: Callable[[str], RenderedSnippet],
+        validate_snippet: Callable[[str], None],
+        variable_suggestions: tuple[VariableSuggestion, ...],
     ):
         """Build columns, commands, and model-event subscriptions."""
         super().__init__(
@@ -40,6 +45,9 @@ class SnippetList(wx.ListView):
             include_copied_text_in_clipboard_history
         )
         self._allow_copied_text_cloud_upload = allow_copied_text_cloud_upload
+        self._render_snippet = render_snippet
+        self._validate_snippet = validate_snippet
+        self._variable_suggestions = variable_suggestions
         self.selected_category_id = None
         # Translators: Snippet-list column containing each snippet's name.
         self.AppendColumn(_("Name"), width=self.FromDIP(220))
@@ -393,6 +401,9 @@ class SnippetList(wx.ListView):
                 self._ee,
                 self._model,
                 self.selected_category_id,
+                self._render_snippet,
+                self._validate_snippet,
+                self._variable_suggestions,
             )
         ) as editor:
             editor.ShowModal()
@@ -419,6 +430,9 @@ class SnippetList(wx.ListView):
                 self._ee,
                 self._model,
                 self.selected_category_id,
+                self._render_snippet,
+                self._validate_snippet,
+                self._variable_suggestions,
                 snippet,
             )
         ) as editor:

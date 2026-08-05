@@ -14,6 +14,7 @@ from core.variables import (
     VariableError,
 )
 from i18n import _
+from platform_support import clipboard, windows
 
 
 class SnippetVariableResolver:
@@ -29,18 +30,44 @@ class SnippetVariableResolver:
         self._get_timestamp = get_timestamp or self._current_timestamp
         self._get_locale = get_locale
 
-    def render(self, template: str) -> RenderedSnippet:
+    def render(
+        self,
+        template: str,
+        target_window: int | None = None,
+    ) -> RenderedSnippet:
         """Capture one timestamp and locale, then render a snippet."""
         context = ResolutionContext(
             timestamp=self._get_timestamp(),
             locale=self._get_locale(),
+            get_clipboard_text=self._memoize(clipboard.read_text),
+            get_application_name=self._memoize(
+                lambda: windows.get_window_application_name(target_window)
+            ),
         )
         return self._engine.render(template, context)
+
+    def validate(self, template: str) -> None:
+        """Validate a template without reading runtime context values."""
+        self._engine.validate(template)
 
     @staticmethod
     def _current_timestamp() -> datetime:
         """Return a timezone-aware local timestamp."""
         return datetime.now().astimezone()
+
+    @staticmethod
+    def _memoize(get_value: Callable[[], str | None]) -> Callable[[], str | None]:
+        """Read one contextual value at most once during a rendering."""
+        missing = object()
+        value: object = missing
+
+        def get_once() -> str | None:
+            nonlocal value
+            if value is missing:
+                value = get_value()
+            return value  # type: ignore[return-value]
+
+        return get_once
 
 
 def show_variable_error(parent: wx.Window, error: VariableError) -> None:

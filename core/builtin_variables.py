@@ -14,7 +14,11 @@ from core.variables import (
 )
 
 
-_LOCALIZED_FORMATS = frozenset(("short", "medium", "long", "full"))
+TEMPORAL_VARIABLE_NAMES = ("date", "time", "datetime")
+CONTEXT_VARIABLE_NAMES = ("clipboard", "app")
+BUILTIN_VARIABLE_NAMES = TEMPORAL_VARIABLE_NAMES + CONTEXT_VARIABLE_NAMES
+BUILTIN_VARIABLE_FORMATS = ("short", "medium", "long", "full", "iso")
+_LOCALIZED_FORMATS = frozenset(BUILTIN_VARIABLE_FORMATS[:-1])
 _DEFAULT_FORMAT = "short"
 
 
@@ -38,6 +42,19 @@ def _requested_format(
             format=requested_format,
         )
     return requested_format
+
+
+def _reject_arguments(
+    variable_name: str,
+    arguments: tuple[str, ...],
+) -> None:
+    """Reject arguments for a context variable that accepts none."""
+    if arguments:
+        raise VariableResolutionError(
+            "variable_arguments_unsupported",
+            "Variable {name!r} does not accept arguments",
+            name=variable_name,
+        )
 
 
 def _resolve_temporal(
@@ -101,14 +118,67 @@ def _resolve_datetime(
     )
 
 
+def _resolve_clipboard(
+    context: ResolutionContext,
+    arguments: tuple[str, ...],
+) -> str:
+    _reject_arguments("clipboard", arguments)
+    if context.get_clipboard_text is None:
+        raise VariableResolutionError(
+            "variable_context_unavailable",
+            "No clipboard context is available for the variable",
+            name="clipboard",
+        )
+    text = context.get_clipboard_text()
+    return "" if text is None else text
+
+
+def _resolve_app(
+    context: ResolutionContext,
+    arguments: tuple[str, ...],
+) -> str:
+    _reject_arguments("app", arguments)
+    if context.get_application_name is None:
+        raise VariableResolutionError(
+            "variable_context_unavailable",
+            "No target-application context is available for the variable",
+            name="app",
+        )
+    application_name = context.get_application_name()
+    if application_name is None:
+        raise VariableResolutionError(
+            "variable_target_application_unavailable",
+            "The target application could not be identified",
+            name="app",
+        )
+    return application_name
+
+
 def create_builtin_variable_engine() -> VariableEngine:
     """Create an engine containing every built-in snippet variable."""
+    resolvers = {
+        "date": _resolve_date,
+        "time": _resolve_time,
+        "datetime": _resolve_datetime,
+        "clipboard": _resolve_clipboard,
+        "app": _resolve_app,
+    }
+    argument_validators = {
+        "date": lambda arguments: _requested_format("date", arguments),
+        "time": lambda arguments: _requested_format("time", arguments),
+        "datetime": lambda arguments: _requested_format("datetime", arguments),
+        "clipboard": lambda arguments: _reject_arguments("clipboard", arguments),
+        "app": lambda arguments: _reject_arguments("app", arguments),
+    }
     return VariableEngine(
         VariableRegistry(
-            (
-                VariableDefinition("date", _resolve_date),
-                VariableDefinition("time", _resolve_time),
-                VariableDefinition("datetime", _resolve_datetime),
+            tuple(
+                VariableDefinition(
+                    name,
+                    resolvers[name],
+                    argument_validators[name],
+                )
+                for name in BUILTIN_VARIABLE_NAMES
             )
         )
     )
