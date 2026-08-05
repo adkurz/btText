@@ -5,7 +5,11 @@ from collections.abc import Callable
 import wx
 
 from core import datamodel
-from core.variables import RenderedSnippet, VariableError
+from core.variables import (
+    RenderedSnippet,
+    VariableError,
+    VariableRenderingCancelled,
+)
 from i18n import _
 from platform_support import clipboard_paste, windows
 from ui.variable_resolver import show_variable_error
@@ -74,6 +78,8 @@ class PasteController:
 
         try:
             rendered = self._render_snippet(snippet.content, self._target_window)
+        except VariableRenderingCancelled:
+            return
         except VariableError as error:
             show_variable_error(self._parent, error)
             return

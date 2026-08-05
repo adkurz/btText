@@ -10,13 +10,17 @@ from core.variables import (
     VariableDefinition,
     VariableEngine,
     VariableRegistry,
+    VariableRenderingCancelled,
     VariableResolutionError,
 )
 
 
 TEMPORAL_VARIABLE_NAMES = ("date", "time", "datetime")
 CONTEXT_VARIABLE_NAMES = ("clipboard", "app")
-BUILTIN_VARIABLE_NAMES = TEMPORAL_VARIABLE_NAMES + CONTEXT_VARIABLE_NAMES
+INTERACTIVE_VARIABLE_NAMES = ("input",)
+BUILTIN_VARIABLE_NAMES = (
+    TEMPORAL_VARIABLE_NAMES + CONTEXT_VARIABLE_NAMES + INTERACTIVE_VARIABLE_NAMES
+)
 BUILTIN_VARIABLE_FORMATS = ("short", "medium", "long", "full", "iso")
 _LOCALIZED_FORMATS = frozenset(BUILTIN_VARIABLE_FORMATS[:-1])
 _DEFAULT_FORMAT = "short"
@@ -154,6 +158,34 @@ def _resolve_app(
     return application_name
 
 
+def _input_label(arguments: tuple[str, ...]) -> str:
+    """Return the required non-empty label for an interactive input."""
+    if len(arguments) != 1 or not arguments[0].strip():
+        raise VariableResolutionError(
+            "variable_input_label_required",
+            "Variable 'input' requires exactly one non-empty label",
+            name="input",
+        )
+    return arguments[0]
+
+
+def _resolve_input(
+    context: ResolutionContext,
+    arguments: tuple[str, ...],
+) -> str:
+    label = _input_label(arguments)
+    if context.request_input is None:
+        raise VariableResolutionError(
+            "variable_context_unavailable",
+            "No interactive input context is available for the variable",
+            name="input",
+        )
+    value = context.request_input(label)
+    if value is None:
+        raise VariableRenderingCancelled
+    return value
+
+
 def create_builtin_variable_engine() -> VariableEngine:
     """Create an engine containing every built-in snippet variable."""
     resolvers = {
@@ -162,6 +194,7 @@ def create_builtin_variable_engine() -> VariableEngine:
         "datetime": _resolve_datetime,
         "clipboard": _resolve_clipboard,
         "app": _resolve_app,
+        "input": _resolve_input,
     }
     argument_validators = {
         "date": lambda arguments: _requested_format("date", arguments),
@@ -169,6 +202,7 @@ def create_builtin_variable_engine() -> VariableEngine:
         "datetime": lambda arguments: _requested_format("datetime", arguments),
         "clipboard": lambda arguments: _reject_arguments("clipboard", arguments),
         "app": lambda arguments: _reject_arguments("app", arguments),
+        "input": _input_label,
     }
     return VariableEngine(
         VariableRegistry(

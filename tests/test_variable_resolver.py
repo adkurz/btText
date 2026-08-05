@@ -2,6 +2,8 @@ import unittest
 from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
+import wx
+
 from core.variables import RenderedSnippet, UnknownVariableError
 from ui.variable_resolver import SnippetVariableResolver, show_variable_error
 
@@ -78,6 +80,50 @@ class SnippetVariableResolverTestCase(unittest.TestCase):
         self.assertEqual(result.text, "clipclipnotepad.exenotepad.exe")
         read_text.assert_called_once_with()
         get_application_name.assert_called_once_with(42)
+
+    def test_identical_input_labels_are_requested_once_per_rendering(self):
+        engine = Mock()
+
+        def render(_template, context):
+            return RenderedSnippet(
+                context.request_input("Customer number")
+                + context.request_input("Customer number")
+            )
+
+        engine.render.side_effect = render
+        request_input = Mock(return_value="42")
+        resolver = SnippetVariableResolver(engine, request_input=request_input)
+
+        result = resolver.render("template")
+
+        self.assertEqual(result.text, "4242")
+        request_input.assert_called_once_with("Customer number")
+
+    @patch("ui.variable_resolver.wx.TextEntryDialog")
+    def test_input_dialog_returns_entered_value_and_is_destroyed(self, dialog_class):
+        dialog = dialog_class.return_value
+        dialog.ShowModal.return_value = wx.ID_OK
+        dialog.GetValue.return_value = "42"
+        parent = Mock()
+        resolver = SnippetVariableResolver(Mock(), parent=parent)
+
+        result = resolver._show_input_dialog("Customer number")
+
+        self.assertEqual(result, "42")
+        self.assertEqual(dialog_class.call_args.args[0], parent)
+        self.assertEqual(dialog_class.call_args.args[1], "Customer number")
+        dialog.Destroy.assert_called_once_with()
+
+    @patch("ui.variable_resolver.wx.TextEntryDialog")
+    def test_cancelled_input_dialog_returns_none(self, dialog_class):
+        dialog = dialog_class.return_value
+        dialog.ShowModal.return_value = wx.ID_CANCEL
+        resolver = SnippetVariableResolver(Mock())
+
+        self.assertIsNone(resolver._show_input_dialog("Customer number"))
+
+        dialog.GetValue.assert_not_called()
+        dialog.Destroy.assert_called_once_with()
 
     @patch("ui.variable_resolver.wx.MessageBox")
     def test_variable_errors_are_formatted_at_one_ui_boundary(self, message_box):

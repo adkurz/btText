@@ -27,6 +27,10 @@ class VariableResolutionError(VariableError):
     """Raised when a registered variable cannot produce a text value."""
 
 
+class VariableRenderingCancelled(Exception):
+    """Raised when a user cancels an interactive variable rendering."""
+
+
 @dataclass(frozen=True)
 class ResolutionContext:
     """Values captured once and shared by every variable in one rendering."""
@@ -35,6 +39,7 @@ class ResolutionContext:
     locale: str
     get_clipboard_text: Callable[[], str | None] | None = None
     get_application_name: Callable[[], str | None] | None = None
+    request_input: Callable[[str], str | None] | None = None
 
 
 VariableResolver = Callable[[ResolutionContext, tuple[str, ...]], str]
@@ -123,6 +128,8 @@ class VariableEngine:
                 value = definition.resolver(context, part.arguments)
                 if not isinstance(value, str):
                     raise TypeError("The variable resolver did not return text.")
+            except VariableRenderingCancelled:
+                raise
             except VariableError:
                 raise
             except Exception as error:

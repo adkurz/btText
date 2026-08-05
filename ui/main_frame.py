@@ -87,7 +87,8 @@ class MainFrame(sc.SizedFrame):
         )
         self._hotkey_layout_timer.Start(HOTKEY_LAYOUT_CHECK_INTERVAL_MS)
         self._variable_resolver = SnippetVariableResolver(
-            create_builtin_variable_engine()
+            create_builtin_variable_engine(),
+            self,
         )
         self._paste_controller = PasteController(
             self,

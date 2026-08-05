@@ -136,9 +136,11 @@ Two context variables are also available:
 
 Context variables do not accept a format. When saving, btText validates only their syntax and does not access the clipboard or target application. A preview requires the relevant context and may therefore report an error. Inserted context values are not evaluated again as variables.
 
+Use `{{input:Label}}` to request a value interactively. For example, `{{input:Customer number}}` displays an input field labeled “Customer number” before previewing or inserting and places the entered text at that position. A label is required and cannot contain a colon or variable braces. If the same label occurs more than once in a snippet, btText asks for it only once per operation and uses the answer in every position. An empty answer is valid. Cancelling the input dialog also cancels the preview or insertion without displaying an error. Entered text is not evaluated again as variables.
+
 To insert the characters `{{` or `}}` literally, double the corresponding sequence as `{{{{` or `}}}}`. Unknown variables, unsupported formats, and malformed braces prevent insertion and are reported as errors.
 
-In the text snippet editor, **Insert variable** shows the available variables on the left and their possible formats or settings on the right. The right-hand list is hidden for variables without an additional choice, such as `{{app}}`. The chosen expression replaces the current selection or is inserted at the caret. **Preview** displays the fully resolved text in a read-only field that can be reached with Tab and copied when needed. btText validates variables again when saving, but continues to store the original expression rather than the currently displayed value.
+In the text snippet editor, **Insert variable** shows the available variables on the left and their possible formats or settings on the right. For `input`, enter the requested label on the right. The right-hand area is hidden for variables without an additional choice, such as `{{app}}`. The chosen expression replaces the current selection or is inserted at the caret. **Preview** displays the fully resolved text in a read-only field that can be reached with Tab and copied when needed. btText validates variables again when saving, but continues to store the original expression rather than the currently displayed value.
 
 ### Inserting or Copying Text
 

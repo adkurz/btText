@@ -2,7 +2,11 @@ import unittest
 from datetime import datetime, timezone
 
 from core.builtin_variables import create_builtin_variable_engine
-from core.variables import ResolutionContext, VariableResolutionError
+from core.variables import (
+    ResolutionContext,
+    VariableRenderingCancelled,
+    VariableResolutionError,
+)
 
 
 class BuiltinVariableTestCase(unittest.TestCase):
@@ -24,6 +28,7 @@ class BuiltinVariableTestCase(unittest.TestCase):
         locale="de",
         get_clipboard_text=None,
         get_application_name=None,
+        request_input=None,
     ):
         return self.engine.render(
             template,
@@ -32,6 +37,7 @@ class BuiltinVariableTestCase(unittest.TestCase):
                 locale,
                 get_clipboard_text,
                 get_application_name,
+                request_input,
             ),
         ).text
 
@@ -145,7 +151,45 @@ class BuiltinVariableTestCase(unittest.TestCase):
                 )
 
     def test_validation_does_not_require_runtime_context(self):
-        self.engine.validate("{{clipboard}} {{app}} {{date:long}}")
+        self.engine.validate(
+            "{{clipboard}} {{app}} {{date:long}} {{input:Kundennummer}}"
+        )
+
+    def test_input_inserts_the_entered_text_verbatim(self):
+        self.assertEqual(
+            self.render(
+                "Customer: {{input:Kundennummer}}",
+                request_input=lambda label: "42 {{date}}",
+            ),
+            "Customer: 42 {{date}}",
+        )
+
+    def test_input_passes_its_label_to_the_runtime_context(self):
+        labels = []
+
+        self.render(
+            "{{input:Kundennummer}}",
+            request_input=lambda label: labels.append(label) or "42",
+        )
+
+        self.assertEqual(labels, ["Kundennummer"])
+
+    def test_input_requires_exactly_one_non_empty_label(self):
+        for template in ("{{input}}", "{{input: }}", "{{input:label:extra}}"):
+            with self.subTest(template=template):
+                with self.assertRaises(VariableResolutionError) as raised:
+                    self.engine.validate(template)
+                self.assertEqual(
+                    raised.exception.code,
+                    "variable_input_label_required",
+                )
+
+    def test_cancelled_input_cancels_the_rendering(self):
+        with self.assertRaises(VariableRenderingCancelled):
+            self.render(
+                "{{input:Kundennummer}}",
+                request_input=lambda label: None,
+            )
 
 
 if __name__ == "__main__":

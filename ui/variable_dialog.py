@@ -8,6 +8,7 @@ from core.builtin_variables import (
     BUILTIN_VARIABLE_FORMATS,
     BUILTIN_VARIABLE_NAMES,
     CONTEXT_VARIABLE_NAMES,
+    INTERACTIVE_VARIABLE_NAMES,
     TEMPORAL_VARIABLE_NAMES,
 )
 from i18n import _
@@ -38,6 +39,8 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
         # Translators: Description used in the snippet variable picker. This is
         # the executable filename, not a possibly private window title.
         "app": _("Executable filename of the target application"),
+        # Translators: Description used in the snippet variable picker.
+        "input": _("Text requested during insertion"),
     }
     suggestions = []
     for name in BUILTIN_VARIABLE_NAMES:
@@ -47,6 +50,17 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                 VariableSuggestion(
                     "{{" + name + "}}",
                     value_description + ".",
+                    value_description,
+                )
+            )
+            continue
+        if name in INTERACTIVE_VARIABLE_NAMES:
+            suggestions.append(
+                VariableSuggestion(
+                    "{{input:Prompt}}",
+                    # Translators: Description for the editable placeholder in
+                    # an interactive input variable expression.
+                    _("Replace 'Prompt' with the requested value's label."),
                     value_description,
                 )
             )
@@ -110,6 +124,7 @@ class VariablePickerDialog(wx.Dialog):
         )
         self._groups = self._group_suggestions(suggestions)
         self._visible_suggestions: tuple[VariableSuggestion, ...] = ()
+        self._visible_name: str | None = None
         # Translators: Label for the list of variables available to insert.
         label = wx.StaticText(self, label=_("&Available variables"))
         self.variable_list = wx.ListBox(
@@ -138,8 +153,16 @@ class VariablePickerDialog(wx.Dialog):
             # formats/settings.
             _("Available variable formats or settings")
         )
+        # Translators: Label for the prompt stored in an interactive input
+        # variable. "&" marks the keyboard mnemonic.
+        self.input_label = wx.StaticText(self.settings_panel, label=_("&Prompt"))
+        self.input_text = wx.TextCtrl(self.settings_panel)
+        # Translators: Accessible name for the editable prompt of {{input}}.
+        self.input_text.SetName(_("Interactive variable prompt"))
         settings_sizer.Add(self.settings_label, 0, wx.BOTTOM, self.FromDIP(6))
         settings_sizer.Add(self.settings_list, 1, wx.EXPAND)
+        settings_sizer.Add(self.input_label, 0, wx.BOTTOM, self.FromDIP(6))
+        settings_sizer.Add(self.input_text, 0, wx.EXPAND)
         self.settings_panel.SetSizer(settings_sizer)
 
         button_sizer = wx.StdDialogButtonSizer()
@@ -157,6 +180,7 @@ class VariablePickerDialog(wx.Dialog):
         self.variable_list.Bind(wx.EVT_LISTBOX, self._on_variable_selected)
         self.variable_list.Bind(wx.EVT_LISTBOX_DCLICK, self._on_variable_activated)
         self.settings_list.Bind(wx.EVT_LISTBOX_DCLICK, self._on_activate)
+        self.input_text.Bind(wx.EVT_TEXT, self._on_input_changed)
 
         dialog_sizer = wx.BoxSizer(wx.VERTICAL)
         dialog_sizer.Add(label, 0, wx.LEFT | wx.RIGHT | wx.TOP, self.FromDIP(12))
@@ -193,6 +217,11 @@ class VariablePickerDialog(wx.Dialog):
         variable_selection = self.variable_list.GetSelection()
         if variable_selection == wx.NOT_FOUND or not self._visible_suggestions:
             return None
+        if self._visible_name == "input":
+            label = self.input_text.GetValue()
+            if not self._input_label_is_valid(label):
+                return None
+            return "{{input:" + label + "}}"
         if len(self._visible_suggestions) == 1:
             return self._visible_suggestions[0].expression
         setting_selection = self.settings_list.GetSelection()
@@ -225,9 +254,11 @@ class VariablePickerDialog(wx.Dialog):
         """Show the settings belonging to the selected variable, if any."""
         selection = self.variable_list.GetSelection()
         if selection == wx.NOT_FOUND:
+            self._visible_name = None
             self._visible_suggestions = ()
         else:
-            self._visible_suggestions = self._groups[selection][1]
+            self._visible_name, self._visible_suggestions = self._groups[selection]
+        has_custom_input = self._visible_name == "input"
         has_settings = len(self._visible_suggestions) > 1
         self.settings_list.Set(
             [self._setting_label(item) for item in self._visible_suggestions]
@@ -236,8 +267,29 @@ class VariablePickerDialog(wx.Dialog):
         )
         if has_settings:
             self.settings_list.SetSelection(0)
-        self.settings_panel.Show(has_settings)
+        self.settings_list.Show(has_settings)
+        self.input_label.Show(has_custom_input)
+        self.input_text.Show(has_custom_input)
+        self.settings_panel.Show(has_settings or has_custom_input)
+        self._update_insert_button()
         self.Layout()
+
+    @staticmethod
+    def _input_label_is_valid(label: str) -> bool:
+        """Return whether a label fits the variable expression grammar."""
+        return (
+            bool(label.strip())
+            and ":" not in label
+            and "{{" not in label
+            and "}}" not in label
+        )
+
+    def _update_insert_button(self) -> None:
+        """Enable insertion only when the current expression is complete."""
+        self.insert_button.Enable(self.get_selected_expression() is not None)
+
+    def _on_input_changed(self, event: wx.CommandEvent) -> None:
+        self._update_insert_button()
 
     def _on_variable_selected(self, event: wx.CommandEvent) -> None:
         self._update_settings()
@@ -246,7 +298,10 @@ class VariablePickerDialog(wx.Dialog):
         """Insert a setting-free variable or move to its settings list."""
         self._update_settings()
         if len(self._visible_suggestions) == 1:
-            self.EndModal(wx.ID_OK)
+            if self._visible_name == "input":
+                self.input_text.SetFocus()
+            else:
+                self.EndModal(wx.ID_OK)
         else:
             self.settings_list.SetFocus()
 

@@ -275,6 +275,11 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "variable_target_application_unavailable": lambda parameters: _(
         "The target application could not be identified."
     ),
+    # Translators: Validation error for {{input:Label}}. The technical variable
+    # name remains English in every user-interface language.
+    "variable_input_label_required": lambda parameters: _(
+        "The variable 'input' requires exactly one non-empty label."
+    ),
     # Translators: Validation error when a global shortcut contains an
     # unsupported keyboard key.
     "hotkey_key_unsupported": lambda parameters: _(

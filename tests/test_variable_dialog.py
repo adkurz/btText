@@ -6,6 +6,7 @@ from core.builtin_variables import (
     BUILTIN_VARIABLE_FORMATS,
     BUILTIN_VARIABLE_NAMES,
     CONTEXT_VARIABLE_NAMES,
+    INTERACTIVE_VARIABLE_NAMES,
     TEMPORAL_VARIABLE_NAMES,
 )
 from ui.variable_dialog import (
@@ -25,9 +26,12 @@ class VariableDialogTestCase(unittest.TestCase):
         suggestions = get_builtin_variable_suggestions()
         expressions = {suggestion.expression for suggestion in suggestions}
 
-        self.assertEqual(len(suggestions), 20)
+        self.assertEqual(len(suggestions), 21)
         for name in BUILTIN_VARIABLE_NAMES:
+            if name in INTERACTIVE_VARIABLE_NAMES:
+                continue
             self.assertIn("{{" + name + "}}", expressions)
+        self.assertIn("{{input:Prompt}}", expressions)
         for name in TEMPORAL_VARIABLE_NAMES:
             for format_name in BUILTIN_VARIABLE_FORMATS:
                 self.assertIn(
@@ -73,6 +77,32 @@ class VariableDialogTestCase(unittest.TestCase):
             self.assertFalse(dialog.settings_panel.IsShown())
             self.assertEqual(dialog.settings_list.GetCount(), 0)
             self.assertEqual(dialog.get_selected_expression(), "{{app}}")
+        finally:
+            dialog.Destroy()
+
+    def test_picker_builds_input_expression_from_entered_prompt(self):
+        dialog = VariablePickerDialog(None, get_builtin_variable_suggestions())
+        try:
+            input_index = next(
+                index
+                for index in range(dialog.variable_list.GetCount())
+                if dialog.variable_list.GetString(index).startswith("{{input}}")
+            )
+            dialog.variable_list.SetSelection(input_index)
+            dialog._update_settings()
+
+            self.assertTrue(dialog.settings_panel.IsShown())
+            self.assertTrue(dialog.input_text.IsShown())
+            self.assertFalse(dialog.settings_list.IsShown())
+            self.assertFalse(dialog.insert_button.IsEnabled())
+
+            dialog.input_text.SetValue("Kundennummer")
+
+            self.assertTrue(dialog.insert_button.IsEnabled())
+            self.assertEqual(
+                dialog.get_selected_expression(),
+                "{{input:Kundennummer}}",
+            )
         finally:
             dialog.Destroy()
 

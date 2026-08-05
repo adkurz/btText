@@ -7,7 +7,11 @@ import wx
 from core import datamodel
 from core.app_settings import AppSettings
 from core.events import EventEmitter
-from core.variables import RenderedSnippet, VariableError
+from core.variables import (
+    RenderedSnippet,
+    VariableError,
+    VariableRenderingCancelled,
+)
 from i18n import _
 from platform_support import clipboard, hotstring_expansion, hotstrings, windows
 from platform_support.clipboard_paste import PendingPaste
@@ -96,6 +100,8 @@ class HotstringController:
         settings = self._get_settings()
         try:
             rendered = self._render_snippet(snippet.content, target_window)
+        except VariableRenderingCancelled:
+            return
         except VariableError as error:
             show_variable_error(self._parent, error)
             return

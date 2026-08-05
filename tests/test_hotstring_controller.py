@@ -3,7 +3,11 @@ from unittest.mock import Mock, patch
 
 from core import datamodel
 from core.app_settings import AppSettings
-from core.variables import RenderedSnippet, UnknownVariableError
+from core.variables import (
+    RenderedSnippet,
+    UnknownVariableError,
+    VariableRenderingCancelled,
+)
 from platform_support import clipboard
 from ui.hotstring_controller import HotstringController
 
@@ -200,6 +204,36 @@ class HotstringControllerTestCase(unittest.TestCase):
 
         expand_hotstring.assert_not_called()
         show_error.assert_called_once()
+
+    @patch("ui.hotstring_controller.show_variable_error")
+    @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
+    @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
+    def test_cancelled_input_does_not_expand_or_report_an_error(
+        self,
+        keyboard_hook,
+        expand_hotstring,
+        show_error,
+    ):
+        controller = HotstringController(
+            Mock(),
+            Mock(),
+            Mock(),
+            lambda: AppSettings(),
+            Mock(),
+            Mock(),
+            Mock(side_effect=VariableRenderingCancelled()),
+        )
+        snippet = datamodel.Snippet(
+            category_id=1,
+            name="Interactive",
+            content="{{input:Customer number}}",
+            hotstring="customer",
+        )
+
+        controller._expand(42, snippet, 32)
+
+        expand_hotstring.assert_not_called()
+        show_error.assert_not_called()
 
     @patch("ui.hotstring_controller.wx.MessageBox")
     @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")

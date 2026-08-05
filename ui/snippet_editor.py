@@ -8,7 +8,11 @@ from core import datamodel
 from core.events import EventEmitter
 import ui.validators as validators
 from core.error_messages import format_user_error
-from core.variables import RenderedSnippet, VariableError
+from core.variables import (
+    RenderedSnippet,
+    VariableError,
+    VariableRenderingCancelled,
+)
 from i18n import _
 from ui import utils
 from ui import theme
@@ -277,6 +281,8 @@ class SnippetEditor(wx.Dialog):
         """Render content or present one localized variable error."""
         try:
             return self._render_snippet(content)
+        except VariableRenderingCancelled:
+            return None
         except VariableError as error:
             show_variable_error(self, error)
             return None

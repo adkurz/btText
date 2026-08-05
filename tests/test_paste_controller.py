@@ -2,7 +2,11 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
-from core.variables import RenderedSnippet, UnknownVariableError
+from core.variables import (
+    RenderedSnippet,
+    UnknownVariableError,
+    VariableRenderingCancelled,
+)
 from platform_support import clipboard_paste
 from ui.paste_controller import PasteController
 
@@ -131,6 +135,36 @@ class PasteControllerTestCase(unittest.TestCase):
         before_paste.assert_not_called()
         call_later.assert_not_called()
         show_error.assert_called_once()
+
+    @patch("ui.paste_controller.show_variable_error")
+    @patch("ui.paste_controller.wx.CallLater")
+    @patch("ui.paste_controller.windows.is_external_window", return_value=True)
+    @patch("ui.paste_controller.windows.get_foreground_window", return_value=42)
+    def test_cancelled_input_does_not_hide_or_report_an_error(
+        self,
+        get_foreground_window,
+        is_external_window,
+        call_later,
+        show_error,
+    ):
+        model = Mock()
+        model.get_snippet.return_value = SimpleNamespace(
+            content="{{input:Customer number}}"
+        )
+        before_paste = Mock()
+        controller = PasteController(
+            Mock(),
+            model,
+            before_paste,
+            Mock(),
+            Mock(side_effect=VariableRenderingCancelled()),
+        )
+
+        controller.insert_snippet(7)
+
+        before_paste.assert_not_called()
+        call_later.assert_not_called()
+        show_error.assert_not_called()
 
     @patch("ui.paste_controller.clipboard_paste.paste_text")
     def test_successful_paste_schedules_clipboard_restore(self, paste_text):
