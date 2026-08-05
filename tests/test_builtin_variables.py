@@ -203,6 +203,13 @@ class BuiltinVariableTestCase(unittest.TestCase):
 
         self.assertEqual(labels, ["Kundennummer"])
 
+    def test_input_plan_deduplicates_labels_and_preserves_order(self):
+        plan = self.engine.plan(
+            "{{input:Customer}} {{input:Reference}} {{input:Customer}}"
+        )
+
+        self.assertEqual(plan.input_labels, ("Customer", "Reference"))
+
     def test_input_requires_exactly_one_non_empty_label(self):
         for template in ("{{input}}", "{{input: }}", "{{input:label:extra}}"):
             with self.subTest(template=template):

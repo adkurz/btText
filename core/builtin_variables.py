@@ -234,6 +234,11 @@ def _resolve_input(
     return value
 
 
+def _collect_input_label(arguments: tuple[str, ...]) -> tuple[str, ...]:
+    """Collect one validated label for the rendering plan."""
+    return (_input_label(arguments),)
+
+
 def _resolve_cursor(
     context: ResolutionContext,
     arguments: tuple[str, ...],
@@ -300,7 +305,12 @@ BUILTIN_VARIABLE_CATALOG = (
         VariableDescription.APPLICATION,
     ),
     BuiltinVariable(
-        VariableDefinition("input", _resolve_input, _input_label),
+        VariableDefinition(
+            "input",
+            _resolve_input,
+            _input_label,
+            collect_input_labels=_collect_input_label,
+        ),
         VariableDescription.INPUT,
         VariableEditorKind.INPUT_LABEL,
         editor_placeholder="Prompt",

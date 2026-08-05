@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-06 01:45+0200\n"
+"POT-Creation-Date: 2026-08-06 01:52+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1596,29 +1596,36 @@ msgstr ""
 msgid "Default"
 msgstr ""
 
+#. Translators: Window title for entering all interactive snippet
+#. variable values in one dialog.
+#: ui/variable_dialog.py:354
+msgid "Enter variable values"
+msgstr ""
+
+#. Translators: Instructions above interactive snippet variable
+#. fields.
+#: ui/variable_dialog.py:364
+msgid "Enter the values required by this snippet."
+msgstr ""
+
 #. Translators: Window title for rendered snippet variable output.
-#: ui/variable_dialog.py:351
+#: ui/variable_dialog.py:444
 msgid "Variable preview"
 msgstr ""
 
 #. Translators: Label for the rendered snippet text in the preview.
-#: ui/variable_dialog.py:355
+#: ui/variable_dialog.py:448
 msgid "Resolved &text"
 msgstr ""
 
 #. Translators: Accessible name for rendered snippet preview text.
-#: ui/variable_dialog.py:362
+#: ui/variable_dialog.py:455
 msgid "Resolved snippet text"
-msgstr ""
-
-#. Translators: Window title for an interactive snippet variable.
-#: ui/variable_resolver.py:97
-msgid "Enter variable value"
 msgstr ""
 
 #. Translators: Title for a variable error that prevents a snippet from
 #. being inserted manually or expanded through a hotstring.
-#: ui/variable_resolver.py:113
+#: ui/variable_resolver.py:108
 msgid "Variable error"
 msgstr ""
 

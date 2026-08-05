@@ -7,6 +7,7 @@ from core.builtin_variables import (
     VariableEditorKind,
 )
 from ui.variable_dialog import (
+    InteractiveVariablesDialog,
     VariablePickerDialog,
     VariablePreviewDialog,
     VariableSuggestion,
@@ -125,6 +126,30 @@ class VariableDialogTestCase(unittest.TestCase):
             self.assertTrue(dialog.preview_text.AcceptsFocusFromKeyboard())
         finally:
             dialog.Destroy()
+
+    def test_interactive_dialog_collects_all_values_in_label_order(self):
+        dialog = InteractiveVariablesDialog(
+            None,
+            ("Kundennummer", "Referenz"),
+        )
+        try:
+            dialog._inputs["Kundennummer"].SetValue("42")
+            dialog._inputs["Referenz"].SetValue("")
+
+            self.assertEqual(
+                dialog.get_values(),
+                {"Kundennummer": "42", "Referenz": ""},
+            )
+            self.assertEqual(
+                dialog._inputs["Kundennummer"].GetName(),
+                "Kundennummer",
+            )
+        finally:
+            dialog.Destroy()
+
+    def test_interactive_dialog_requires_at_least_one_label(self):
+        with self.assertRaises(ValueError):
+            InteractiveVariablesDialog(None, ())
 
 
 if __name__ == "__main__":

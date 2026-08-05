@@ -5,6 +5,7 @@ from unittest.mock import Mock
 from core.variables import (
     RenderedSnippet,
     ResolutionContext,
+    ResolutionPlan,
     UnknownVariableError,
     VariableDefinition,
     VariableEngine,
@@ -153,6 +154,29 @@ class VariableEngineTestCase(unittest.TestCase):
         engine.validate("{{value:format}}")
 
         validator.assert_called_once_with(("format",))
+        resolver.assert_not_called()
+
+    def test_plan_collects_distinct_inputs_in_template_order(self):
+        collector = Mock(side_effect=lambda arguments: (arguments[0],))
+        resolver = Mock(return_value="resolved")
+        engine = VariableEngine(
+            VariableRegistry(
+                [
+                    VariableDefinition(
+                        "input",
+                        resolver,
+                        collect_input_labels=collector,
+                    )
+                ]
+            )
+        )
+
+        plan = engine.plan(
+            "{{input:Customer}} {{input:Reference}} {{input:Customer}}"
+        )
+
+        self.assertEqual(plan, ResolutionPlan(("Customer", "Reference")))
+        self.assertEqual(collector.call_count, 3)
         resolver.assert_not_called()
 
 

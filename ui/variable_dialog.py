@@ -341,6 +341,103 @@ class VariablePickerDialog(wx.Dialog):
             wx.CallAfter(self.variable_list.SetFocus)
 
 
+class InteractiveVariablesDialog(wx.Dialog):
+    """Collect every interactive value required by one rendering."""
+
+    def __init__(self, parent: wx.Window | None, labels: tuple[str, ...]) -> None:
+        if not labels:
+            raise ValueError("At least one interactive variable label is required.")
+        super().__init__(
+            parent,
+            # Translators: Window title for entering all interactive snippet
+            # variable values in one dialog.
+            title=_("Enter variable values"),
+            style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
+        )
+        self._labels = labels
+        self._inputs: dict[str, wx.TextCtrl] = {}
+
+        instructions = wx.StaticText(
+            self,
+            # Translators: Instructions above interactive snippet variable
+            # fields.
+            label=_("Enter the values required by this snippet."),
+        )
+        fields_panel = wx.ScrolledWindow(self)
+        fields_panel.SetScrollRate(0, self.FromDIP(10))
+        fields_sizer = wx.FlexGridSizer(
+            cols=2,
+            vgap=self.FromDIP(10),
+            hgap=self.FromDIP(12),
+        )
+        fields_sizer.AddGrowableCol(1, 1)
+        for label in labels:
+            mnemonic_marker = chr(38)
+            display_label = label.replace(
+                mnemonic_marker,
+                mnemonic_marker * 2,
+            )
+            label_control = wx.StaticText(
+                fields_panel,
+                label=display_label,
+            )
+            value_input = wx.TextCtrl(fields_panel)
+            value_input.SetName(label)
+            fields_sizer.Add(label_control, 0, wx.ALIGN_CENTER_VERTICAL)
+            fields_sizer.Add(value_input, 0, wx.EXPAND)
+            self._inputs[label] = value_input
+        fields_panel.SetSizer(fields_sizer)
+
+        button_sizer = wx.StdDialogButtonSizer()
+        ok_button = wx.Button(self, wx.ID_OK)
+        cancel_button = wx.Button(self, wx.ID_CANCEL)
+        button_sizer.AddButton(ok_button)
+        button_sizer.AddButton(cancel_button)
+        button_sizer.Realize()
+        ok_button.SetDefault()
+        self.SetAffirmativeId(wx.ID_OK)
+        self.SetEscapeId(wx.ID_CANCEL)
+
+        dialog_sizer = wx.BoxSizer(wx.VERTICAL)
+        dialog_sizer.Add(
+            instructions,
+            0,
+            wx.LEFT | wx.RIGHT | wx.TOP,
+            self.FromDIP(12),
+        )
+        dialog_sizer.Add(
+            fields_panel,
+            1,
+            wx.EXPAND | wx.ALL,
+            self.FromDIP(12),
+        )
+        dialog_sizer.Add(
+            button_sizer,
+            0,
+            wx.ALIGN_RIGHT | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            self.FromDIP(12),
+        )
+        self.SetSizer(dialog_sizer)
+        self.SetMinSize(self.FromDIP((480, 280)))
+        self.SetSize(self.FromDIP((620, 420)))
+        self.CentreOnParent()
+        theme.apply(self)
+        self.Bind(wx.EVT_SHOW, self._on_show)
+
+    def get_values(self) -> dict[str, str]:
+        """Return every entered value keyed by its technical label."""
+        return {
+            label: self._inputs[label].GetValue()
+            for label in self._labels
+        }
+
+    def _on_show(self, event: wx.ShowEvent) -> None:
+        """Focus the first value field when the dialog is displayed."""
+        event.Skip()
+        if event.IsShown():
+            wx.CallAfter(self._inputs[self._labels[0]].SetFocus)
+
+
 class VariablePreviewDialog(wx.Dialog):
     """Display rendered snippet text in a focusable read-only control."""
 

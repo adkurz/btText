@@ -4,7 +4,12 @@ from unittest.mock import Mock, patch
 
 import wx
 
-from core.variables import RenderedSnippet, UnknownVariableError
+from core.variables import (
+    RenderedSnippet,
+    ResolutionPlan,
+    UnknownVariableError,
+    VariableRenderingCancelled,
+)
 from ui.variable_resolver import SnippetVariableResolver, show_variable_error
 
 
@@ -14,6 +19,7 @@ class SnippetVariableResolverTestCase(unittest.TestCase):
         get_timestamp = Mock(return_value=timestamp)
         get_locale = Mock(return_value="de")
         engine = Mock()
+        engine.plan.return_value = ResolutionPlan()
         engine.render.return_value = RenderedSnippet("resolved")
         resolver = SnippetVariableResolver(
             engine,
@@ -38,6 +44,7 @@ class SnippetVariableResolverTestCase(unittest.TestCase):
 
     def test_validation_does_not_read_runtime_context(self):
         engine = Mock()
+        engine.plan.return_value = ResolutionPlan()
         resolver = SnippetVariableResolver(engine)
 
         with (
@@ -54,6 +61,7 @@ class SnippetVariableResolverTestCase(unittest.TestCase):
 
     def test_context_values_are_lazy_and_memoized_per_rendering(self):
         engine = Mock()
+        engine.plan.return_value = ResolutionPlan()
 
         def render(_template, context):
             return RenderedSnippet(
@@ -81,49 +89,75 @@ class SnippetVariableResolverTestCase(unittest.TestCase):
         read_text.assert_called_once_with()
         get_application_name.assert_called_once_with(42)
 
-    def test_identical_input_labels_are_requested_once_per_rendering(self):
+    def test_all_distinct_input_labels_are_requested_together(self):
         engine = Mock()
+        engine.plan.return_value = ResolutionPlan(
+            ("Customer number", "Reference"),
+        )
 
         def render(_template, context):
             return RenderedSnippet(
                 context.request_input("Customer number")
-                + context.request_input("Customer number")
+                + context.request_input("Reference")
             )
 
         engine.render.side_effect = render
-        request_input = Mock(return_value="42")
-        resolver = SnippetVariableResolver(engine, request_input=request_input)
+        request_inputs = Mock(
+            return_value={"Customer number": "42", "Reference": "A7"}
+        )
+        resolver = SnippetVariableResolver(engine, request_inputs=request_inputs)
 
         result = resolver.render("template")
 
-        self.assertEqual(result.text, "4242")
-        request_input.assert_called_once_with("Customer number")
+        self.assertEqual(result.text, "42A7")
+        request_inputs.assert_called_once_with(("Customer number", "Reference"))
 
-    @patch("ui.variable_resolver.wx.TextEntryDialog")
-    def test_input_dialog_returns_entered_value_and_is_destroyed(self, dialog_class):
+    @patch("ui.variable_resolver.InteractiveVariablesDialog")
+    def test_input_dialog_returns_all_values_and_is_destroyed(self, dialog_class):
         dialog = dialog_class.return_value
         dialog.ShowModal.return_value = wx.ID_OK
-        dialog.GetValue.return_value = "42"
+        dialog.get_values.return_value = {
+            "Customer number": "42",
+            "Reference": "A7",
+        }
         parent = Mock()
         resolver = SnippetVariableResolver(Mock(), parent=parent)
 
-        result = resolver._show_input_dialog("Customer number")
+        result = resolver._show_input_dialog(("Customer number", "Reference"))
 
-        self.assertEqual(result, "42")
-        self.assertEqual(dialog_class.call_args.args[0], parent)
-        self.assertEqual(dialog_class.call_args.args[1], "Customer number")
+        self.assertEqual(
+            result,
+            {"Customer number": "42", "Reference": "A7"},
+        )
+        dialog_class.assert_called_once_with(
+            parent,
+            ("Customer number", "Reference"),
+        )
         dialog.Destroy.assert_called_once_with()
 
-    @patch("ui.variable_resolver.wx.TextEntryDialog")
+    @patch("ui.variable_resolver.InteractiveVariablesDialog")
     def test_cancelled_input_dialog_returns_none(self, dialog_class):
         dialog = dialog_class.return_value
         dialog.ShowModal.return_value = wx.ID_CANCEL
         resolver = SnippetVariableResolver(Mock())
 
-        self.assertIsNone(resolver._show_input_dialog("Customer number"))
+        self.assertIsNone(resolver._show_input_dialog(("Customer number",)))
 
-        dialog.GetValue.assert_not_called()
+        dialog.get_values.assert_not_called()
         dialog.Destroy.assert_called_once_with()
+
+    def test_cancelled_combined_input_dialog_cancels_before_rendering(self):
+        engine = Mock()
+        engine.plan.return_value = ResolutionPlan(("Customer number",))
+        resolver = SnippetVariableResolver(
+            engine,
+            request_inputs=Mock(return_value=None),
+        )
+
+        with self.assertRaises(VariableRenderingCancelled):
+            resolver.render("{{input:Customer number}}")
+
+        engine.render.assert_not_called()
 
     @patch("ui.variable_resolver.wx.MessageBox")
     def test_variable_errors_are_formatted_at_one_ui_boundary(self, message_box):

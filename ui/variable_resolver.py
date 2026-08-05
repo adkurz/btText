@@ -12,9 +12,11 @@ from core.variables import (
     ResolutionContext,
     VariableEngine,
     VariableError,
+    VariableRenderingCancelled,
 )
 from i18n import _
 from platform_support import clipboard, windows
+from ui.variable_dialog import InteractiveVariablesDialog
 
 
 class SnippetVariableResolver:
@@ -26,20 +28,29 @@ class SnippetVariableResolver:
         parent: wx.Window | None = None,
         get_timestamp: Callable[[], datetime] | None = None,
         get_locale: Callable[[], str] = i18n.get_active_language,
-        request_input: Callable[[str], str | None] | None = None,
+        request_inputs: (
+            Callable[[tuple[str, ...]], dict[str, str] | None] | None
+        ) = None,
     ) -> None:
         self._engine = engine
         self._parent = parent
         self._get_timestamp = get_timestamp or self._current_timestamp
         self._get_locale = get_locale
-        self._request_input = request_input or self._show_input_dialog
+        self._request_inputs = request_inputs or self._show_input_dialog
 
     def render(
         self,
         template: str,
         target_window: int | None = None,
     ) -> RenderedSnippet:
-        """Capture one timestamp and locale, then render a snippet."""
+        """Collect interactive values, then capture context and render."""
+        plan = self._engine.plan(template)
+        answers: dict[str, str] = {}
+        if plan.input_labels:
+            requested_answers = self._request_inputs(plan.input_labels)
+            if requested_answers is None:
+                raise VariableRenderingCancelled
+            answers = requested_answers
         context = ResolutionContext(
             timestamp=self._get_timestamp(),
             locale=self._get_locale(),
@@ -47,7 +58,7 @@ class SnippetVariableResolver:
             get_application_name=self._memoize(
                 lambda: windows.get_window_application_name(target_window)
             ),
-            request_input=self._memoize_inputs(self._request_input),
+            request_input=lambda label: answers[label],
         )
         return self._engine.render(template, context)
 
@@ -74,32 +85,16 @@ class SnippetVariableResolver:
 
         return get_once
 
-    @staticmethod
-    def _memoize_inputs(
-        request_input: Callable[[str], str | None],
-    ) -> Callable[[str], str | None]:
-        """Ask once for each distinct label during one rendering."""
-        values: dict[str, str | None] = {}
-
-        def request_once(label: str) -> str | None:
-            if label not in values:
-                values[label] = request_input(label)
-            return values[label]
-
-        return request_once
-
-    def _show_input_dialog(self, label: str) -> str | None:
-        """Request one interactive variable value from the user."""
-        dialog = wx.TextEntryDialog(
-            self._parent,
-            label,
-            # Translators: Window title for an interactive snippet variable.
-            _("Enter variable value"),
-        )
+    def _show_input_dialog(
+        self,
+        labels: tuple[str, ...],
+    ) -> dict[str, str] | None:
+        """Collect every interactive variable value in one dialog."""
+        dialog = InteractiveVariablesDialog(self._parent, labels)
         try:
             if dialog.ShowModal() != wx.ID_OK:
                 return None
-            return dialog.GetValue()
+            return dialog.get_values()
         finally:
             dialog.Destroy()
 

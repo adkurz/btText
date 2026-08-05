@@ -55,6 +55,7 @@ VariableResolver = Callable[
     str | ResolvedVariable,
 ]
 VariableArgumentValidator = Callable[[tuple[str, ...]], None]
+VariableInputCollector = Callable[[tuple[str, ...]], tuple[str, ...]]
 
 
 @dataclass(frozen=True)
@@ -65,6 +66,7 @@ class VariableDefinition:
     resolver: VariableResolver
     validate_arguments: VariableArgumentValidator | None = None
     maximum_occurrences: int | None = None
+    collect_input_labels: VariableInputCollector | None = None
 
 
 @dataclass(frozen=True)
@@ -73,6 +75,13 @@ class RenderedSnippet:
 
     text: str
     cursor_offset_from_end: int | None = None
+
+
+@dataclass(frozen=True)
+class ResolutionPlan:
+    """Describe user input required before resolving a template."""
+
+    input_labels: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -116,6 +125,11 @@ class VariableRegistry:
             and definition.maximum_occurrences < 1
         ):
             raise ValueError("The variable occurrence limit must be positive.")
+        if (
+            definition.collect_input_labels is not None
+            and not callable(definition.collect_input_labels)
+        ):
+            raise TypeError("The variable input collector must be callable.")
         self._definitions[definition.name] = definition
 
     def get(self, name: str) -> VariableDefinition | None:
@@ -178,11 +192,23 @@ class VariableEngine:
 
     def validate(self, template: str) -> None:
         """Validate syntax, names, and arguments without resolving values."""
+        self.plan(template)
+
+    def plan(self, template: str) -> ResolutionPlan:
+        """Validate a template and collect its distinct interactive inputs."""
         occurrences: dict[str, int] = {}
+        input_labels: list[str] = []
+        known_labels: set[str] = set()
         for part in self._parse(template):
             if isinstance(part, _VariableToken):
                 definition = self._get_validated_definition(part)
                 self._validate_occurrence(definition, part, occurrences)
+                if definition.collect_input_labels is not None:
+                    for label in definition.collect_input_labels(part.arguments):
+                        if label not in known_labels:
+                            known_labels.add(label)
+                            input_labels.append(label)
+        return ResolutionPlan(tuple(input_labels))
 
     @staticmethod
     def _validate_occurrence(
