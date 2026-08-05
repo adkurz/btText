@@ -116,6 +116,39 @@ class HotstringControllerTestCase(unittest.TestCase):
         schedule_restore.assert_called_once_with(pending)
         notify.assert_called_once_with(snippet)
 
+    @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
+    @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
+    def test_variable_like_text_is_currently_forwarded_unchanged(
+        self,
+        keyboard_hook,
+        expand_hotstring,
+    ):
+        pending = Mock()
+        expand_hotstring.return_value = pending
+        controller = HotstringController(
+            Mock(),
+            Mock(),
+            Mock(),
+            lambda: AppSettings(),
+            Mock(),
+            Mock(),
+        )
+        snippet = datamodel.Snippet(
+            category_id=1,
+            name="Dated greeting",
+            content="Today is {{date:long}}.",
+            hotstring="dated",
+        )
+
+        controller._expand(42, snippet, 32)
+
+        expand_hotstring.assert_called_once_with(
+            42,
+            "Today is {{date:long}}.",
+            5,
+            32,
+        )
+
     @patch("ui.hotstring_controller.wx.MessageBox")
     @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")

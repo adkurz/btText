@@ -52,6 +52,31 @@ class PasteControllerTestCase(unittest.TestCase):
             "Example",
         )
 
+    @patch("ui.paste_controller.wx.CallLater")
+    @patch("ui.paste_controller.windows.is_external_window")
+    @patch("ui.paste_controller.windows.get_foreground_window")
+    def test_variable_like_text_is_currently_forwarded_unchanged(
+        self,
+        get_foreground_window,
+        is_external_window,
+        call_later,
+    ):
+        get_foreground_window.return_value = 42
+        is_external_window.return_value = True
+        model = Mock()
+        model.get_snippet.return_value = SimpleNamespace(
+            content="Today is {{date:long}}."
+        )
+        controller = PasteController(Mock(), model, Mock(), Mock())
+
+        controller.insert_snippet(7)
+
+        call_later.assert_called_once_with(
+            50,
+            controller._paste_after_hide,
+            "Today is {{date:long}}.",
+        )
+
     @patch("ui.paste_controller.clipboard_paste.paste_text")
     def test_successful_paste_schedules_clipboard_restore(self, paste_text):
         pending = Mock()
