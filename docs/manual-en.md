@@ -138,7 +138,7 @@ Context variables do not accept a format. When saving, btText validates only the
 
 To insert the characters `{{` or `}}` literally, double the corresponding sequence as `{{{{` or `}}}}`. Unknown variables, unsupported formats, and malformed braces prevent insertion and are reported as errors.
 
-In the text snippet editor, **Insert variable** opens a list of every supported expression with a description. The chosen expression replaces the current selection or is inserted at the caret. **Preview** displays the fully resolved text in a focusable read-only field where it can also be copied. btText validates variables again when saving, but continues to store the original expression rather than the currently displayed value.
+In the text snippet editor, **Insert variable** shows the available variables on the left and their possible formats or settings on the right. The right-hand list is hidden for variables without an additional choice, such as `{{app}}`. The chosen expression replaces the current selection or is inserted at the caret. **Preview** displays the fully resolved text in a read-only field that can be reached with Tab and copied when needed. btText validates variables again when saving, but continues to store the original expression rather than the currently displayed value.
 
 ### Inserting or Copying Text
 

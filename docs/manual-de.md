@@ -138,7 +138,7 @@ Kontextvariablen unterstützen keine Formatangabe. Beim Speichern prüft btText 
 
 Um die Zeichen `{{` oder `}}` unverändert auszugeben, verdoppeln Sie die jeweilige Zeichenfolge zu `{{{{` beziehungsweise `}}}}`. Unbekannte Variablen, ungültige Formate und fehlerhafte Klammern verhindern das Einfügen und werden als Fehler gemeldet.
 
-Im Textbaustein-Editor öffnet **Variable einfügen** eine Liste aller unterstützten Ausdrücke mit Beschreibungen. Der gewählte Ausdruck ersetzt die aktuelle Markierung oder wird an der Schreibmarke eingefügt. Mit **Vorschau** können Sie den vollständig aufgelösten Text in einem schreibgeschützten, fokussierbaren Textfeld prüfen und bei Bedarf kopieren. Beim Speichern prüft btText die Variablen erneut, speichert jedoch weiterhin den ursprünglichen Ausdruck und nicht den momentan angezeigten Wert.
+Im Textbaustein-Editor zeigt **Variable einfügen** links die verfügbaren Variablen und rechts deren mögliche Formate oder Einstellungen. Für Variablen ohne zusätzliche Auswahl, etwa `{{app}}`, wird die rechte Liste ausgeblendet. Der gewählte Ausdruck ersetzt die aktuelle Markierung oder wird an der Schreibmarke eingefügt. Mit **Vorschau** können Sie den vollständig aufgelösten Text in einem schreibgeschützten, mit der Tabulatortaste erreichbaren Textfeld prüfen und bei Bedarf kopieren. Beim Speichern prüft btText die Variablen erneut, speichert jedoch weiterhin den ursprünglichen Ausdruck und nicht den momentan angezeigten Wert.
 
 ### Text einfügen oder kopieren
 

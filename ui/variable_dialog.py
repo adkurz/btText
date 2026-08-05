@@ -12,6 +12,7 @@ from core.builtin_variables import (
 )
 from i18n import _
 from ui import theme
+from ui.controls import FocusableReadOnlyTextCtrl
 
 
 @dataclass(frozen=True)
@@ -20,6 +21,7 @@ class VariableSuggestion:
 
     expression: str
     description: str
+    variable_description: str | None = None
 
 
 def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
@@ -45,6 +47,7 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                 VariableSuggestion(
                     "{{" + name + "}}",
                     value_description + ".",
+                    value_description,
                 )
             )
             continue
@@ -56,6 +59,7 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                 _("{value} using the default localized short format.").format(
                     value=value_description
                 ),
+                value_description,
             )
         )
         if name not in TEMPORAL_VARIABLE_NAMES:
@@ -73,6 +77,7 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                         value=value_description,
                         format=format_name,
                     ),
+                    value_description,
                 )
             )
         suggestions.append(
@@ -83,6 +88,7 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                 _("{value} using the language-independent ISO format.").format(
                     value=value_description
                 ),
+                value_description,
             )
         )
     return tuple(suggestions)
@@ -102,20 +108,39 @@ class VariablePickerDialog(wx.Dialog):
             title=_("Insert variable"),
             style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
-        self._suggestions = suggestions
+        self._groups = self._group_suggestions(suggestions)
+        self._visible_suggestions: tuple[VariableSuggestion, ...] = ()
         # Translators: Label for the list of variables available to insert.
         label = wx.StaticText(self, label=_("&Available variables"))
         self.variable_list = wx.ListBox(
             self,
             choices=[
-                f"{suggestion.expression} — {suggestion.description}"
-                for suggestion in suggestions
+                f"{{{{{name}}}}} — "
+                f"{group[0].variable_description or group[0].description}"
+                for name, group in self._groups
             ],
         )
         # Translators: Accessible name for the snippet variable picker list.
         self.variable_list.SetName(_("Available snippet variables"))
-        if suggestions:
+        if self._groups:
             self.variable_list.SetSelection(0)
+
+        self.settings_panel = wx.Panel(self)
+        settings_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.settings_label = wx.StaticText(
+            self.settings_panel,
+            # Translators: Label for optional variable formats or settings.
+            label=_("Possible &formats or settings"),
+        )
+        self.settings_list = wx.ListBox(self.settings_panel)
+        self.settings_list.SetName(
+            # Translators: Accessible name for optional variable
+            # formats/settings.
+            _("Available variable formats or settings")
+        )
+        settings_sizer.Add(self.settings_label, 0, wx.BOTTOM, self.FromDIP(6))
+        settings_sizer.Add(self.settings_list, 1, wx.EXPAND)
+        self.settings_panel.SetSizer(settings_sizer)
 
         button_sizer = wx.StdDialogButtonSizer()
         # Translators: Button that inserts the selected variable expression.
@@ -125,16 +150,26 @@ class VariablePickerDialog(wx.Dialog):
         button_sizer.AddButton(self.insert_button)
         button_sizer.AddButton(cancel_button)
         button_sizer.Realize()
-        self.insert_button.Enable(bool(suggestions))
+        self.insert_button.Enable(bool(self._groups))
         self.insert_button.SetDefault()
         self.SetAffirmativeId(wx.ID_OK)
         self.SetEscapeId(wx.ID_CANCEL)
-        self.variable_list.Bind(wx.EVT_LISTBOX_DCLICK, self._on_activate)
+        self.variable_list.Bind(wx.EVT_LISTBOX, self._on_variable_selected)
+        self.variable_list.Bind(wx.EVT_LISTBOX_DCLICK, self._on_variable_activated)
+        self.settings_list.Bind(wx.EVT_LISTBOX_DCLICK, self._on_activate)
 
         dialog_sizer = wx.BoxSizer(wx.VERTICAL)
         dialog_sizer.Add(label, 0, wx.LEFT | wx.RIGHT | wx.TOP, self.FromDIP(12))
-        dialog_sizer.Add(
+        choices_sizer = wx.BoxSizer(wx.HORIZONTAL)
+        choices_sizer.Add(
             self.variable_list,
+            1,
+            wx.EXPAND | wx.RIGHT,
+            self.FromDIP(12),
+        )
+        choices_sizer.Add(self.settings_panel, 1, wx.EXPAND)
+        dialog_sizer.Add(
+            choices_sizer,
             1,
             wx.EXPAND | wx.ALL,
             self.FromDIP(12),
@@ -148,16 +183,72 @@ class VariablePickerDialog(wx.Dialog):
         self.SetSizer(dialog_sizer)
         self.SetMinSize(self.FromDIP((620, 360)))
         self.SetSize(self.FromDIP((760, 520)))
+        self._update_settings()
         self.CentreOnParent()
         theme.apply(self)
         self.Bind(wx.EVT_SHOW, self._on_show)
 
     def get_selected_expression(self) -> str | None:
         """Return the selected complete expression, if one exists."""
+        variable_selection = self.variable_list.GetSelection()
+        if variable_selection == wx.NOT_FOUND or not self._visible_suggestions:
+            return None
+        if len(self._visible_suggestions) == 1:
+            return self._visible_suggestions[0].expression
+        setting_selection = self.settings_list.GetSelection()
+        if setting_selection == wx.NOT_FOUND:
+            return None
+        return self._visible_suggestions[setting_selection].expression
+
+    @staticmethod
+    def _group_suggestions(
+        suggestions: tuple[VariableSuggestion, ...],
+    ) -> tuple[tuple[str, tuple[VariableSuggestion, ...]], ...]:
+        """Group complete expressions by their technical variable name."""
+        groups: dict[str, list[VariableSuggestion]] = {}
+        for suggestion in suggestions:
+            content = suggestion.expression.removeprefix("{{").removesuffix("}}")
+            name = content.partition(":")[0]
+            groups.setdefault(name, []).append(suggestion)
+        return tuple((name, tuple(group)) for name, group in groups.items())
+
+    @staticmethod
+    def _setting_label(suggestion: VariableSuggestion) -> str:
+        content = suggestion.expression.removeprefix("{{").removesuffix("}}")
+        _name, separator, setting = content.partition(":")
+        if not separator:
+            # Translators: Default choice for a variable with optional formats.
+            setting = _("Default")
+        return f"{setting} — {suggestion.description}"
+
+    def _update_settings(self) -> None:
+        """Show the settings belonging to the selected variable, if any."""
         selection = self.variable_list.GetSelection()
         if selection == wx.NOT_FOUND:
-            return None
-        return self._suggestions[selection].expression
+            self._visible_suggestions = ()
+        else:
+            self._visible_suggestions = self._groups[selection][1]
+        has_settings = len(self._visible_suggestions) > 1
+        self.settings_list.Set(
+            [self._setting_label(item) for item in self._visible_suggestions]
+            if has_settings
+            else []
+        )
+        if has_settings:
+            self.settings_list.SetSelection(0)
+        self.settings_panel.Show(has_settings)
+        self.Layout()
+
+    def _on_variable_selected(self, event: wx.CommandEvent) -> None:
+        self._update_settings()
+
+    def _on_variable_activated(self, event: wx.CommandEvent) -> None:
+        """Insert a setting-free variable or move to its settings list."""
+        self._update_settings()
+        if len(self._visible_suggestions) == 1:
+            self.EndModal(wx.ID_OK)
+        else:
+            self.settings_list.SetFocus()
 
     def _on_activate(self, event: wx.CommandEvent) -> None:
         """Accept a variable activated directly from the list."""
@@ -183,10 +274,10 @@ class VariablePreviewDialog(wx.Dialog):
         )
         # Translators: Label for the rendered snippet text in the preview.
         label = wx.StaticText(self, label=_("Resolved &text"))
-        self.preview_text = wx.TextCtrl(
+        self.preview_text = FocusableReadOnlyTextCtrl(
             self,
             value=text,
-            style=wx.TE_MULTILINE | wx.TE_READONLY | wx.TE_RICH2,
+            style=wx.TE_MULTILINE | wx.TE_RICH2,
         )
         # Translators: Accessible name for rendered snippet preview text.
         self.preview_text.SetName(_("Resolved snippet text"))

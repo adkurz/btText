@@ -39,19 +39,40 @@ class VariableDialogTestCase(unittest.TestCase):
                 any(expression.startswith("{{" + name + ":") for expression in expressions)
             )
 
-    def test_picker_exposes_descriptions_and_selected_expression(self):
+    def test_picker_splits_variables_and_formats_into_two_lists(self):
         suggestions = (
-            VariableSuggestion("{{date}}", "Current date."),
-            VariableSuggestion("{{time}}", "Current time."),
+            VariableSuggestion("{{date}}", "Current date, default format."),
+            VariableSuggestion("{{date:iso}}", "Current date, ISO format."),
+            VariableSuggestion("{{app}}", "Target application."),
         )
         dialog = VariablePickerDialog(None, suggestions)
         try:
             self.assertEqual(dialog.variable_list.GetCount(), 2)
-            self.assertIn("Current date.", dialog.variable_list.GetString(0))
+            self.assertIn("Current date", dialog.variable_list.GetString(0))
+            self.assertTrue(dialog.settings_panel.IsShown())
+            self.assertEqual(dialog.settings_list.GetCount(), 2)
             self.assertEqual(dialog.get_selected_expression(), "{{date}}")
-            dialog.variable_list.SetSelection(1)
-            self.assertEqual(dialog.get_selected_expression(), "{{time}}")
+            dialog.settings_list.SetSelection(1)
+            self.assertEqual(dialog.get_selected_expression(), "{{date:iso}}")
             self.assertTrue(dialog.insert_button.IsEnabled())
+        finally:
+            dialog.Destroy()
+
+    def test_picker_hides_settings_for_variable_without_options(self):
+        suggestions = get_builtin_variable_suggestions()
+        dialog = VariablePickerDialog(None, suggestions)
+        try:
+            app_index = next(
+                index
+                for index in range(dialog.variable_list.GetCount())
+                if dialog.variable_list.GetString(index).startswith("{{app}}")
+            )
+            dialog.variable_list.SetSelection(app_index)
+            dialog._update_settings()
+
+            self.assertFalse(dialog.settings_panel.IsShown())
+            self.assertEqual(dialog.settings_list.GetCount(), 0)
+            self.assertEqual(dialog.get_selected_expression(), "{{app}}")
         finally:
             dialog.Destroy()
 
@@ -71,6 +92,7 @@ class VariableDialogTestCase(unittest.TestCase):
                 "First line\nSecond line",
             )
             self.assertFalse(dialog.preview_text.IsEditable())
+            self.assertTrue(dialog.preview_text.AcceptsFocusFromKeyboard())
         finally:
             dialog.Destroy()
 
