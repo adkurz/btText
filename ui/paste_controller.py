@@ -5,9 +5,10 @@ from collections.abc import Callable
 import wx
 
 from core import datamodel
-from core.error_messages import format_user_error
+from core.variables import RenderedSnippet, VariableError
 from i18n import _
 from platform_support import clipboard_paste, windows
+from ui.variable_resolver import show_variable_error
 
 CLIPBOARD_RESTORE_DELAY_MS = 500
 PASTE_AFTER_HIDE_DELAY_MS = 50
@@ -24,12 +25,14 @@ class PasteController:
         model: datamodel.DataModel,
         before_paste: Callable[[], None],
         reveal_after_error: Callable[[], None],
+        render_snippet: Callable[[str], RenderedSnippet],
     ):
         """Initialize paste coordination with explicit frame callbacks."""
         self._parent = parent
         self._model = model
         self._before_paste = before_paste
         self._reveal_after_error = reveal_after_error
+        self._render_snippet = render_snippet
         self._target_window: int | None = None
         self.remember_foreground_window()
 
@@ -64,11 +67,17 @@ class PasteController:
             )
             return
 
+        try:
+            rendered = self._render_snippet(snippet.content)
+        except VariableError as error:
+            show_variable_error(self._parent, error)
+            return
+
         self._before_paste()
         wx.CallLater(
             PASTE_AFTER_HIDE_DELAY_MS,
             self._paste_after_hide,
-            snippet.content,
+            rendered.text,
         )
 
     def _paste_after_hide(self, text: str) -> None:

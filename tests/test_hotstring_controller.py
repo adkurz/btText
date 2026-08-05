@@ -3,8 +3,13 @@ from unittest.mock import Mock, patch
 
 from core import datamodel
 from core.app_settings import AppSettings
+from core.variables import RenderedSnippet, UnknownVariableError
 from platform_support import clipboard
 from ui.hotstring_controller import HotstringController
+
+
+def render_unchanged(text):
+    return RenderedSnippet(text)
 
 
 class HotstringControllerTestCase(unittest.TestCase):
@@ -26,6 +31,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             lambda: AppSettings(),
             Mock(),
             Mock(),
+            render_unchanged,
         )
 
         controller.refresh()
@@ -44,6 +50,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             lambda: AppSettings(),
             Mock(),
             Mock(),
+            render_unchanged,
         )
 
         self.assertFalse(controller.start())
@@ -70,6 +77,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             lambda: AppSettings(),
             Mock(),
             Mock(),
+            render_unchanged,
         )
         snippet = Mock()
 
@@ -102,6 +110,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             lambda: settings,
             schedule_restore,
             notify,
+            render_unchanged,
         )
         snippet = datamodel.Snippet(
             category_id=1,
@@ -118,13 +127,16 @@ class HotstringControllerTestCase(unittest.TestCase):
 
     @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
-    def test_variable_like_text_is_currently_forwarded_unchanged(
+    def test_variable_text_is_resolved_before_hotstring_expansion(
         self,
         keyboard_hook,
         expand_hotstring,
     ):
         pending = Mock()
         expand_hotstring.return_value = pending
+        render_snippet = Mock(
+            return_value=RenderedSnippet("Today is 6. August 2026.")
+        )
         controller = HotstringController(
             Mock(),
             Mock(),
@@ -132,6 +144,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             lambda: AppSettings(),
             Mock(),
             Mock(),
+            render_snippet,
         )
         snippet = datamodel.Snippet(
             category_id=1,
@@ -142,12 +155,51 @@ class HotstringControllerTestCase(unittest.TestCase):
 
         controller._expand(42, snippet, 32)
 
+        render_snippet.assert_called_once_with("Today is {{date:long}}.")
         expand_hotstring.assert_called_once_with(
             42,
-            "Today is {{date:long}}.",
+            "Today is 6. August 2026.",
             5,
             32,
         )
+
+    @patch("ui.hotstring_controller.show_variable_error")
+    @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
+    @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
+    def test_variable_error_does_not_expand_hotstring(
+        self,
+        keyboard_hook,
+        expand_hotstring,
+        show_error,
+    ):
+        render_snippet = Mock(
+            side_effect=UnknownVariableError(
+                "variable_unknown",
+                "Unknown variable {name}",
+                name="missing",
+                position=0,
+            )
+        )
+        controller = HotstringController(
+            Mock(),
+            Mock(),
+            Mock(),
+            lambda: AppSettings(),
+            Mock(),
+            Mock(),
+            render_snippet,
+        )
+        snippet = datamodel.Snippet(
+            category_id=1,
+            name="Broken",
+            content="{{missing}}",
+            hotstring="broken",
+        )
+
+        controller._expand(42, snippet, 32)
+
+        expand_hotstring.assert_not_called()
+        show_error.assert_called_once()
 
     @patch("ui.hotstring_controller.wx.MessageBox")
     @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
@@ -167,6 +219,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             lambda: AppSettings(),
             schedule_restore,
             Mock(),
+            render_unchanged,
         )
         snippet = datamodel.Snippet(
             category_id=1,

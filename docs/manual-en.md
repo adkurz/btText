@@ -116,6 +116,21 @@ Click **Save** to apply changes. The name and content must not be empty. A hotst
 
 To edit, select a single text snippet and select **Edit text snippet** (Textbaustein bearbeiten) from the context menu or press `F2`.
 
+### Date and Time Variables
+
+Text snippets can contain variables that btText replaces immediately before insertion. Variable and format names are always English, independently of the user-interface language. For example, `{{date}}` inserts the current date and `{{time}}` inserts the current time.
+
+The following variables are available for dates, times, and their combination:
+
+- `{{date}}`, `{{time}}`, and `{{datetime}}` use the short format;
+- `{{date:short}}`, `{{date:medium}}`, `{{date:long}}`, and `{{date:full}}` select localized formats with different levels of detail;
+- the same format names can be used with `time` and `datetime`;
+- `{{date:iso}}`, `{{time:iso}}`, and `{{datetime:iso}}` produce a stable, language-independent ISO format.
+
+Localized formats follow the language currently used by btText. For example, `{{date:long}}` may produce `6. August 2026` in German and `August 6, 2026` in English. Every date and time variable in one insertion uses the same captured point in time.
+
+To insert the characters `{{` or `}}` literally, double the corresponding sequence as `{{{{` or `}}}}`. Unknown variables, unsupported formats, and malformed braces prevent insertion and are reported as errors.
+
 ### Inserting or Copying Text
 
 Open btText using the global keyboard shortcut or via the icon in the system tray and select a text snippet. You can then:

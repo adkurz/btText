@@ -2,8 +2,13 @@ import unittest
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 
+from core.variables import RenderedSnippet, UnknownVariableError
 from platform_support import clipboard_paste
 from ui.paste_controller import PasteController
+
+
+def render_unchanged(text):
+    return RenderedSnippet(text)
 
 
 class PasteControllerTestCase(unittest.TestCase):
@@ -17,7 +22,9 @@ class PasteControllerTestCase(unittest.TestCase):
         get_foreground_window.return_value = 42
         is_external_window.return_value = True
 
-        controller = PasteController(Mock(), Mock(), Mock(), Mock())
+        controller = PasteController(
+            Mock(), Mock(), Mock(), Mock(), render_unchanged
+        )
 
         self.assertEqual(controller._target_window, 42)
 
@@ -40,6 +47,7 @@ class PasteControllerTestCase(unittest.TestCase):
             model,
             before_paste,
             Mock(),
+            render_unchanged,
         )
 
         controller.insert_snippet(7)
@@ -55,7 +63,7 @@ class PasteControllerTestCase(unittest.TestCase):
     @patch("ui.paste_controller.wx.CallLater")
     @patch("ui.paste_controller.windows.is_external_window")
     @patch("ui.paste_controller.windows.get_foreground_window")
-    def test_variable_like_text_is_currently_forwarded_unchanged(
+    def test_variable_text_is_resolved_before_the_window_is_hidden(
         self,
         get_foreground_window,
         is_external_window,
@@ -67,15 +75,61 @@ class PasteControllerTestCase(unittest.TestCase):
         model.get_snippet.return_value = SimpleNamespace(
             content="Today is {{date:long}}."
         )
-        controller = PasteController(Mock(), model, Mock(), Mock())
+        before_paste = Mock()
+        render_snippet = Mock(
+            return_value=RenderedSnippet("Today is 6. August 2026.")
+        )
+        controller = PasteController(
+            Mock(),
+            model,
+            before_paste,
+            Mock(),
+            render_snippet,
+        )
 
         controller.insert_snippet(7)
 
+        render_snippet.assert_called_once_with("Today is {{date:long}}.")
+        before_paste.assert_called_once_with()
         call_later.assert_called_once_with(
             50,
             controller._paste_after_hide,
-            "Today is {{date:long}}.",
+            "Today is 6. August 2026.",
         )
+
+    @patch("ui.paste_controller.show_variable_error")
+    @patch("ui.paste_controller.wx.CallLater")
+    @patch("ui.paste_controller.windows.is_external_window")
+    @patch("ui.paste_controller.windows.get_foreground_window")
+    def test_variable_error_does_not_hide_or_schedule_paste(
+        self,
+        get_foreground_window,
+        is_external_window,
+        call_later,
+        show_error,
+    ):
+        get_foreground_window.return_value = 42
+        is_external_window.return_value = True
+        model = Mock()
+        model.get_snippet.return_value = SimpleNamespace(content="{{missing}}")
+        before_paste = Mock()
+        render_snippet = Mock(
+            side_effect=UnknownVariableError(
+                "variable_unknown",
+                "Unknown variable {name}",
+                name="missing",
+                position=0,
+            )
+        )
+        controller = PasteController(
+            Mock(), model, before_paste, Mock(), render_snippet
+        )
+
+        controller.insert_snippet(7)
+
+        before_paste.assert_not_called()
+        call_later.assert_not_called()
+        show_error.assert_called_once()
 
     @patch("ui.paste_controller.clipboard_paste.paste_text")
     def test_successful_paste_schedules_clipboard_restore(self, paste_text):

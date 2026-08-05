@@ -10,6 +10,7 @@ from core import datamodel
 import i18n
 import info
 from core.app_settings import AppSettings, SettingsStore
+from core.builtin_variables import create_builtin_variable_engine
 from core.error_messages import format_user_error
 from core.events import EventEmitter
 from i18n import _
@@ -28,6 +29,7 @@ from ui.settings_dialog import SettingsDialog
 from ui.snippet_list import SnippetList
 from ui.tray_icon import TrayIcon
 from ui.transfer import TransferBuffer
+from ui.variable_resolver import SnippetVariableResolver
 
 HOTKEY_LAYOUT_CHECK_INTERVAL_MS = 500
 
@@ -83,11 +85,15 @@ class MainFrame(sc.SizedFrame):
             self._hotkey_layout_timer,
         )
         self._hotkey_layout_timer.Start(HOTKEY_LAYOUT_CHECK_INTERVAL_MS)
+        self._variable_resolver = SnippetVariableResolver(
+            create_builtin_variable_engine()
+        )
         self._paste_controller = PasteController(
             self,
             model,
             self._prepare_external_paste,
             self._reveal_after_paste_error,
+            self._variable_resolver.render,
         )
         self._hotstring_controller = HotstringController(
             self,
@@ -96,6 +102,7 @@ class MainFrame(sc.SizedFrame):
             lambda: self._settings_controller.settings,
             self._paste_controller.schedule_restore,
             lambda snippet: self.tray_icon.show_hotstring_notification(snippet),
+            self._variable_resolver.render,
         )
         self._settings_controller = SettingsController(
             self,

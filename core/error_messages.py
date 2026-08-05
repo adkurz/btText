@@ -231,6 +231,36 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "snippet_id_missing": lambda parameters: _(
         "The snippet has no ID."
     ),
+    # Translators: Error when braces or another part of a snippet variable are
+    # malformed. {position} is a zero-based character position in the snippet.
+    "variable_syntax_invalid": lambda parameters: _(
+        "The snippet contains invalid variable syntax at position {position}."
+    ).format(**parameters),
+    # Translators: Error when a snippet variable has an invalid technical name.
+    # {position} is a zero-based character position in the snippet.
+    "variable_name_invalid": lambda parameters: _(
+        "The snippet contains an invalid variable name at position {position}."
+    ).format(**parameters),
+    # Translators: Error when a snippet refers to a variable that btText does not
+    # provide. {name} is the language-independent technical variable name.
+    "variable_unknown": lambda parameters: _(
+        "The variable '{name}' is not available."
+    ).format(**parameters),
+    # Translators: Error when a known snippet variable fails while resolving.
+    # {name} is the language-independent technical variable name.
+    "variable_resolution_failed": lambda parameters: _(
+        "The variable '{name}' could not be resolved."
+    ).format(**parameters),
+    # Translators: Error when a variable receives more format arguments than it
+    # supports. {name} is the language-independent technical variable name.
+    "variable_argument_count_invalid": lambda parameters: _(
+        "The variable '{name}' accepts at most one format."
+    ).format(**parameters),
+    # Translators: Error for an unsupported date or time variable format.
+    # {format} and {name} are language-independent technical identifiers.
+    "variable_format_invalid": lambda parameters: _(
+        "The format '{format}' is not supported for the variable '{name}'."
+    ).format(**parameters),
     # Translators: Validation error when a global shortcut contains an
     # unsupported keyboard key.
     "hotkey_key_unsupported": lambda parameters: _(

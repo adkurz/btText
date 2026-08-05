@@ -7,9 +7,11 @@ import wx
 from core import datamodel
 from core.app_settings import AppSettings
 from core.events import EventEmitter
+from core.variables import RenderedSnippet, VariableError
 from i18n import _
 from platform_support import clipboard, hotstring_expansion, hotstrings, windows
 from platform_support.clipboard_paste import PendingPaste
+from ui.variable_resolver import show_variable_error
 
 
 class HotstringController:
@@ -23,6 +25,7 @@ class HotstringController:
         get_settings: Callable[[], AppSettings],
         schedule_clipboard_restore: Callable[[PendingPaste], None],
         notify_expansion: Callable[[datamodel.Snippet], None],
+        render_snippet: Callable[[str], RenderedSnippet],
     ):
         """Create the hook and subscribe to snippet mutations."""
         self._parent = parent
@@ -30,6 +33,7 @@ class HotstringController:
         self._get_settings = get_settings
         self._schedule_clipboard_restore = schedule_clipboard_restore
         self._notify_expansion = notify_expansion
+        self._render_snippet = render_snippet
         self._hook = hotstrings.KeyboardHook(
             self._queue_expansion,
             lambda: windows.is_external_window(windows.get_foreground_window()),
@@ -91,9 +95,14 @@ class HotstringController:
         """Replace a recognized hotstring through the clipboard paste path."""
         settings = self._get_settings()
         try:
+            rendered = self._render_snippet(snippet.content)
+        except VariableError as error:
+            show_variable_error(self._parent, error)
+            return
+        try:
             pending = hotstring_expansion.expand_hotstring(
                 target_window,
-                snippet.content,
+                rendered.text,
                 len(snippet.hotstring or ""),
                 boundary_key if settings.preserve_hotstring_boundary else None,
             )

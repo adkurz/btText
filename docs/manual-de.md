@@ -116,6 +116,21 @@ Mit **Speichern** übernehmen Sie die Änderungen. Der Name und der Inhalt dürf
 
 Zum Bearbeiten markieren Sie einen einzelnen Textbaustein und wählen im Kontextmenü **Textbaustein bearbeiten** oder drücken `F2`.
 
+### Variablen für Datum und Uhrzeit
+
+Textbausteine können Variablen enthalten, die btText unmittelbar vor dem Einfügen ersetzt. Variablennamen und Formatnamen sind unabhängig von der Sprache der Benutzeroberfläche immer Englisch. Beispielsweise fügt `{{date}}` das aktuelle Datum und `{{time}}` die aktuelle Uhrzeit ein.
+
+Für Datum, Uhrzeit und deren Kombination stehen folgende Variablen zur Verfügung:
+
+- `{{date}}`, `{{time}}` und `{{datetime}}` verwenden das kurze Format;
+- `{{date:short}}`, `{{date:medium}}`, `{{date:long}}` und `{{date:full}}` wählen unterschiedlich ausführliche, sprachabhängige Datumsformate;
+- dieselben Formatnamen können mit `time` und `datetime` verwendet werden;
+- `{{date:iso}}`, `{{time:iso}}` und `{{datetime:iso}}` erzeugen ein festes, sprachunabhängiges ISO-Format.
+
+Die sprachabhängigen Formate richten sich nach der aktuell von btText verwendeten Sprache. So kann `{{date:long}}` auf Deutsch beispielsweise `6. August 2026` und auf Englisch `August 6, 2026` ergeben. Alle Datums- und Zeitvariablen eines Einfügevorgangs verwenden denselben Zeitpunkt.
+
+Um die Zeichen `{{` oder `}}` unverändert auszugeben, verdoppeln Sie die jeweilige Zeichenfolge zu `{{{{` beziehungsweise `}}}}`. Unbekannte Variablen, ungültige Formate und fehlerhafte Klammern verhindern das Einfügen und werden als Fehler gemeldet.
+
 ### Text einfügen oder kopieren
 
 Öffnen Sie btText mit der globalen Tastenkombination oder über das Symbol im Infobereich und markieren Sie einen Textbaustein. Anschließend können Sie:

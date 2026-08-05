@@ -115,6 +115,9 @@ class ErrorMessagesTestCase(unittest.TestCase):
             "LanguageError",
             "SettingsError",
             "SnippetValidationError",
+            "UnknownVariableError",
+            "VariableResolutionError",
+            "VariableSyntaxError",
         }
         declared_codes = set()
         project_root = Path(__file__).resolve().parents[1]
@@ -122,6 +125,8 @@ class ErrorMessagesTestCase(unittest.TestCase):
             "core/app_settings.py",
             "core/datamodel.py",
             "core/shortcuts.py",
+            "core/variables.py",
+            "core/builtin_variables.py",
             "i18n.py",
         ):
             tree = ast.parse((project_root / relative_file).read_text(encoding="utf-8"))
