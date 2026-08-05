@@ -1,7 +1,13 @@
 import unittest
 from datetime import datetime, timezone
 
-from core.builtin_variables import create_builtin_variable_engine
+from core.builtin_variables import (
+    BUILTIN_VARIABLE_CATALOG,
+    BuiltinVariable,
+    VariableDescription,
+    VariableEditorKind,
+    create_builtin_variable_engine,
+)
 from core.variables import (
     RenderedSnippet,
     ResolutionContext,
@@ -41,6 +47,28 @@ class BuiltinVariableTestCase(unittest.TestCase):
                 request_input,
             ),
         ).text
+
+    def test_catalog_has_one_unique_definition_per_builtin_variable(self):
+        names = [
+            variable.definition.name
+            for variable in BUILTIN_VARIABLE_CATALOG
+        ]
+
+        self.assertEqual(len(names), len(set(names)))
+        self.assertEqual(
+            set(VariableDescription),
+            {variable.description for variable in BUILTIN_VARIABLE_CATALOG},
+        )
+
+    def test_catalog_rejects_inconsistent_editor_metadata(self):
+        definition = BUILTIN_VARIABLE_CATALOG[0].definition
+
+        with self.assertRaises(ValueError):
+            BuiltinVariable(
+                definition,
+                VariableDescription.DATE,
+                VariableEditorKind.INPUT_LABEL,
+            )
 
     def test_date_defaults_to_localized_short_format(self):
         self.assertEqual(self.render("{{date}}", "de"), "06.08.26")

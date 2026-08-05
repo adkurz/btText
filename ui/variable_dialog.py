@@ -5,12 +5,9 @@ from dataclasses import dataclass
 import wx
 
 from core.builtin_variables import (
-    BUILTIN_VARIABLE_FORMATS,
-    BUILTIN_VARIABLE_NAMES,
-    CONTEXT_VARIABLE_NAMES,
-    INSTRUCTION_VARIABLE_NAMES,
-    INTERACTIVE_VARIABLE_NAMES,
-    TEMPORAL_VARIABLE_NAMES,
+    BUILTIN_VARIABLE_CATALOG,
+    VariableDescription,
+    VariableEditorKind,
 )
 from i18n import _
 from ui import theme
@@ -24,47 +21,65 @@ class VariableSuggestion:
     expression: str
     description: str
     variable_description: str | None = None
+    editor_kind: VariableEditorKind = VariableEditorKind.PLAIN
+
+
+def _get_variable_description(description: VariableDescription) -> str:
+    """Localize one stable description identifier from the core catalog."""
+    descriptions = {
+        # Translators: Description used in the snippet variable picker.
+        VariableDescription.DATE: _("Current date"),
+        # Translators: Description used in the snippet variable picker.
+        VariableDescription.TIME: _("Current time"),
+        # Translators: Description used in the snippet variable picker.
+        VariableDescription.DATETIME: _("Current date and time"),
+        # Translators: Description used in the snippet variable picker.
+        VariableDescription.CLIPBOARD: _(
+            "Current Unicode text from the Windows clipboard"
+        ),
+        # Translators: Description used in the snippet variable picker. This is
+        # the executable filename, not a possibly private window title.
+        VariableDescription.APPLICATION: _(
+            "Executable filename of the target application"
+        ),
+        # Translators: Description used in the snippet variable picker.
+        VariableDescription.INPUT: _("Text requested during insertion"),
+        # Translators: Description used in the snippet variable picker.
+        VariableDescription.CURSOR: _("Final cursor position after insertion"),
+    }
+    return descriptions[description]
 
 
 def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
     """Return localized editor choices for every built-in variable format."""
-    value_descriptions = {
-        # Translators: Description used in the snippet variable picker.
-        "date": _("Current date"),
-        # Translators: Description used in the snippet variable picker.
-        "time": _("Current time"),
-        # Translators: Description used in the snippet variable picker.
-        "datetime": _("Current date and time"),
-        # Translators: Description used in the snippet variable picker.
-        "clipboard": _("Current Unicode text from the Windows clipboard"),
-        # Translators: Description used in the snippet variable picker. This is
-        # the executable filename, not a possibly private window title.
-        "app": _("Executable filename of the target application"),
-        # Translators: Description used in the snippet variable picker.
-        "input": _("Text requested during insertion"),
-        # Translators: Description used in the snippet variable picker.
-        "cursor": _("Final cursor position after insertion"),
-    }
     suggestions = []
-    for name in BUILTIN_VARIABLE_NAMES:
-        value_description = value_descriptions[name]
-        if name in CONTEXT_VARIABLE_NAMES or name in INSTRUCTION_VARIABLE_NAMES:
+    for variable in BUILTIN_VARIABLE_CATALOG:
+        name = variable.definition.name
+        value_description = _get_variable_description(variable.description)
+        if variable.editor_kind is VariableEditorKind.PLAIN:
             suggestions.append(
                 VariableSuggestion(
                     "{{" + name + "}}",
                     value_description + ".",
                     value_description,
+                    variable.editor_kind,
                 )
             )
             continue
-        if name in INTERACTIVE_VARIABLE_NAMES:
+        if variable.editor_kind is VariableEditorKind.INPUT_LABEL:
+            placeholder = variable.editor_placeholder
+            if placeholder is None:
+                raise ValueError(
+                    f"Variable {name!r} requires an editor placeholder."
+                )
             suggestions.append(
                 VariableSuggestion(
-                    "{{input:Prompt}}",
+                    "{{" + name + ":" + placeholder + "}}",
                     # Translators: Description for the editable placeholder in
                     # an interactive input variable expression.
                     _("Replace 'Prompt' with the requested value's label."),
                     value_description,
+                    variable.editor_kind,
                 )
             )
             continue
@@ -77,11 +92,10 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                     value=value_description
                 ),
                 value_description,
+                variable.editor_kind,
             )
         )
-        if name not in TEMPORAL_VARIABLE_NAMES:
-            continue
-        for format_name in BUILTIN_VARIABLE_FORMATS:
+        for format_name in variable.editor_options:
             if format_name == "iso":
                 continue
             suggestions.append(
@@ -95,6 +109,7 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                         format=format_name,
                     ),
                     value_description,
+                    variable.editor_kind,
                 )
             )
         suggestions.append(
@@ -106,6 +121,7 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                     value=value_description
                 ),
                 value_description,
+                variable.editor_kind,
             )
         )
     return tuple(suggestions)
@@ -128,6 +144,7 @@ class VariablePickerDialog(wx.Dialog):
         self._groups = self._group_suggestions(suggestions)
         self._visible_suggestions: tuple[VariableSuggestion, ...] = ()
         self._visible_name: str | None = None
+        self._visible_editor_kind = VariableEditorKind.PLAIN
         # Translators: Label for the list of variables available to insert.
         label = wx.StaticText(self, label=_("&Available variables"))
         self.variable_list = wx.ListBox(
@@ -220,7 +237,7 @@ class VariablePickerDialog(wx.Dialog):
         variable_selection = self.variable_list.GetSelection()
         if variable_selection == wx.NOT_FOUND or not self._visible_suggestions:
             return None
-        if self._visible_name == "input":
+        if self._visible_editor_kind is VariableEditorKind.INPUT_LABEL:
             label = self.input_text.GetValue()
             if not self._input_label_is_valid(label):
                 return None
@@ -258,10 +275,14 @@ class VariablePickerDialog(wx.Dialog):
         selection = self.variable_list.GetSelection()
         if selection == wx.NOT_FOUND:
             self._visible_name = None
+            self._visible_editor_kind = VariableEditorKind.PLAIN
             self._visible_suggestions = ()
         else:
             self._visible_name, self._visible_suggestions = self._groups[selection]
-        has_custom_input = self._visible_name == "input"
+            self._visible_editor_kind = self._visible_suggestions[0].editor_kind
+        has_custom_input = (
+            self._visible_editor_kind is VariableEditorKind.INPUT_LABEL
+        )
         has_settings = len(self._visible_suggestions) > 1
         self.settings_list.Set(
             [self._setting_label(item) for item in self._visible_suggestions]
@@ -301,7 +322,7 @@ class VariablePickerDialog(wx.Dialog):
         """Insert a setting-free variable or move to its settings list."""
         self._update_settings()
         if len(self._visible_suggestions) == 1:
-            if self._visible_name == "input":
+            if self._visible_editor_kind is VariableEditorKind.INPUT_LABEL:
                 self.input_text.SetFocus()
             else:
                 self.EndModal(wx.ID_OK)

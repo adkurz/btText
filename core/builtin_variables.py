@@ -1,7 +1,9 @@
 """Built-in snippet variables with locale-aware date and time formatting."""
 
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import date, datetime, time
+from enum import Enum, auto
 
 from babel.dates import format_date, format_datetime, format_time
 
@@ -16,19 +18,60 @@ from core.variables import (
 )
 
 
-TEMPORAL_VARIABLE_NAMES = ("date", "time", "datetime")
-CONTEXT_VARIABLE_NAMES = ("clipboard", "app")
-INTERACTIVE_VARIABLE_NAMES = ("input",)
-INSTRUCTION_VARIABLE_NAMES = ("cursor",)
-BUILTIN_VARIABLE_NAMES = (
-    TEMPORAL_VARIABLE_NAMES
-    + CONTEXT_VARIABLE_NAMES
-    + INTERACTIVE_VARIABLE_NAMES
-    + INSTRUCTION_VARIABLE_NAMES
-)
 BUILTIN_VARIABLE_FORMATS = ("short", "medium", "long", "full", "iso")
 _LOCALIZED_FORMATS = frozenset(BUILTIN_VARIABLE_FORMATS[:-1])
 _DEFAULT_FORMAT = "short"
+
+
+class VariableEditorKind(Enum):
+    """Describe how the editor configures a built-in variable."""
+
+    PLAIN = auto()
+    TEMPORAL_FORMAT = auto()
+    INPUT_LABEL = auto()
+
+
+class VariableDescription(Enum):
+    """Identify a localizable built-in variable description."""
+
+    DATE = auto()
+    TIME = auto()
+    DATETIME = auto()
+    CLIPBOARD = auto()
+    APPLICATION = auto()
+    INPUT = auto()
+    CURSOR = auto()
+
+
+@dataclass(frozen=True)
+class BuiltinVariable:
+    """Declare runtime and editor metadata for one built-in variable."""
+
+    definition: VariableDefinition
+    description: VariableDescription
+    editor_kind: VariableEditorKind = VariableEditorKind.PLAIN
+    editor_options: tuple[str, ...] = ()
+    editor_placeholder: str | None = None
+
+    def __post_init__(self) -> None:
+        """Reject inconsistent editor metadata when defining the catalog."""
+        if self.editor_kind is VariableEditorKind.PLAIN:
+            if self.editor_options or self.editor_placeholder is not None:
+                raise ValueError("A plain variable cannot define editor settings.")
+            return
+        if self.editor_kind is VariableEditorKind.TEMPORAL_FORMAT:
+            if not self.editor_options or self.editor_placeholder is not None:
+                raise ValueError(
+                    "A temporal variable requires format options only."
+                )
+            return
+        if (
+            not self.editor_placeholder
+            or self.editor_options
+        ):
+            raise ValueError(
+                "An input variable requires one editor placeholder only."
+            )
 
 
 def _requested_format(
@@ -199,36 +242,84 @@ def _resolve_cursor(
     return ResolvedVariable(cursor_position=True)
 
 
+def _validate_temporal(
+    variable_name: str,
+) -> Callable[[tuple[str, ...]], None]:
+    """Build an argument validator for one temporal variable."""
+
+    def validate(arguments: tuple[str, ...]) -> None:
+        _requested_format(variable_name, arguments)
+
+    return validate
+
+
+def _validate_no_arguments(
+    variable_name: str,
+) -> Callable[[tuple[str, ...]], None]:
+    """Build an argument validator for one parameterless variable."""
+
+    def validate(arguments: tuple[str, ...]) -> None:
+        _reject_arguments(variable_name, arguments)
+
+    return validate
+
+
+BUILTIN_VARIABLE_CATALOG = (
+    BuiltinVariable(
+        VariableDefinition("date", _resolve_date, _validate_temporal("date")),
+        VariableDescription.DATE,
+        VariableEditorKind.TEMPORAL_FORMAT,
+        BUILTIN_VARIABLE_FORMATS,
+    ),
+    BuiltinVariable(
+        VariableDefinition("time", _resolve_time, _validate_temporal("time")),
+        VariableDescription.TIME,
+        VariableEditorKind.TEMPORAL_FORMAT,
+        BUILTIN_VARIABLE_FORMATS,
+    ),
+    BuiltinVariable(
+        VariableDefinition(
+            "datetime",
+            _resolve_datetime,
+            _validate_temporal("datetime"),
+        ),
+        VariableDescription.DATETIME,
+        VariableEditorKind.TEMPORAL_FORMAT,
+        BUILTIN_VARIABLE_FORMATS,
+    ),
+    BuiltinVariable(
+        VariableDefinition(
+            "clipboard",
+            _resolve_clipboard,
+            _validate_no_arguments("clipboard"),
+        ),
+        VariableDescription.CLIPBOARD,
+    ),
+    BuiltinVariable(
+        VariableDefinition("app", _resolve_app, _validate_no_arguments("app")),
+        VariableDescription.APPLICATION,
+    ),
+    BuiltinVariable(
+        VariableDefinition("input", _resolve_input, _input_label),
+        VariableDescription.INPUT,
+        VariableEditorKind.INPUT_LABEL,
+        editor_placeholder="Prompt",
+    ),
+    BuiltinVariable(
+        VariableDefinition(
+            "cursor",
+            _resolve_cursor,
+            _validate_no_arguments("cursor"),
+            maximum_occurrences=1,
+        ),
+        VariableDescription.CURSOR,
+    ),
+)
+
 def create_builtin_variable_engine() -> VariableEngine:
     """Create an engine containing every built-in snippet variable."""
-    resolvers = {
-        "date": _resolve_date,
-        "time": _resolve_time,
-        "datetime": _resolve_datetime,
-        "clipboard": _resolve_clipboard,
-        "app": _resolve_app,
-        "input": _resolve_input,
-        "cursor": _resolve_cursor,
-    }
-    argument_validators = {
-        "date": lambda arguments: _requested_format("date", arguments),
-        "time": lambda arguments: _requested_format("time", arguments),
-        "datetime": lambda arguments: _requested_format("datetime", arguments),
-        "clipboard": lambda arguments: _reject_arguments("clipboard", arguments),
-        "app": lambda arguments: _reject_arguments("app", arguments),
-        "input": _input_label,
-        "cursor": lambda arguments: _reject_arguments("cursor", arguments),
-    }
     return VariableEngine(
         VariableRegistry(
-            tuple(
-                VariableDefinition(
-                    name,
-                    resolvers[name],
-                    argument_validators[name],
-                    1 if name in INSTRUCTION_VARIABLE_NAMES else None,
-                )
-                for name in BUILTIN_VARIABLE_NAMES
-            )
+            variable.definition for variable in BUILTIN_VARIABLE_CATALOG
         )
     )

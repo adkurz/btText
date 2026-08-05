@@ -3,11 +3,8 @@ import unittest
 import wx
 
 from core.builtin_variables import (
-    BUILTIN_VARIABLE_FORMATS,
-    BUILTIN_VARIABLE_NAMES,
-    CONTEXT_VARIABLE_NAMES,
-    INTERACTIVE_VARIABLE_NAMES,
-    TEMPORAL_VARIABLE_NAMES,
+    BUILTIN_VARIABLE_CATALOG,
+    VariableEditorKind,
 )
 from ui.variable_dialog import (
     VariablePickerDialog,
@@ -26,22 +23,25 @@ class VariableDialogTestCase(unittest.TestCase):
         suggestions = get_builtin_variable_suggestions()
         expressions = {suggestion.expression for suggestion in suggestions}
 
-        self.assertEqual(len(suggestions), 22)
-        for name in BUILTIN_VARIABLE_NAMES:
-            if name in INTERACTIVE_VARIABLE_NAMES:
-                continue
-            self.assertIn("{{" + name + "}}", expressions)
-        self.assertIn("{{input:Prompt}}", expressions)
-        for name in TEMPORAL_VARIABLE_NAMES:
-            for format_name in BUILTIN_VARIABLE_FORMATS:
+        expected_count = 0
+        for variable in BUILTIN_VARIABLE_CATALOG:
+            name = variable.definition.name
+            if variable.editor_kind is VariableEditorKind.INPUT_LABEL:
                 self.assertIn(
-                    "{{" + name + ":" + format_name + "}}",
+                    "{{" + name + ":" + variable.editor_placeholder + "}}",
                     expressions,
                 )
-        for name in CONTEXT_VARIABLE_NAMES:
-            self.assertFalse(
-                any(expression.startswith("{{" + name + ":") for expression in expressions)
-            )
+                expected_count += 1
+            else:
+                self.assertIn("{{" + name + "}}", expressions)
+                expected_count += 1 + len(variable.editor_options)
+                for option in variable.editor_options:
+                    self.assertIn(
+                        "{{" + name + ":" + option + "}}",
+                        expressions,
+                    )
+
+        self.assertEqual(len(suggestions), expected_count)
 
     def test_picker_splits_variables_and_formats_into_two_lists(self):
         suggestions = (

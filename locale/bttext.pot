@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-06 01:32+0200\n"
+"POT-Creation-Date: 2026-08-06 01:45+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -641,7 +641,7 @@ msgstr ""
 #. Translators: Snippet-editor button that discards unsaved changes and
 #. Translators: Button that closes the variable picker without inserting.
 #: ui/database_selection.py:57 ui/search_dialog.py:61 ui/settings_dialog.py:98
-#: ui/snippet_editor.py:165 ui/variable_dialog.py:175
+#: ui/snippet_editor.py:165 ui/variable_dialog.py:192
 msgid "&Cancel"
 msgstr ""
 
@@ -1486,50 +1486,50 @@ msgid "The input field must not be empty!"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:33
+#: ui/variable_dialog.py:31
 msgid "Current date"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:35
+#: ui/variable_dialog.py:33
 msgid "Current time"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:37
+#: ui/variable_dialog.py:35
 msgid "Current date and time"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:39
+#: ui/variable_dialog.py:38
 msgid "Current Unicode text from the Windows clipboard"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker. This is
 #. the executable filename, not a possibly private window title.
-#: ui/variable_dialog.py:42
+#: ui/variable_dialog.py:43
 msgid "Executable filename of the target application"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:44
+#: ui/variable_dialog.py:46
 msgid "Text requested during insertion"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:46
+#: ui/variable_dialog.py:48
 msgid "Final cursor position after insertion"
 msgstr ""
 
 #. Translators: Description for the editable placeholder in
 #. an interactive input variable expression.
-#: ui/variable_dialog.py:66
+#: ui/variable_dialog.py:80
 msgid "Replace 'Prompt' with the requested value's label."
 msgstr ""
 
 #. Translators: Description for a variable without an explicit
 #. format. {value} is a localized date/time value description.
-#: ui/variable_dialog.py:76
+#: ui/variable_dialog.py:91
 #, python-brace-format
 msgid "{value} using the default localized short format."
 msgstr ""
@@ -1537,77 +1537,77 @@ msgstr ""
 #. Translators: Description for a localized date/time
 #. variable. {value} is its value type; {format} is a
 #. language-independent technical format name.
-#: ui/variable_dialog.py:93
+#: ui/variable_dialog.py:107
 #, python-brace-format
 msgid "{value} using the localized '{format}' format."
 msgstr ""
 
 #. Translators: Description for a language-independent date/time
 #. variable. {value} is a localized value description.
-#: ui/variable_dialog.py:105
+#: ui/variable_dialog.py:120
 #, python-brace-format
 msgid "{value} using the language-independent ISO format."
 msgstr ""
 
 #. Translators: Window title for choosing a snippet variable.
-#: ui/variable_dialog.py:125
+#: ui/variable_dialog.py:141
 msgid "Insert variable"
 msgstr ""
 
 #. Translators: Label for the list of variables available to insert.
-#: ui/variable_dialog.py:132
+#: ui/variable_dialog.py:149
 msgid "&Available variables"
 msgstr ""
 
 #. Translators: Accessible name for the snippet variable picker list.
-#: ui/variable_dialog.py:142
+#: ui/variable_dialog.py:159
 msgid "Available snippet variables"
 msgstr ""
 
 #. Translators: Label for optional variable formats or settings.
-#: ui/variable_dialog.py:151
+#: ui/variable_dialog.py:168
 msgid "Possible &formats or settings"
 msgstr ""
 
 #. Translators: Accessible name for optional variable
 #. formats/settings.
-#: ui/variable_dialog.py:157
+#: ui/variable_dialog.py:174
 msgid "Available variable formats or settings"
 msgstr ""
 
 #. Translators: Label for the prompt stored in an interactive input
 #. variable. "&" marks the keyboard mnemonic.
-#: ui/variable_dialog.py:161
+#: ui/variable_dialog.py:178
 msgid "&Prompt"
 msgstr ""
 
 #. Translators: Accessible name for the editable prompt of {{input}}.
-#: ui/variable_dialog.py:164
+#: ui/variable_dialog.py:181
 msgid "Interactive variable prompt"
 msgstr ""
 
 #. Translators: Button that inserts the selected variable expression.
-#: ui/variable_dialog.py:173
+#: ui/variable_dialog.py:190
 msgid "&Insert"
 msgstr ""
 
 #. Translators: Default choice for a variable with optional formats.
-#: ui/variable_dialog.py:253
+#: ui/variable_dialog.py:270
 msgid "Default"
 msgstr ""
 
 #. Translators: Window title for rendered snippet variable output.
-#: ui/variable_dialog.py:330
+#: ui/variable_dialog.py:351
 msgid "Variable preview"
 msgstr ""
 
 #. Translators: Label for the rendered snippet text in the preview.
-#: ui/variable_dialog.py:334
+#: ui/variable_dialog.py:355
 msgid "Resolved &text"
 msgstr ""
 
 #. Translators: Accessible name for rendered snippet preview text.
-#: ui/variable_dialog.py:341
+#: ui/variable_dialog.py:362
 msgid "Resolved snippet text"
 msgstr ""
 
