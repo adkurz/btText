@@ -215,31 +215,124 @@ class MainFrameConstructionTestCase(unittest.TestCase):
 
 
 class HotkeyLayoutChangeTestCase(unittest.TestCase):
-    @patch("ui.main_frame.wx.CallAfter")
-    @patch("ui.main_frame.windows.activate_window")
-    def test_show_and_focus_uses_native_activation(
-        self,
-        activate_window,
-        call_after,
-    ):
+    def test_show_and_focus_sets_target_before_showing_frame(self):
         category_tree = Mock()
         frame = SimpleNamespace(
             Show=Mock(),
             Iconize=Mock(),
-            GetHandle=Mock(return_value=123),
-            Raise=Mock(),
             _last_focused_control=None,
             category_tree=category_tree,
+            _pending_show_focus=None,
         )
 
         MainFrame.show_and_focus(frame)
 
         frame.Show.assert_called_once_with()
         frame.Iconize.assert_called_once_with(False)
+        self.assertIs(frame._pending_show_focus, category_tree)
+
+    @patch("ui.main_frame.wx.CallAfter")
+    def test_show_event_defers_pending_activation(self, call_after):
+        target = Mock()
+        activate_and_focus = Mock()
+        event = Mock(IsShown=Mock(return_value=True))
+        frame = SimpleNamespace(
+            _pending_show_focus=target,
+            _activate_and_focus=activate_and_focus,
+        )
+
+        MainFrame._on_show(frame, event)
+
+        event.Skip.assert_called_once_with()
+        self.assertIsNone(frame._pending_show_focus)
+        call_after.assert_called_once_with(activate_and_focus, target)
+
+    @patch("ui.main_frame.wx.CallAfter")
+    def test_initial_show_event_without_pending_target_does_not_activate(
+        self,
+        call_after,
+    ):
+        event = Mock(IsShown=Mock(return_value=True))
+        frame = SimpleNamespace(
+            _pending_show_focus=None,
+        )
+
+        MainFrame._on_show(frame, event)
+
+        event.Skip.assert_called_once_with()
+        call_after.assert_not_called()
+
+    @patch("ui.main_frame.wx.CallAfter")
+    @patch("ui.main_frame.windows.activate_window", return_value=True)
+    def test_deferred_activation_focuses_frame_before_scheduling_child(
+        self,
+        activate_window,
+        call_after,
+    ):
+        target = Mock()
+        focus_restored_control = Mock()
+        frame = SimpleNamespace(
+            IsShown=Mock(return_value=True),
+            GetHandle=Mock(return_value=123),
+            Raise=Mock(),
+            SetFocus=Mock(),
+            _focus_restored_control=focus_restored_control,
+        )
+
+        MainFrame._activate_and_focus(frame, target)
+
         activate_window.assert_called_once_with(123)
         frame.Raise.assert_called_once_with()
-        category_tree.SetFocus.assert_called_once_with()
-        call_after.assert_called_once_with(category_tree.SetFocus)
+        frame.SetFocus.assert_called_once_with()
+        target.SetFocus.assert_not_called()
+        call_after.assert_called_once_with(focus_restored_control, target)
+
+    def test_restored_child_is_focused_in_following_event_cycle(self):
+        target = Mock()
+        frame = SimpleNamespace(IsShown=Mock(return_value=True))
+
+        MainFrame._focus_restored_control(frame, target)
+
+        target.SetFocus.assert_called_once_with()
+
+    def test_restored_child_is_not_focused_after_frame_was_hidden(self):
+        target = Mock()
+        frame = SimpleNamespace(IsShown=Mock(return_value=False))
+
+        MainFrame._focus_restored_control(frame, target)
+
+        target.SetFocus.assert_not_called()
+
+    @patch("ui.main_frame.wx.CallLater")
+    @patch("ui.main_frame.windows.activate_window", return_value=False)
+    def test_failed_foreground_activation_is_retried_before_focusing(
+        self,
+        activate_window,
+        call_later,
+    ):
+        target = Mock()
+        retry = Mock()
+        frame = SimpleNamespace(
+            IsShown=Mock(return_value=True),
+            GetHandle=Mock(return_value=123),
+            Raise=Mock(),
+            _activate_and_focus=retry,
+        )
+
+        MainFrame._activate_and_focus(frame, target)
+
+        activate_window.assert_called_once_with(123)
+        call_later.assert_called_once_with(50, retry, target, 4)
+        frame.Raise.assert_not_called()
+        target.SetFocus.assert_not_called()
+
+    @patch("ui.main_frame.windows.activate_window")
+    def test_pending_activation_stops_after_frame_is_hidden(self, activate_window):
+        frame = SimpleNamespace(IsShown=Mock(return_value=False))
+
+        MainFrame._activate_and_focus(frame, Mock())
+
+        activate_window.assert_not_called()
 
     def test_layout_timer_delegates_to_binding(self):
         frame = SimpleNamespace(

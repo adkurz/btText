@@ -34,6 +34,8 @@ from ui.variable_dialog import get_builtin_variable_suggestions
 from ui.variable_resolver import SnippetVariableResolver
 
 HOTKEY_LAYOUT_CHECK_INTERVAL_MS = 500
+FOREGROUND_RETRY_INTERVAL_MS = 50
+FOREGROUND_ACTIVATION_ATTEMPTS = 5
 
 
 class MainFrame(sc.SizedFrame):
@@ -53,6 +55,7 @@ class MainFrame(sc.SizedFrame):
         self._ee = ee
         self._model = model
         self._settings_store = settings_store
+        self._pending_show_focus: wx.Window | None = None
         self._create_process_integrations(
             ee,
             model,
@@ -129,6 +132,7 @@ class MainFrame(sc.SizedFrame):
         )
         self._ee.on("status.changed", self.set_status_text)
         self.Bind(wx.EVT_ACTIVATE, self.on_activate)
+        self.Bind(wx.EVT_SHOW, self._on_show)
         self.Bind(
             wx.EVT_HOTKEY,
             self.on_global_hotkey,
@@ -328,14 +332,45 @@ class MainFrame(sc.SizedFrame):
 
     def show_and_focus(self):
         """Restore the frame and return focus to a useful child control."""
+        self._pending_show_focus = self._last_focused_control or self.category_tree
         self.Show()
         self.Iconize(False)
-        windows.activate_window(self.GetHandle())
+
+    def _on_show(self, event: wx.ShowEvent) -> None:
+        """Activate a restored frame after its native show event."""
+        event.Skip()
+        if not event.IsShown() or self._pending_show_focus is None:
+            return
+        target = self._pending_show_focus
+        self._pending_show_focus = None
+        wx.CallAfter(self._activate_and_focus, target)
+
+    def _activate_and_focus(
+        self,
+        target: wx.Window,
+        attempts_remaining: int = FOREGROUND_ACTIVATION_ATTEMPTS,
+    ) -> None:
+        """Activate the visible frame before focusing its remembered child."""
+        if not self.IsShown():
+            return
+        if not windows.activate_window(self.GetHandle()):
+            if attempts_remaining > 1:
+                wx.CallLater(
+                    FOREGROUND_RETRY_INTERVAL_MS,
+                    self._activate_and_focus,
+                    target,
+                    attempts_remaining - 1,
+                )
+            return
         self.Raise()
-        target = self._last_focused_control or self.category_tree
+        self.SetFocus()
+        wx.CallAfter(self._focus_restored_control, target)
+
+    def _focus_restored_control(self, target: wx.Window) -> None:
+        """Move focus to a child after accessibility sees frame activation."""
+        if not self.IsShown():
+            return
         target.SetFocus()
-        # Repeat after pending native events when restoring a hidden frame.
-        wx.CallAfter(target.SetFocus)
 
     def _remember_focused_control(self):
         """Remember which primary list should regain keyboard focus."""
