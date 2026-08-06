@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-06 01:52+0200\n"
+"POT-Creation-Date: 2026-08-06 02:01+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1609,17 +1609,17 @@ msgid "Enter the values required by this snippet."
 msgstr ""
 
 #. Translators: Window title for rendered snippet variable output.
-#: ui/variable_dialog.py:444
+#: ui/variable_dialog.py:448
 msgid "Variable preview"
 msgstr ""
 
 #. Translators: Label for the rendered snippet text in the preview.
-#: ui/variable_dialog.py:448
+#: ui/variable_dialog.py:452
 msgid "Resolved &text"
 msgstr ""
 
 #. Translators: Accessible name for rendered snippet preview text.
-#: ui/variable_dialog.py:455
+#: ui/variable_dialog.py:459
 msgid "Resolved snippet text"
 msgstr ""
 

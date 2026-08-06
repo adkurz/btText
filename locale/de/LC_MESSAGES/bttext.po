@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-08-06 01:52+0200\n"
+"POT-Creation-Date: 2026-08-06 02:01+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -1630,17 +1630,17 @@ msgid "Enter the values required by this snippet."
 msgstr "Geben Sie die von diesem Textbaustein benötigten Werte ein."
 
 #. Translators: Window title for rendered snippet variable output.
-#: ui/variable_dialog.py:444
+#: ui/variable_dialog.py:448
 msgid "Variable preview"
 msgstr "Variablenvorschau"
 
 #. Translators: Label for the rendered snippet text in the preview.
-#: ui/variable_dialog.py:448
+#: ui/variable_dialog.py:452
 msgid "Resolved &text"
 msgstr "Aufgelöster &Text"
 
 #. Translators: Accessible name for rendered snippet preview text.
-#: ui/variable_dialog.py:455
+#: ui/variable_dialog.py:459
 msgid "Resolved snippet text"
 msgstr "Aufgelöster Textbausteintext"
 
@@ -1649,3 +1649,4 @@ msgstr "Aufgelöster Textbausteintext"
 #: ui/variable_resolver.py:108
 msgid "Variable error"
 msgstr "Variablenfehler"
+
