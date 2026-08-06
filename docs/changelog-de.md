@@ -16,6 +16,8 @@
 
 - Wird die Liste der Textbausteine nach dem Wechseln einer Kategorie fokussiert, erhält deren erster Listeneintrag nun korrekt den Fokus.
 
+- Die Suche berücksichtigt nun auch Hotstrings.
+
 ## [v1.0] 02.08.2026
 
 Erste Version

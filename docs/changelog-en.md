@@ -16,6 +16,8 @@
 
 - If the list of snippets is focused after changing a category, the first list entry now receives the focus correctly.
 
+- The search now also takes hotstrings into account.
+
 ## [v1.0] 2026-08-02
 
 First Version
