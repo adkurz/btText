@@ -310,6 +310,7 @@ class SnippetEditor(wx.Dialog):
         snippet_weight = self.weight_input.GetSelection() + 1
         snippet_content = self.content_input.GetValue()
         if not self._variables_are_valid(snippet_content):
+            self.content_input.SetFocus()
             return
         snippet_hotstring = self.hotstring_input.GetValue()
         snippet = datamodel.Snippet(

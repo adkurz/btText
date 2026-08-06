@@ -183,6 +183,7 @@ class SnippetEditorVariableTestCase(unittest.TestCase):
         dialog._variables_are_valid.assert_called_once_with(
             "Today is {{date:long}}."
         )
+        dialog.content_input.SetFocus.assert_called_once_with()
         model.add_snippet.assert_not_called()
         dialog.EndModal.assert_not_called()
 

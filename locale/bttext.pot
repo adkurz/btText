@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-06 13:31+0200\n"
+"POT-Creation-Date: 2026-08-06 14:50+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1282,7 +1282,7 @@ msgid "Discard unsaved changes?"
 msgstr ""
 
 #. Translators: Title of a dialog reporting invalid form input.
-#: ui/snippet_editor.py:333 ui/validators.py:29
+#: ui/snippet_editor.py:334 ui/validators.py:29
 msgid "Validation error"
 msgstr ""
 
