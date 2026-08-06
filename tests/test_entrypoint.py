@@ -15,7 +15,6 @@ class SingleInstanceTestCase(unittest.TestCase):
     @patch("btText.app_paths.get_log_file")
     @patch("btText.configure_logging")
     @patch("btText.theme.apply_to_app")
-    @patch("btText.theme.initialize")
     @patch("btText.DataModel")
     @patch("btText.i18n.initialize")
     @patch("btText.SettingsStore")
@@ -32,7 +31,6 @@ class SingleInstanceTestCase(unittest.TestCase):
         settings_store,
         initialize_i18n,
         data_model,
-        initialize_theme,
         apply_theme_to_app,
         configure_logging,
         get_log_file,
@@ -46,8 +44,10 @@ class SingleInstanceTestCase(unittest.TestCase):
         btText.main()
 
         app_class.return_value.SetAppName.assert_called_once_with("btText")
-        initialize_theme.assert_called_once_with(APPEARANCE_DARK)
-        apply_theme_to_app.assert_called_once_with(app_class.return_value)
+        apply_theme_to_app.assert_called_once_with(
+            app_class.return_value,
+            APPEARANCE_DARK,
+        )
         checker_class.assert_called_once_with("btText-test-user")
         message_box.assert_called_once_with(
             "btText is already running.",

@@ -5,7 +5,7 @@ from unittest.mock import Mock, patch
 
 import wx
 
-from core.app_settings import APPEARANCE_DARK, APPEARANCE_LIGHT
+from core.app_settings import APPEARANCE_DARK, APPEARANCE_LIGHT, APPEARANCE_SYSTEM
 from ui import theme
 
 
@@ -17,61 +17,37 @@ class ThemeSelectionTestCase(unittest.TestCase):
     def tearDown(self):
         theme._active_theme = None
 
-    @patch("ui.theme.system_uses_dark_mode", return_value=True)
-    def test_initialize_selects_dark_theme(self, system_uses_dark_mode):
-        active_theme = theme.initialize()
-
-        self.assertTrue(active_theme.dark)
-        system_uses_dark_mode.assert_called_once_with()
-
-    @patch("ui.theme.system_uses_dark_mode")
-    def test_explicit_dark_does_not_query_system(self, system_uses_dark_mode):
-        active_theme = theme.initialize(APPEARANCE_DARK)
-
-        self.assertTrue(active_theme.dark)
-        system_uses_dark_mode.assert_not_called()
-
-    @patch("ui.theme.system_uses_dark_mode")
-    def test_explicit_light_does_not_query_system(self, system_uses_dark_mode):
-        active_theme = theme.initialize(APPEARANCE_LIGHT)
-
-        self.assertFalse(active_theme.dark)
-        system_uses_dark_mode.assert_not_called()
-
-    @patch("ui.theme.system_uses_dark_mode", return_value=False)
-    def test_initialize_selects_light_theme_for_light_system(
-        self,
-        system_uses_dark_mode,
-    ):
-        active_theme = theme.initialize()
-
-        self.assertFalse(active_theme.dark)
-        self.assertIs(active_theme, theme._LIGHT_THEME)
-
-    def test_apply_to_app_requests_native_dark_appearance(self):
+    @patch("ui.theme.wx.SystemSettings.GetAppearance")
+    def test_apply_to_app_requests_native_dark_appearance(self, get_appearance):
         app = Mock()
-        theme._active_theme = theme._DARK_THEME
+        get_appearance.return_value.IsDark.return_value = True
 
-        theme.apply_to_app(app)
+        theme.apply_to_app(app, APPEARANCE_DARK)
 
         app.SetAppearance.assert_called_once_with(wx.PyApp.Appearance.Dark)
-
-    def test_apply_to_app_requests_native_light_appearance(self):
-        app = Mock()
-        theme._active_theme = theme._LIGHT_THEME
-
-        theme.apply_to_app(app)
-
-        app.SetAppearance.assert_called_once_with(wx.PyApp.Appearance.Light)
+        self.assertIs(theme.get_active_theme(), theme._DARK_THEME)
 
     @patch("ui.theme.wx.SystemSettings.GetAppearance")
-    def test_system_appearance_uses_default_app_appearance(self, get_appearance):
-        get_appearance.return_value.AreAppsDark.return_value = True
+    def test_apply_to_app_requests_native_light_appearance(self, get_appearance):
+        app = Mock()
+        get_appearance.return_value.IsDark.return_value = False
 
-        self.assertTrue(theme.system_uses_dark_mode())
+        theme.apply_to_app(app, APPEARANCE_LIGHT)
 
+        app.SetAppearance.assert_called_once_with(wx.PyApp.Appearance.Light)
+        self.assertIs(theme.get_active_theme(), theme._LIGHT_THEME)
+
+    @patch("ui.theme.wx.SystemSettings.GetAppearance")
+    def test_apply_to_app_requests_native_system_appearance(self, get_appearance):
+        app = Mock()
+        get_appearance.return_value.IsDark.return_value = True
+
+        theme.apply_to_app(app, APPEARANCE_SYSTEM)
+
+        app.SetAppearance.assert_called_once_with(wx.PyApp.Appearance.System)
         get_appearance.assert_called_once_with()
-        get_appearance.return_value.AreAppsDark.assert_called_once_with()
+        get_appearance.return_value.IsDark.assert_called_once_with()
+        self.assertIs(theme.get_active_theme(), theme._DARK_THEME)
 
     @patch("ui.theme._apply_windows_title_bar")
     @patch("ui.theme._apply_to_window")

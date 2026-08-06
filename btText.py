@@ -117,8 +117,7 @@ def main():
         except SettingsError as error:
             settings = AppSettings()
             settings_error = error
-        theme.initialize(settings.appearance)
-        theme.apply_to_app(app)
+        theme.apply_to_app(app, settings.appearance)
         language_error = None
         try:
             i18n.initialize(

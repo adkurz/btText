@@ -43,36 +43,31 @@ _DARK_THEME = Theme(
 _active_theme: Theme | None = None
 
 
-def system_uses_dark_mode() -> bool:
-    """Return whether applications use a dark appearance by default."""
-    return bool(wx.SystemSettings.GetAppearance().AreAppsDark())
-
-
-def initialize(appearance: str = APPEARANCE_SYSTEM) -> Theme:
-    """Select and retain the configured appearance for this application run."""
-    global _active_theme
-    use_dark_theme = appearance == APPEARANCE_DARK or (
-        appearance == APPEARANCE_SYSTEM and system_uses_dark_mode()
-    )
-    if use_dark_theme:
-        _active_theme = _DARK_THEME
-    else:
-        _active_theme = _LIGHT_THEME
-    return _active_theme
-
-
 def get_active_theme() -> Theme:
-    """Return the startup theme, initializing it on first use if necessary."""
-    return _active_theme if _active_theme is not None else initialize()
+    """Return the appearance selected by wx for this application run."""
+    if _active_theme is not None:
+        return _active_theme
+    return _theme_for_current_appearance()
 
 
-def apply_to_app(app: wx.App) -> None:
-    """Request the selected native appearance before creating any windows."""
-    active_theme = get_active_theme()
-    appearance = (
-        wx.PyApp.Appearance.Dark if active_theme.dark else wx.PyApp.Appearance.Light
-    )
-    app.SetAppearance(appearance)
+def apply_to_app(app: wx.App, appearance: str = APPEARANCE_SYSTEM) -> None:
+    """Request the configured native appearance before creating any windows."""
+    native_appearances = {
+        APPEARANCE_SYSTEM: wx.PyApp.Appearance.System,
+        APPEARANCE_LIGHT: wx.PyApp.Appearance.Light,
+        APPEARANCE_DARK: wx.PyApp.Appearance.Dark,
+    }
+    app.SetAppearance(native_appearances[appearance])
+
+    global _active_theme
+    _active_theme = _theme_for_current_appearance()
+
+
+def _theme_for_current_appearance() -> Theme:
+    """Return custom colours matching the current wx application appearance."""
+    if wx.SystemSettings.GetAppearance().IsDark():
+        return _DARK_THEME
+    return _LIGHT_THEME
 
 
 def apply(window: wx.Window) -> None:
