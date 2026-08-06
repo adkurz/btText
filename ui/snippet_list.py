@@ -125,6 +125,8 @@ class SnippetList(wx.ListView):
                 )
                 self.SetItemData(index, snippet.id or 0)
             self.sort()
+            if self.GetItemCount():
+                self.Focus(0)
 
     def context_menu(self, event: wx.ContextMenuEvent):
         """Show commands valid for the current row and transfer state."""

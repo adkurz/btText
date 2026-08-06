@@ -165,6 +165,8 @@ class SearchDialog(wx.Dialog):
                         )
                     )
                     self.result_list.SetItemData(index, snippet.id or 0)
+                if self.result_list.GetItemCount():
+                    self.result_list.Focus(0)
             except datamodel.DataModelError as error:
                 wx.MessageBox(
                     format_user_error(error),

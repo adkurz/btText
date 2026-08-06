@@ -214,6 +214,34 @@ class MainFrameConstructionTestCase(unittest.TestCase):
         self.assertEqual(calls, ["show", "hide"])
 
 
+class SnippetListUpdateTestCase(unittest.TestCase):
+    def test_update_focuses_first_row_without_selecting_it(self):
+        snippet = SimpleNamespace(
+            id=7,
+            name="Example",
+            weight=1,
+            content="Example content",
+        )
+        snippet_list = SimpleNamespace(
+            selected_category_id=None,
+            _model=SimpleNamespace(get_snippets=Mock(return_value=[snippet])),
+            Freeze=Mock(),
+            Thaw=Mock(),
+            DeleteAllItems=Mock(),
+            Append=Mock(return_value=0),
+            SetItemData=Mock(),
+            sort=Mock(),
+            GetItemCount=Mock(return_value=1),
+            Focus=Mock(),
+            Select=Mock(),
+        )
+
+        SnippetList.update(snippet_list, 3)
+
+        snippet_list.Focus.assert_called_once_with(0)
+        snippet_list.Select.assert_not_called()
+
+
 class HotkeyLayoutChangeTestCase(unittest.TestCase):
     def test_show_and_focus_sets_target_before_showing_frame(self):
         category_tree = Mock()
