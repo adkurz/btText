@@ -82,6 +82,11 @@ class NativeWindowTestCase(unittest.TestCase):
                 )
                 or True,
             ),
+            patch.object(
+                windows.user32,
+                "GetForegroundWindow",
+                return_value=123,
+            ),
         ):
             self.assertTrue(windows.activate_window(123))
 
@@ -92,6 +97,46 @@ class NativeWindowTestCase(unittest.TestCase):
                 ("foreground", 123),
             ],
         )
+
+    def test_activation_joins_foreground_input_thread_after_direct_failure(self):
+        foreground_handles = iter((456, 456, 123))
+
+        with (
+            patch.object(windows.user32, "IsWindow", return_value=True),
+            patch.object(windows.user32, "ShowWindow"),
+            patch.object(windows.user32, "SetForegroundWindow") as set_foreground,
+            patch.object(
+                windows.user32,
+                "GetForegroundWindow",
+                side_effect=foreground_handles,
+            ),
+            patch.object(
+                windows.user32,
+                "GetWindowThreadProcessId",
+                return_value=22,
+            ),
+            patch.object(
+                windows.kernel32,
+                "GetCurrentThreadId",
+                return_value=11,
+            ),
+            patch.object(
+                windows.user32,
+                "AttachThreadInput",
+                return_value=True,
+            ) as attach_thread_input,
+            patch.object(windows.user32, "BringWindowToTop") as bring_to_top,
+            patch.object(windows.user32, "SetFocus") as set_focus,
+        ):
+            self.assertTrue(windows.activate_window(123))
+
+        self.assertEqual(set_foreground.call_count, 2)
+        self.assertEqual(
+            attach_thread_input.call_args_list,
+            [unittest.mock.call(11, 22, True), unittest.mock.call(11, 22, False)],
+        )
+        bring_to_top.assert_called_once_with(123)
+        set_focus.assert_called_once_with(123)
 
     def test_invalid_window_is_not_activated(self):
         with (

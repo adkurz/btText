@@ -1,4 +1,5 @@
 import unittest
+from unittest.mock import Mock, patch
 
 import wx
 
@@ -150,6 +151,33 @@ class VariableDialogTestCase(unittest.TestCase):
     def test_interactive_dialog_requires_at_least_one_label(self):
         with self.assertRaises(ValueError):
             InteractiveVariablesDialog(None, ())
+
+    @patch("ui.variable_dialog.windows.activate_window")
+    @patch("ui.variable_dialog.wx.CallAfter")
+    def test_interactive_dialog_activates_before_focusing_first_input(
+        self,
+        call_after,
+        activate_window,
+    ):
+        dialog = InteractiveVariablesDialog(None, ("Kundennummer",))
+        try:
+            event = Mock(IsShown=Mock(return_value=True))
+            dialog.Raise = Mock()
+            first_input = dialog._inputs["Kundennummer"]
+            first_input.SetFocus = Mock()
+
+            dialog._on_show(event)
+
+            event.Skip.assert_called_once_with()
+            call_after.assert_called_once_with(
+                dialog._activate_and_focus_first_input
+            )
+            call_after.call_args.args[0]()
+            activate_window.assert_called_once_with(dialog.GetHandle())
+            dialog.Raise.assert_called_once_with()
+            first_input.SetFocus.assert_called_once_with()
+        finally:
+            dialog.Destroy()
 
 
 if __name__ == "__main__":

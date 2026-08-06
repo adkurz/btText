@@ -14,6 +14,7 @@ from core.builtin_variables import create_builtin_variable_engine
 from core.error_messages import format_user_error
 from core.events import EventEmitter
 from i18n import _
+from platform_support import windows
 from platform_support.documentation import open_changelog, open_manual
 from platform_support.logging_support import open_log_directory
 from ui import utils
@@ -66,9 +67,15 @@ class MainFrame(sc.SizedFrame):
         self._create_tray_icon()
         self._configure_frame_geometry()
         theme.apply(self)
-        # Let wx finish creating and displaying the frame before touching
+        self._initialize_hidden_frame()
+        # Let wx finish processing the initial show/hide cycle before touching
         # process-wide hooks or loading all hotstrings from the database.
         wx.CallAfter(self._start_process_integrations)
+
+    def _initialize_hidden_frame(self) -> None:
+        """Create a previously shown native owner while starting hidden."""
+        self.ShowWithoutActivating()
+        self.Hide()
 
     def _create_process_integrations(
         self,
@@ -323,6 +330,7 @@ class MainFrame(sc.SizedFrame):
         """Restore the frame and return focus to a useful child control."""
         self.Show()
         self.Iconize(False)
+        windows.activate_window(self.GetHandle())
         self.Raise()
         target = self._last_focused_control or self.category_tree
         target.SetFocus()

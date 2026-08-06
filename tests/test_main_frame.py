@@ -181,6 +181,7 @@ class MainFrameConstructionTestCase(unittest.TestCase):
                 )
                 self.assertIsNotNone(frame.GetMenuBar())
                 self.assertIsNotNone(frame.GetStatusBar())
+                self.assertFalse(frame.IsShown())
                 exit_item = frame.GetMenuBar().FindItemById(wx.ID_EXIT)
                 self.assertEqual(exit_item.GetItemLabel(), _("E&xit\tCtrl+Q"))
                 self.assertEqual(frame.category_tree.GetName(), _("Categories"))
@@ -201,8 +202,45 @@ class MainFrameConstructionTestCase(unittest.TestCase):
                     wx.YieldIfNeeded()
                 model.close()
 
+    def test_hidden_frame_is_shown_without_activation_before_being_hidden(self):
+        calls = []
+        frame = SimpleNamespace(
+            ShowWithoutActivating=lambda: calls.append("show"),
+            Hide=lambda: calls.append("hide"),
+        )
+
+        MainFrame._initialize_hidden_frame(frame)
+
+        self.assertEqual(calls, ["show", "hide"])
+
 
 class HotkeyLayoutChangeTestCase(unittest.TestCase):
+    @patch("ui.main_frame.wx.CallAfter")
+    @patch("ui.main_frame.windows.activate_window")
+    def test_show_and_focus_uses_native_activation(
+        self,
+        activate_window,
+        call_after,
+    ):
+        category_tree = Mock()
+        frame = SimpleNamespace(
+            Show=Mock(),
+            Iconize=Mock(),
+            GetHandle=Mock(return_value=123),
+            Raise=Mock(),
+            _last_focused_control=None,
+            category_tree=category_tree,
+        )
+
+        MainFrame.show_and_focus(frame)
+
+        frame.Show.assert_called_once_with()
+        frame.Iconize.assert_called_once_with(False)
+        activate_window.assert_called_once_with(123)
+        frame.Raise.assert_called_once_with()
+        category_tree.SetFocus.assert_called_once_with()
+        call_after.assert_called_once_with(category_tree.SetFocus)
+
     def test_layout_timer_delegates_to_binding(self):
         frame = SimpleNamespace(
             _global_hotkey=Mock(refresh_keyboard_layout=Mock(return_value=None)),

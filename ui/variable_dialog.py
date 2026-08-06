@@ -10,6 +10,7 @@ from core.builtin_variables import (
     VariableEditorKind,
 )
 from i18n import _
+from platform_support import windows
 from ui import theme
 from ui.controls import FocusableReadOnlyTextCtrl
 
@@ -435,7 +436,13 @@ class InteractiveVariablesDialog(wx.Dialog):
         """Focus the first value field when the dialog is displayed."""
         event.Skip()
         if event.IsShown():
-            wx.CallAfter(self._inputs[self._labels[0]].SetFocus)
+            wx.CallAfter(self._activate_and_focus_first_input)
+
+    def _activate_and_focus_first_input(self) -> None:
+        """Bring the dialog forward before focusing its first value field."""
+        windows.activate_window(self.GetHandle())
+        self.Raise()
+        self._inputs[self._labels[0]].SetFocus()
 
 
 class VariablePreviewDialog(wx.Dialog):

@@ -21,7 +21,18 @@ user32.IsWindow.restype = wintypes.BOOL
 user32.SetForegroundWindow.argtypes = (wintypes.HWND,)
 user32.SetForegroundWindow.restype = wintypes.BOOL
 user32.ShowWindow.argtypes = (wintypes.HWND, ctypes.c_int)
+user32.AttachThreadInput.argtypes = (
+    wintypes.DWORD,
+    wintypes.DWORD,
+    wintypes.BOOL,
+)
+user32.AttachThreadInput.restype = wintypes.BOOL
+user32.BringWindowToTop.argtypes = (wintypes.HWND,)
+user32.BringWindowToTop.restype = wintypes.BOOL
+user32.SetFocus.argtypes = (wintypes.HWND,)
+user32.SetFocus.restype = wintypes.HWND
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
+kernel32.GetCurrentThreadId.restype = wintypes.DWORD
 kernel32.OpenProcess.argtypes = (
     wintypes.DWORD,
     wintypes.BOOL,
@@ -94,4 +105,26 @@ def activate_window(handle: int | None) -> bool:
     if not is_valid_window(handle):
         return False
     user32.ShowWindow(handle, SW_RESTORE)
-    return bool(user32.SetForegroundWindow(handle))
+    user32.SetForegroundWindow(handle)
+    if get_foreground_window() == handle:
+        return True
+
+    foreground_window = get_foreground_window()
+    if not foreground_window:
+        return False
+    foreground_thread = user32.GetWindowThreadProcessId(
+        foreground_window,
+        None,
+    )
+    current_thread = kernel32.GetCurrentThreadId()
+    if not foreground_thread or foreground_thread == current_thread:
+        return False
+    if not user32.AttachThreadInput(current_thread, foreground_thread, True):
+        return False
+    try:
+        user32.BringWindowToTop(handle)
+        user32.SetForegroundWindow(handle)
+        user32.SetFocus(handle)
+    finally:
+        user32.AttachThreadInput(current_thread, foreground_thread, False)
+    return get_foreground_window() == handle
