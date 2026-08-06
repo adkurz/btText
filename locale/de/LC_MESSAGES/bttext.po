@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-08-06 21:36+0200\n"
+"POT-Creation-Date: 2026-08-07 00:04+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -432,6 +432,18 @@ msgstr "Es ist ein unerwarteter Anwendungsfehler aufgetreten."
 #: i18n.py:60
 msgid "System default"
 msgstr "Systemstandard"
+
+#. Translators: Hotstring expansion failed because its target application
+#. window was closed before btText could replace the typed abbreviation.
+#: platform_support/hotstring_expansion.py:19
+msgid "The active window no longer exists."
+msgstr "Das aktive Fenster ist nicht mehr vorhanden."
+
+#. Translators: Hotstring expansion failed because Windows did not
+#. allow btText to return focus to the target application window.
+#: platform_support/hotstring_expansion.py:25
+msgid "The active window could not be activated."
+msgstr "Das aktive Fenster konnte nicht aktiviert werden."
 
 #. Translators: Root label of the main window's category tree.
 #. Translators: Accessible name for the main window's category tree.
@@ -1649,4 +1661,3 @@ msgstr "Aufgelöster Textbausteintext"
 #: ui/variable_resolver.py:108
 msgid "Variable error"
 msgstr "Variablenfehler"
-

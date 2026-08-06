@@ -61,15 +61,24 @@ class HotstringExpansionTestCase(unittest.TestCase):
     def test_invalid_target_is_rejected_before_preparing_clipboard(self):
         with (
             patch.object(
+                hotstring_expansion,
+                "_",
+                return_value="Das aktive Fenster ist nicht mehr vorhanden.",
+            ) as translate,
+            patch.object(
                 hotstring_expansion.windows,
                 "is_valid_window",
                 return_value=False,
             ),
             patch.object(PendingPaste, "prepare") as prepare,
         ):
-            with self.assertRaises(clipboard.ClipboardError):
+            with self.assertRaisesRegex(
+                clipboard.ClipboardError,
+                "Das aktive Fenster ist nicht mehr vorhanden",
+            ):
                 hotstring_expansion.expand_hotstring(123, "Expanded", 3, None)
 
+        translate.assert_called_once_with("The active window no longer exists.")
         prepare.assert_not_called()
 
     def test_activation_failure_restores_pending_paste(self):

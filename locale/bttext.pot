@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-06 21:36+0200\n"
+"POT-Creation-Date: 2026-08-07 00:04+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -424,6 +424,18 @@ msgstr ""
 #. system's language when a matching catalog is installed.
 #: i18n.py:60
 msgid "System default"
+msgstr ""
+
+#. Translators: Hotstring expansion failed because its target application
+#. window was closed before btText could replace the typed abbreviation.
+#: platform_support/hotstring_expansion.py:19
+msgid "The active window no longer exists."
+msgstr ""
+
+#. Translators: Hotstring expansion failed because Windows did not
+#. allow btText to return focus to the target application window.
+#: platform_support/hotstring_expansion.py:25
+msgid "The active window could not be activated."
 msgstr ""
 
 #. Translators: Root label of the main window's category tree.
