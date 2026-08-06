@@ -64,32 +64,14 @@ class ThemeSelectionTestCase(unittest.TestCase):
 
         app.SetAppearance.assert_called_once_with(wx.PyApp.Appearance.Light)
 
-    @patch("ui.theme.sys.platform", "win32")
-    @patch("ui.theme._windows_uses_dark_mode", return_value=True)
-    def test_windows_system_appearance_uses_windows_preference(
-        self,
-        windows_uses_dark_mode,
-    ):
-        with patch("ui.theme.wx.SystemSettings.GetAppearance") as get_appearance:
-            self.assertTrue(theme.system_uses_dark_mode())
-
-        windows_uses_dark_mode.assert_called_once_with()
-        get_appearance.assert_not_called()
-
-    @patch("ui.theme.sys.platform", "win32")
-    @patch("ui.theme._windows_uses_dark_mode", return_value=None)
     @patch("ui.theme.wx.SystemSettings.GetAppearance")
-    def test_windows_system_appearance_falls_back_to_wx(
-        self,
-        get_appearance,
-        windows_uses_dark_mode,
-    ):
-        get_appearance.return_value.IsDark.return_value = True
+    def test_system_appearance_uses_default_app_appearance(self, get_appearance):
+        get_appearance.return_value.AreAppsDark.return_value = True
 
         self.assertTrue(theme.system_uses_dark_mode())
 
-        windows_uses_dark_mode.assert_called_once_with()
         get_appearance.assert_called_once_with()
+        get_appearance.return_value.AreAppsDark.assert_called_once_with()
 
     @patch("ui.theme._apply_windows_title_bar")
     @patch("ui.theme._apply_to_window")

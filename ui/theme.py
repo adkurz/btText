@@ -44,31 +44,8 @@ _active_theme: Theme | None = None
 
 
 def system_uses_dark_mode() -> bool:
-    """Return whether the system uses a dark appearance."""
-    if sys.platform == "win32":
-        windows_dark_mode = _windows_uses_dark_mode()
-        if windows_dark_mode is not None:
-            return windows_dark_mode
-
-    get_appearance = getattr(wx.SystemSettings, "GetAppearance", None)
-    if get_appearance is None:
-        return False
-    return bool(get_appearance().IsDark())
-
-
-def _windows_uses_dark_mode() -> bool | None:
-    """Read the Windows app appearance preference, if it is available."""
-    try:
-        import winreg
-
-        with winreg.OpenKey(
-            winreg.HKEY_CURRENT_USER,
-            r"Software\Microsoft\Windows\CurrentVersion\Themes\Personalize",
-        ) as key:
-            value, _value_type = winreg.QueryValueEx(key, "AppsUseLightTheme")
-    except (ImportError, OSError, TypeError, ValueError):
-        return None
-    return not bool(value)
+    """Return whether applications use a dark appearance by default."""
+    return bool(wx.SystemSettings.GetAppearance().AreAppsDark())
 
 
 def initialize(appearance: str = APPEARANCE_SYSTEM) -> Theme:
