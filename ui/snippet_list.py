@@ -49,6 +49,14 @@ class SnippetList(wx.ListView):
         self._validate_snippet = validate_snippet
         self._variable_suggestions = variable_suggestions
         self.selected_category_id = None
+        header_font = wx.Font(self.GetFont())
+        header_font.SetWeight(wx.FONTWEIGHT_BOLD)
+        self._header_attributes = wx.ItemAttr(
+            wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT),
+            wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNFACE),
+            header_font,
+        )
+        self.SetHeaderAttr(self._header_attributes)
         # Translators: Snippet-list column containing each snippet's name.
         self.AppendColumn(_("Name"), width=self.FromDIP(220))
         # Translators: Snippet-list column containing the localized search rank.

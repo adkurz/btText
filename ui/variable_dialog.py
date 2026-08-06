@@ -11,7 +11,6 @@ from core.builtin_variables import (
 )
 from i18n import _
 from platform_support import windows
-from ui import theme
 from ui.controls import FocusableReadOnlyTextCtrl
 
 
@@ -230,7 +229,6 @@ class VariablePickerDialog(wx.Dialog):
         self.SetSize(self.FromDIP((760, 520)))
         self._update_settings()
         self.CentreOnParent()
-        theme.apply(self)
         self.Bind(wx.EVT_SHOW, self._on_show)
 
     def get_selected_expression(self) -> str | None:
@@ -422,7 +420,6 @@ class InteractiveVariablesDialog(wx.Dialog):
         self.SetMinSize(self.FromDIP((480, 280)))
         self.SetSize(self.FromDIP((620, 420)))
         self.CentreOnParent()
-        theme.apply(self)
         self.Bind(wx.EVT_SHOW, self._on_show)
 
     def get_values(self) -> dict[str, str]:
@@ -487,7 +484,6 @@ class VariablePreviewDialog(wx.Dialog):
         self.SetMinSize(self.FromDIP((560, 360)))
         self.SetSize(self.FromDIP((720, 500)))
         self.CentreOnParent()
-        theme.apply(self)
         self.Bind(wx.EVT_SHOW, self._on_show)
 
     def _on_close(self, event: wx.CommandEvent) -> None:

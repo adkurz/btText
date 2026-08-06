@@ -18,7 +18,6 @@ from platform_support import windows
 from platform_support.documentation import open_changelog, open_manual
 from platform_support.logging_support import open_log_directory
 from ui import utils
-from ui import theme
 from ui.category_tree import CategoryTree
 from ui.database_selection import select_database
 from ui.global_hotkey import WxGlobalHotkeyBinding
@@ -69,7 +68,6 @@ class MainFrame(sc.SizedFrame):
         self._create_statusbar()
         self._create_tray_icon()
         self._configure_frame_geometry()
-        theme.apply(self)
         self._initialize_hidden_frame()
         # Let wx finish processing the initial show/hide cycle before touching
         # process-wide hooks or loading all hotstrings from the database.

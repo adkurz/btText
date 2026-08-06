@@ -15,7 +15,6 @@ from core.variables import (
 )
 from i18n import _
 from ui import utils
-from ui import theme
 from ui.variable_dialog import (
     VariablePickerDialog,
     VariablePreviewDialog,
@@ -189,7 +188,6 @@ class SnippetEditor(wx.Dialog):
             self.load()
         self._initial_state = self._current_state()
         self._closing_allowed = False
-        theme.apply(self)
 
     def _on_show(self, event: wx.ShowEvent):
         """Focus the first input after wx has activated the dialog."""

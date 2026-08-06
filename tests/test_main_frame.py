@@ -189,6 +189,19 @@ class MainFrameConstructionTestCase(unittest.TestCase):
                     frame.snippet_list.GetName(),
                     _("Snippets in the selected category"),
                 )
+                header_attributes = frame.snippet_list._header_attributes
+                self.assertEqual(
+                    header_attributes.GetTextColour(),
+                    wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNTEXT),
+                )
+                self.assertEqual(
+                    header_attributes.GetBackgroundColour(),
+                    wx.SystemSettings.GetColour(wx.SYS_COLOUR_BTNFACE),
+                )
+                self.assertEqual(
+                    header_attributes.GetFont().GetWeight(),
+                    wx.FONTWEIGHT_BOLD,
+                )
                 (
                     settings_controller_class.return_value.register_initial_hotkey.assert_called_once_with()
                 )
