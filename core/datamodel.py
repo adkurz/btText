@@ -348,7 +348,7 @@ class DataModel:
 
     @_translate_sqlite_errors
     def search_snippets(self, term: str):
-        """Yield snippets whose name or content contains a literal term."""
+        """Yield snippets whose name, content, or hotstring contains a literal term."""
         if not term:
             return  # An empty query deliberately yields no results.
         sql = (
@@ -357,6 +357,7 @@ class DataModel:
             "INNER JOIN category c ON s.category_id = c.id "
             "WHERE s.name LIKE :term ESCAPE '\\' "
             "OR s.content LIKE :term ESCAPE '\\' "
+            "OR s.hotstring LIKE :term ESCAPE '\\' "
             "ORDER BY category_name COLLATE NOCASE, c.id, s.weight DESC, "
             "s.name COLLATE NOCASE, s.id"
         )

@@ -155,7 +155,7 @@ Beim Einfügen merkt sich btText das zuvor aktive Fenster, blendet sein eigenes 
 
 ### Suchen
 
-Drücken Sie `F3` oder wählen Sie **Bearbeiten > Suchen**. Geben Sie einen Suchbegriff ein, um Textbausteine zu finden. Die Ergebnisse zeigen Name, Kategorie, Gewichtung und eine Inhaltsvorschau.
+Drücken Sie `F3` oder wählen Sie **Bearbeiten > Suchen**. Geben Sie einen Suchbegriff ein, um Textbausteine anhand ihres Namens, Inhalts oder Hotstrings zu finden. Die Ergebnisse zeigen Name, Kategorie, Gewichtung und eine Inhaltsvorschau.
 
 Wählen Sie ein Ergebnis und **Textbaustein anzeigen**, um btText zur passenden Kategorie zu navigieren und den Textbaustein zu markieren.
 

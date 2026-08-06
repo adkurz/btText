@@ -634,6 +634,25 @@ class DataModelTestCase(unittest.TestCase):
                 results = list(self.model.search_snippets(term))
                 self.assertEqual([result.id for result in results], [expected.id])
 
+    def test_search_finds_snippet_by_hotstring(self):
+        category = self.model.add_category(Category("Search"))
+        matching_snippet = self.model.add_snippet(
+            Snippet(
+                "Postal address",
+                "Example Street 1",
+                category.id,
+                hotstring=";addr",
+            )
+        )
+        self.model.add_snippet(
+            Snippet("Unrelated", "Other content", category.id, hotstring=";other")
+        )
+
+        results = list(self.model.search_snippets("addr"))
+
+        self.assertEqual([result.id for result in results], [matching_snippet.id])
+        self.assertEqual(results[0].hotstring, ";addr")
+
 
 class DatabaseMigrationTestCase(unittest.TestCase):
     def test_empty_database_file_is_initialized(self):

@@ -155,7 +155,7 @@ When inserting, btText remembers the previously active window, hides its own win
 
 ### Search
 
-Press `F3` or select **Edit > Search** (Bearbeiten > Suchen). Enter a search term to find text snippets. The results show the name, category, weighting, and a content preview.
+Press `F3` or select **Edit > Search** (Bearbeiten > Suchen). Enter a search term to find text snippets by name, content, or hotstring. The results show the name, category, weighting, and a content preview.
 
 Select a result and **Show text snippet** (Textbaustein anzeigen) to navigate to the matching category and select the text snippet.
 
