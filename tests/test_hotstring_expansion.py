@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import Mock, call, patch
 
+from core.hotstrings import HotstringExpansionError
 from platform_support import clipboard, hotstring_expansion
 from platform_support.clipboard_paste import ClipboardRestoreError, PendingPaste
 
@@ -61,24 +62,17 @@ class HotstringExpansionTestCase(unittest.TestCase):
     def test_invalid_target_is_rejected_before_preparing_clipboard(self):
         with (
             patch.object(
-                hotstring_expansion,
-                "_",
-                return_value="Das aktive Fenster ist nicht mehr vorhanden.",
-            ) as translate,
-            patch.object(
                 hotstring_expansion.windows,
                 "is_valid_window",
                 return_value=False,
             ),
             patch.object(PendingPaste, "prepare") as prepare,
         ):
-            with self.assertRaisesRegex(
-                clipboard.ClipboardError,
-                "Das aktive Fenster ist nicht mehr vorhanden",
-            ):
+            with self.assertRaises(HotstringExpansionError) as raised:
                 hotstring_expansion.expand_hotstring(123, "Expanded", 3, None)
 
-        translate.assert_called_once_with("The active window no longer exists.")
+        self.assertEqual(raised.exception.code, "hotstring_target_window_missing")
+        self.assertEqual(str(raised.exception), "The active window no longer exists.")
         prepare.assert_not_called()
 
     def test_activation_failure_restores_pending_paste(self):
@@ -96,9 +90,13 @@ class HotstringExpansionTestCase(unittest.TestCase):
                 return_value=False,
             ),
         ):
-            with self.assertRaises(clipboard.ClipboardError):
+            with self.assertRaises(HotstringExpansionError) as raised:
                 hotstring_expansion.expand_hotstring(123, "Expanded", 3, None)
 
+        self.assertEqual(
+            raised.exception.code,
+            "hotstring_target_window_activation_failed",
+        )
         pending.restore_clipboard.assert_called_once_with()
 
     def test_input_failure_restores_pending_paste(self):

@@ -5,6 +5,12 @@ import unicodedata
 from collections.abc import Mapping
 from typing import Generic, TypeVar
 
+from core.user_errors import UserFacingError
+
+
+class HotstringExpansionError(UserFacingError):
+    """Raised when a recognized hotstring cannot be expanded in its target."""
+
 
 Payload = TypeVar("Payload")
 

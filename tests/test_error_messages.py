@@ -8,6 +8,7 @@ import i18n
 from core.app_settings import SettingsError, SettingsStore
 from core.datamodel import CategoryValidationError, EntityNotFoundError
 from core.error_messages import _FORMATTERS, format_user_error
+from core.hotstrings import HotstringExpansionError
 from core.user_errors import UserFacingError
 
 
@@ -92,6 +93,22 @@ class ErrorMessagesTestCase(unittest.TestCase):
             "An unexpected application error occurred.",
         )
 
+    def test_hotstring_target_error_is_translated_at_ui_boundary(self):
+        source = "The active window no longer exists."
+        i18n._translation = MappingTranslations(
+            {source: "Das aktive Fenster ist nicht mehr vorhanden."}
+        )
+        error = HotstringExpansionError(
+            "hotstring_target_window_missing",
+            source,
+        )
+
+        self.assertEqual(str(error), source)
+        self.assertEqual(
+            format_user_error(error),
+            "Das aktive Fenster ist nicht mehr vorhanden.",
+        )
+
     def test_catalog_load_error_explains_english_fallback(self):
         error = i18n.LanguageError(
             "language_catalog_load_failed",
@@ -112,6 +129,7 @@ class ErrorMessagesTestCase(unittest.TestCase):
             "DataModelError",
             "EntityNotFoundError",
             "HotkeyError",
+            "HotstringExpansionError",
             "LanguageError",
             "SettingsError",
             "SnippetValidationError",
@@ -124,6 +142,7 @@ class ErrorMessagesTestCase(unittest.TestCase):
         for relative_file in (
             "core/app_settings.py",
             "core/datamodel.py",
+            "core/hotstrings.py",
             "core/shortcuts.py",
             "core/variables.py",
             "core/builtin_variables.py",

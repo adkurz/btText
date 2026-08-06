@@ -99,6 +99,16 @@ def _format_settings_save_failed(parameters: dict[str, Any]) -> str:
 
 
 _FORMATTERS: dict[str, ErrorFormatter] = {
+    # Translators: Hotstring expansion failed because its target application
+    # window was closed before btText could replace the typed abbreviation.
+    "hotstring_target_window_missing": lambda parameters: _(
+        "The active window no longer exists."
+    ),
+    # Translators: Hotstring expansion failed because Windows did not allow
+    # btText to return focus to the target application window.
+    "hotstring_target_window_activation_failed": lambda parameters: _(
+        "The active window could not be activated."
+    ),
     "database_open_failed": _format_database_open_failed,
     "database_operation_failed": _format_database_operation_failed,
     # Translators: Database-opening error shown when a configured or selected

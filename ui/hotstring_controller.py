@@ -6,7 +6,9 @@ import wx
 
 from core import datamodel
 from core.app_settings import AppSettings
+from core.error_messages import format_user_error
 from core.events import EventEmitter
+from core.hotstrings import HotstringExpansionError
 from core.variables import (
     RenderedSnippet,
     VariableError,
@@ -127,11 +129,11 @@ class HotstringController:
                 keyboard_input.move_cursor_left(
                     rendered.cursor_offset_from_end + boundary_offset
                 )
-        except clipboard.ClipboardError as error:
+        except (clipboard.ClipboardError, HotstringExpansionError) as error:
             if pending is not None:
                 self._schedule_clipboard_restore(pending)
             wx.MessageBox(
-                str(error),
+                format_user_error(error),
                 # Translators: Title for a failure to monitor or expand a
                 # globally typed snippet hotstring.
                 _("Hotstring error"),

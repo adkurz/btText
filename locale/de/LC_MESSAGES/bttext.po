@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-08-07 00:04+0200\n"
+"POT-Creation-Date: 2026-08-07 00:12+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -134,278 +134,290 @@ msgstr "Die Einstellungsdatei konnte nicht gelesen werden: {reason}"
 msgid "The settings file could not be saved: {reason}"
 msgstr "Die Einstellungsdatei konnte nicht gespeichert werden: {reason}"
 
+#. Translators: Hotstring expansion failed because its target application
+#. window was closed before btText could replace the typed abbreviation.
+#: core/error_messages.py:105
+msgid "The active window no longer exists."
+msgstr "Das aktive Fenster ist nicht mehr vorhanden."
+
+#. Translators: Hotstring expansion failed because Windows did not allow
+#. btText to return focus to the target application window.
+#: core/error_messages.py:110
+msgid "The active window could not be activated."
+msgstr "Das aktive Fenster konnte nicht aktiviert werden."
+
 #. Translators: Database-opening error shown when a configured or selected
 #. file was removed or is no longer reachable.
-#: core/error_messages.py:107
+#: core/error_messages.py:117
 msgid "The selected database file does not exist."
 msgstr "Die ausgewählte Datenbankdatei ist nicht vorhanden."
 
 #. Translators: Fatal startup error when SQLite cannot enforce relationships
 #. between categories and snippets.
-#: core/error_messages.py:112
+#: core/error_messages.py:122
 msgid "SQLite foreign-key support could not be enabled."
 msgstr "Die Fremdschlüsselunterstützung von SQLite konnte nicht aktiviert werden."
 
 #. Translators: Fatal startup error when stored records refer to missing
 #. categories or otherwise violate a database foreign-key relationship.
-#: core/error_messages.py:117
+#: core/error_messages.py:127
 msgid "The database contains records with invalid relationships."
 msgstr "Die Datenbank enthält Datensätze mit ungültigen Beziehungen."
 
 #. Translators: Fatal startup error when category parent relationships form
 #. a loop instead of a valid tree.
-#: core/error_messages.py:122
+#: core/error_messages.py:132
 msgid "The database contains a cycle in the category hierarchy."
 msgstr "Die Datenbank enthält einen Zyklus in der Kategoriehierarchie."
 
 #. Translators: Fatal startup error describing category records without names.
-#: core/error_messages.py:130
+#: core/error_messages.py:140
 msgid "The database contains categories without a name."
 msgstr "Die Datenbank enthält Kategorien ohne Namen."
 
 #. Translators: Fatal migration error for category names that are empty or
 #. consist only of spaces.
-#: core/error_messages.py:135
+#: core/error_messages.py:145
 msgid "The database contains categories with an empty name."
 msgstr "Die Datenbank enthält Kategorien mit einem leeren Namen."
 
 #. Translators: Fatal migration error when a category refers to itself as
 #. its parent.
-#: core/error_messages.py:140
+#: core/error_messages.py:150
 msgid "The database contains a category that is its own parent."
 msgstr "Die Datenbank enthält eine Kategorie, die sich selbst als übergeordnete Kategorie verwendet."
 
 #. Translators: Fatal migration error for snippet names that are empty or
 #. consist only of spaces.
-#: core/error_messages.py:145
+#: core/error_messages.py:155
 msgid "The database contains snippets with an empty name."
 msgstr "Die Datenbank enthält Textbausteine mit einem leeren Namen."
 
 #. Translators: Fatal migration error for snippets whose reusable text is
 #. empty.
-#: core/error_messages.py:150
+#: core/error_messages.py:160
 msgid "The database contains snippets with empty content."
 msgstr "Die Datenbank enthält Textbausteine mit leerem Inhalt."
 
 #. Translators: Fatal startup error for snippet records whose numeric
 #. search-ranking weight is outside the supported range.
-#: core/error_messages.py:155
+#: core/error_messages.py:165
 msgid "The database contains snippets with an invalid weight."
 msgstr "Die Datenbank enthält Textbausteine mit einer ungültigen Gewichtung."
 
 #. Translators: Fatal startup error for duplicate snippet names in one
 #. category.
-#: core/error_messages.py:159
+#: core/error_messages.py:169
 msgid "The database contains duplicate snippet names in a category."
 msgstr "Die Datenbank enthält doppelte Textbausteinnamen innerhalb einer Kategorie."
 
 #. Translators: Fatal migration error when two snippets in one category have
 #. names that differ only in uppercase or lowercase letters.
-#: core/error_messages.py:164
+#: core/error_messages.py:174
 msgid "The database contains snippet names that differ only in letter case within the same category."
 msgstr "Die Datenbank enthält Textbausteinnamen, die sich innerhalb derselben Kategorie nur durch Groß- und Kleinschreibung unterscheiden."
 
 #. Translators: Fatal startup error for snippets without an existing category.
-#: core/error_messages.py:169
+#: core/error_messages.py:179
 msgid "The database contains snippets without a category."
 msgstr "Die Datenbank enthält Textbausteine ohne Kategorie."
 
 #. Translators: Validation error when a sibling category already uses this
 #. name.
-#: core/error_messages.py:175
+#: core/error_messages.py:185
 msgid "A category with this name already exists at this level."
 msgstr "Auf dieser Ebene ist bereits eine Kategorie mit diesem Namen vorhanden."
 
 #. Translators: Internal error for an unsaved category without a database ID.
-#: core/error_messages.py:179
+#: core/error_messages.py:189
 msgid "The category has no ID."
 msgstr "Die Kategorie hat keine ID."
 
 #. Translators: Error when the intended parent category was deleted meanwhile.
-#: core/error_messages.py:183
+#: core/error_messages.py:193
 msgid "The parent category no longer exists."
 msgstr "Die übergeordnete Kategorie ist nicht mehr vorhanden."
 
 #. Translators: Validation error preventing a category being its own parent.
-#: core/error_messages.py:187
+#: core/error_messages.py:197
 msgid "A category cannot be its own parent."
 msgstr "Eine Kategorie kann nicht ihre eigene übergeordnete Kategorie sein."
 
 #. Translators: Validation error preventing a move into the category's subtree.
-#: core/error_messages.py:191
+#: core/error_messages.py:201
 msgid "A category cannot be moved below one of its descendants."
 msgstr "Eine Kategorie kann nicht unter eine ihrer Unterkategorien verschoben werden."
 
 #. Translators: Validation error preventing recursive copying into the same
 #. category subtree.
-#: core/error_messages.py:196
+#: core/error_messages.py:206
 msgid "A category cannot be copied into itself or one of its descendants."
 msgstr "Eine Kategorie kann nicht in sich selbst oder eine ihrer Unterkategorien kopiert werden."
 
 #. Translators: Validation error for an empty category or snippet name.
-#: core/error_messages.py:200
+#: core/error_messages.py:210
 msgid "The name must not be empty."
 msgstr "Der Name darf nicht leer sein."
 
 #. Translators: Validation error when a snippet has no insertion text.
-#: core/error_messages.py:204
+#: core/error_messages.py:214
 msgid "The content must not be empty."
 msgstr "Der Inhalt darf nicht leer sein."
 
 #. Translators: Error when the snippet's selected category was deleted
 #. meanwhile.
-#: core/error_messages.py:208
+#: core/error_messages.py:218
 msgid "The selected category no longer exists."
 msgstr "Die ausgewählte Kategorie ist nicht mehr vorhanden."
 
 #. Translators: Validation error when a snippet name is already used in the
 #. same category.
-#: core/error_messages.py:213
+#: core/error_messages.py:223
 msgid "A snippet with this name already exists in this category."
 msgstr "In dieser Kategorie ist bereits ein Textbaustein mit diesem Namen vorhanden."
 
 #. Translators: Validation error for a snippet search-ranking weight outside
 #. the allowed choices.
-#: core/error_messages.py:218
+#: core/error_messages.py:228
 msgid "The selected weight is not allowed."
 msgstr "Die ausgewählte Gewichtung ist nicht zulässig."
 
 #. Translators: Validation error when a hotstring contains a space, tab, or
 #. another whitespace character.
-#: core/error_messages.py:223
+#: core/error_messages.py:233
 msgid "The hotstring must not contain whitespace."
 msgstr "Der Hotstring darf keine Leerraumzeichen enthalten."
 
 #. Translators: Validation error when another snippet already uses the same
 #. global hotstring.
-#: core/error_messages.py:228
+#: core/error_messages.py:238
 msgid "This hotstring is already assigned to another snippet."
 msgstr "Dieser Hotstring ist bereits einem anderen Textbaustein zugeordnet."
 
 #. Translators: Internal error for an unsaved snippet without a database ID.
-#: core/error_messages.py:232
+#: core/error_messages.py:242
 msgid "The snippet has no ID."
 msgstr "Der Textbaustein hat keine ID."
 
 #. Translators: Error when braces or another part of a snippet variable are
 #. malformed. {position} is a zero-based character position in the snippet.
-#: core/error_messages.py:237
+#: core/error_messages.py:247
 #, python-brace-format
 msgid "The snippet contains invalid variable syntax at position {position}."
 msgstr "Der Textbaustein enthält an Position {position} eine ungültige Variablensyntax."
 
 #. Translators: Error when a snippet variable has an invalid technical name.
 #. {position} is a zero-based character position in the snippet.
-#: core/error_messages.py:242
+#: core/error_messages.py:252
 #, python-brace-format
 msgid "The snippet contains an invalid variable name at position {position}."
 msgstr "Der Textbaustein enthält an Position {position} einen ungültigen Variablennamen."
 
 #. Translators: Error when a snippet refers to a variable that btText does not
 #. provide. {name} is the language-independent technical variable name.
-#: core/error_messages.py:247
+#: core/error_messages.py:257
 #, python-brace-format
 msgid "The variable '{name}' is not available."
 msgstr "Die Variable '{name}' ist nicht verfügbar."
 
 #. Translators: Error when a known snippet variable fails while resolving.
 #. {name} is the language-independent technical variable name.
-#: core/error_messages.py:252
+#: core/error_messages.py:262
 #, python-brace-format
 msgid "The variable '{name}' could not be resolved."
 msgstr "Die Variable '{name}' konnte nicht aufgelöst werden."
 
 #. Translators: Error when a variable receives more format arguments than it
 #. supports. {name} is the language-independent technical variable name.
-#: core/error_messages.py:257
+#: core/error_messages.py:267
 #, python-brace-format
 msgid "The variable '{name}' accepts at most one format."
 msgstr "Die Variable '{name}' akzeptiert höchstens ein Format."
 
 #. Translators: Error when a context variable receives an argument although
 #. it supports only its parameterless form. {name} is its technical name.
-#: core/error_messages.py:262
+#: core/error_messages.py:272
 #, python-brace-format
 msgid "The variable '{name}' does not accept arguments."
 msgstr "Die Variable '{name}' akzeptiert keine Argumente."
 
 #. Translators: Error for an unsupported date or time variable format.
 #. {format} and {name} are language-independent technical identifiers.
-#: core/error_messages.py:267
+#: core/error_messages.py:277
 #, python-brace-format
 msgid "The format '{format}' is not supported for the variable '{name}'."
 msgstr "Das Format '{format}' wird für die Variable '{name}' nicht unterstützt."
 
 #. Translators: Error when a contextual variable is previewed or resolved
 #. where its source is unavailable. {name} is its technical name.
-#: core/error_messages.py:272
+#: core/error_messages.py:282
 #, python-brace-format
 msgid "The context required by the variable '{name}' is not available."
 msgstr "Der für die Variable '{name}' benötigte Kontext ist nicht verfügbar."
 
 #. Translators: Error when {{app}} cannot identify the target executable.
-#: core/error_messages.py:276
+#: core/error_messages.py:286
 msgid "The target application could not be identified."
 msgstr "Die Zielanwendung konnte nicht identifiziert werden."
 
 #. Translators: Validation error for {{input:Label}}. The technical variable
 #. name remains English in every user-interface language.
-#: core/error_messages.py:281
+#: core/error_messages.py:291
 msgid "The variable 'input' requires exactly one non-empty label."
 msgstr "Die Variable 'input' benötigt genau eine nicht leere Beschriftung."
 
 #. Translators: Validation error when a snippet contains {{cursor}} more
 #. than once. The technical variable name remains English.
-#: core/error_messages.py:286
+#: core/error_messages.py:296
 #, python-brace-format
 msgid "The variable '{name}' may occur only once in a snippet."
 msgstr "Die Variable '{name}' darf in einem Textbaustein nur einmal vorkommen."
 
 #. Translators: Validation error when a global shortcut contains an
 #. unsupported keyboard key.
-#: core/error_messages.py:291
+#: core/error_messages.py:301
 msgid "The shortcut contains an unsupported key."
 msgstr "Die Tastenkombination enthält eine nicht unterstützte Taste."
 
 #. Translators: Validation error when a global shortcut has no Ctrl, Shift,
 #. Alt, or Windows modifier.
-#: core/error_messages.py:296
+#: core/error_messages.py:306
 msgid "The shortcut requires at least one modifier."
 msgstr "Die Tastenkombination muss mindestens eine Sondertaste enthalten."
 
 #. Translators: Validation error when a shortcut from settings cannot be
 #. parsed.
-#: core/error_messages.py:300
+#: core/error_messages.py:310
 msgid "The shortcut has an invalid format."
 msgstr "Die Tastenkombination hat ein ungültiges Format."
 
 #. Translators: Validation error when a shortcut repeats the same modifier.
-#: core/error_messages.py:304
+#: core/error_messages.py:314
 msgid "The shortcut contains a duplicate modifier."
 msgstr "Die Tastenkombination enthält eine Sondertaste mehrfach."
 
 #. Translators: Validation error when a shortcut has zero or multiple main
 #. keys.
-#: core/error_messages.py:308
+#: core/error_messages.py:318
 msgid "The shortcut must contain exactly one key."
 msgstr "Die Tastenkombination muss genau eine Haupttaste enthalten."
 
 #. Translators: Validation error when a key cannot be used for a global
 #. shortcut.
-#: core/error_messages.py:312
+#: core/error_messages.py:322
 msgid "This key cannot be used as a shortcut."
 msgstr "Diese Taste kann nicht für eine Tastenkombination verwendet werden."
 
 #. Translators: Settings error when the selected UI language has no installed
 #. gettext catalog.
-#: core/error_messages.py:317
+#: core/error_messages.py:327
 msgid "No translation catalog is available for the selected language."
 msgstr "Für die ausgewählte Sprache ist kein Übersetzungskatalog verfügbar."
 
 #. Translators: Startup warning after a damaged translation catalog forced
 #. btText to continue in English. {language} is a locale code such as de;
 #. {reason} is a technical catalog-loading error.
-#: core/error_messages.py:323
+#: core/error_messages.py:333
 #, python-brace-format
 msgid ""
 "The translation catalog for {language} could not be loaded. btText will continue in English.\n"
@@ -417,13 +429,13 @@ msgstr ""
 "{reason}"
 
 #. Translators: Settings error when the saved UI language code is malformed.
-#: core/error_messages.py:331
+#: core/error_messages.py:341
 msgid "The language setting has an invalid format."
 msgstr "Die Spracheinstellung hat ein ungültiges Format."
 
 #. Translators: Safe fallback when no specific localized application-error
 #. message is available.
-#: core/error_messages.py:346
+#: core/error_messages.py:356
 msgid "An unexpected application error occurred."
 msgstr "Es ist ein unerwarteter Anwendungsfehler aufgetreten."
 
@@ -432,18 +444,6 @@ msgstr "Es ist ein unerwarteter Anwendungsfehler aufgetreten."
 #: i18n.py:60
 msgid "System default"
 msgstr "Systemstandard"
-
-#. Translators: Hotstring expansion failed because its target application
-#. window was closed before btText could replace the typed abbreviation.
-#: platform_support/hotstring_expansion.py:19
-msgid "The active window no longer exists."
-msgstr "Das aktive Fenster ist nicht mehr vorhanden."
-
-#. Translators: Hotstring expansion failed because Windows did not
-#. allow btText to return focus to the target application window.
-#: platform_support/hotstring_expansion.py:25
-msgid "The active window could not be activated."
-msgstr "Das aktive Fenster konnte nicht aktiviert werden."
 
 #. Translators: Root label of the main window's category tree.
 #. Translators: Accessible name for the main window's category tree.
@@ -688,7 +688,7 @@ msgstr "Die ausgewählte Datei ist bereits vorhanden. Wählen Sie einen anderen 
 
 #. Translators: Title for a failure to monitor or expand a
 #. globally typed snippet hotstring.
-#: ui/hotstring_controller.py:64 ui/hotstring_controller.py:137
+#: ui/hotstring_controller.py:66 ui/hotstring_controller.py:139
 msgid "Hotstring error"
 msgstr "Hotstring-Fehler"
 

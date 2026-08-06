@@ -3,12 +3,12 @@ from unittest.mock import Mock, patch
 
 from core import datamodel
 from core.app_settings import AppSettings
+from core.hotstrings import HotstringExpansionError
 from core.variables import (
     RenderedSnippet,
     UnknownVariableError,
     VariableRenderingCancelled,
 )
-from platform_support import clipboard
 from ui.hotstring_controller import HotstringController
 
 
@@ -266,15 +266,24 @@ class HotstringControllerTestCase(unittest.TestCase):
         show_error.assert_not_called()
 
     @patch("ui.hotstring_controller.wx.MessageBox")
+    @patch("ui.hotstring_controller.format_user_error")
     @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
-    def test_expansion_failure_does_not_schedule_restore(
+    def test_structured_expansion_failure_is_localized_without_scheduling_restore(
         self,
         keyboard_hook,
         expand_hotstring,
+        format_user_error,
         message_box,
     ):
-        expand_hotstring.side_effect = clipboard.ClipboardError("clipboard unavailable")
+        error = HotstringExpansionError(
+            "hotstring_target_window_missing",
+            "The active window no longer exists.",
+        )
+        expand_hotstring.side_effect = error
+        format_user_error.return_value = (
+            "Das aktive Fenster ist nicht mehr vorhanden."
+        )
         schedule_restore = Mock()
         controller = HotstringController(
             Mock(),
@@ -295,6 +304,7 @@ class HotstringControllerTestCase(unittest.TestCase):
         controller._expand(42, snippet, 32)
 
         schedule_restore.assert_not_called()
+        format_user_error.assert_called_once_with(error)
         message_box.assert_called_once()
 
 

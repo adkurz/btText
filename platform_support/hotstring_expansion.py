@@ -1,6 +1,6 @@
 """Replace typed hotstrings through a temporary Windows clipboard paste."""
 
-from i18n import _
+from core.hotstrings import HotstringExpansionError
 from platform_support import keyboard_input, windows
 from platform_support.clipboard import ClipboardError
 from platform_support.clipboard_paste import PendingPaste, restore_after_failure
@@ -14,15 +14,15 @@ def expand_hotstring(
 ) -> PendingPaste:
     """Replace a typed hotstring and optionally replay its boundary key."""
     if not windows.is_valid_window(target_window):
-        # Translators: Hotstring expansion failed because its target application
-        # window was closed before btText could replace the typed abbreviation.
-        raise ClipboardError(_("The active window no longer exists."))
+        raise HotstringExpansionError(
+            "hotstring_target_window_missing",
+            "The active window no longer exists.",
+        )
     pending = PendingPaste.prepare(text)
     if not windows.activate_window(target_window):
-        operation_error = ClipboardError(
-            # Translators: Hotstring expansion failed because Windows did not
-            # allow btText to return focus to the target application window.
-            _("The active window could not be activated.")
+        operation_error = HotstringExpansionError(
+            "hotstring_target_window_activation_failed",
+            "The active window could not be activated.",
         )
         restore_after_failure(pending.restore_clipboard, operation_error)
         raise operation_error
