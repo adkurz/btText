@@ -1,5 +1,3 @@
-import ctypes
-from ctypes import wintypes
 import unittest
 from unittest.mock import Mock, patch
 
@@ -49,12 +47,10 @@ class ThemeSelectionTestCase(unittest.TestCase):
         get_appearance.return_value.IsDark.assert_called_once_with()
         self.assertIs(theme.get_active_theme(), theme._DARK_THEME)
 
-    @patch("ui.theme._apply_windows_title_bar")
     @patch("ui.theme._apply_to_window")
     def test_apply_colours_all_descendants(
         self,
         apply_to_window,
-        apply_windows_title_bar,
     ):
         child = Mock(spec=wx.Window)
         child.GetChildren.return_value = []
@@ -67,10 +63,8 @@ class ThemeSelectionTestCase(unittest.TestCase):
         self.assertEqual(apply_to_window.call_count, 2)
         apply_to_window.assert_any_call(parent, theme._DARK_THEME)
         apply_to_window.assert_any_call(child, theme._DARK_THEME)
-        apply_windows_title_bar.assert_not_called()
 
-    @patch("ui.theme._apply_windows_title_bar")
-    def test_dark_theme_colours_real_wx_controls(self, apply_title_bar):
+    def test_dark_theme_colours_real_wx_controls(self):
         frame = wx.Frame(None)
         panel = wx.Panel(frame)
         text_input = wx.TextCtrl(panel)
@@ -90,29 +84,8 @@ class ThemeSelectionTestCase(unittest.TestCase):
                 text_input.GetForegroundColour(),
                 theme._DARK_THEME.foreground,
             )
-            apply_title_bar.assert_called_once_with(frame, True)
         finally:
             frame.Destroy()
-
-    @patch("ui.theme.sys.platform", "win32")
-    @patch("ui.theme.ctypes.windll")
-    def test_windows_title_bar_uses_documented_windows_11_attribute(
-        self,
-        windll,
-    ):
-        window = Mock()
-        window.GetHandle.return_value = 123
-
-        theme._apply_windows_title_bar(window, True)
-
-        call = windll.dwmapi.DwmSetWindowAttribute.call_args
-        self.assertEqual(call.args[0].value, 123)
-        self.assertEqual(
-            call.args[1],
-            theme.DWMWA_USE_IMMERSIVE_DARK_MODE,
-        )
-        self.assertEqual(call.args[3], ctypes.sizeof(wintypes.BOOL()))
-        windll.dwmapi.DwmSetWindowAttribute.assert_called_once()
 
 
 if __name__ == "__main__":

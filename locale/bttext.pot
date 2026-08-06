@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-06 19:40+0200\n"
+"POT-Creation-Date: 2026-08-06 21:12+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -28,13 +28,13 @@ msgstr ""
 #. database path in the application settings.
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:80 btText.py:160 ui/settings_controller.py:210
+#: btText.py:80 btText.py:159 ui/settings_controller.py:210
 msgid "Settings error"
 msgstr ""
 
 #. Translators: Startup warning when the application could not
 #. create its local diagnostic log file. {reason} is technical.
-#: btText.py:136
+#: btText.py:135
 #, python-brace-format
 msgid ""
 "The application log could not be initialized. btText will continue without file logging.\n"
@@ -44,19 +44,19 @@ msgstr ""
 
 #. Translators: Title of the startup warning for log setup.
 #. Translators: Title of an error opening the log directory.
-#: btText.py:140 ui/main_frame.py:604
+#: btText.py:139 ui/main_frame.py:604
 msgid "Logging error"
 msgstr ""
 
 #. Translators: Information shown when the user tries to start
 #. the application while it is already running.
-#: btText.py:147
+#: btText.py:146
 msgid "btText is already running."
 msgstr ""
 
 #. Translators: Title of a startup warning after a translation
 #. catalog could not be loaded.
-#: btText.py:169
+#: btText.py:168
 msgid "Language error"
 msgstr ""
 

@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import ctypes
-from ctypes import wintypes
 from dataclasses import dataclass
-import sys
 
 import wx
 
@@ -14,9 +11,6 @@ from core.app_settings import (
     APPEARANCE_LIGHT,
     APPEARANCE_SYSTEM,
 )
-
-DWMWA_USE_IMMERSIVE_DARK_MODE = 20
-
 
 @dataclass(frozen=True)
 class Theme:
@@ -76,8 +70,6 @@ def apply(window: wx.Window) -> None:
     _apply_to_window(window, active_theme)
     for child in window.GetChildren():
         _apply_tree(child, active_theme)
-    if isinstance(window, wx.TopLevelWindow):
-        _apply_windows_title_bar(window, active_theme.dark)
 
 
 def _apply_tree(window: wx.Window, active_theme: Theme) -> None:
@@ -98,21 +90,3 @@ def _apply_to_window(window: wx.Window, active_theme: Theme) -> None:
     window.SetBackgroundColour(background)
     window.SetForegroundColour(active_theme.foreground)
     window.Refresh()
-
-
-def _apply_windows_title_bar(window: wx.TopLevelWindow, dark: bool) -> None:
-    """Ask Windows to match a top-level title bar to the active appearance."""
-    if sys.platform != "win32":
-        return
-    try:
-        attribute_value = wintypes.BOOL(dark)
-        handle = ctypes.c_void_p(window.GetHandle())
-        ctypes.windll.dwmapi.DwmSetWindowAttribute(
-            handle,
-            DWMWA_USE_IMMERSIVE_DARK_MODE,
-            ctypes.byref(attribute_value),
-            ctypes.sizeof(attribute_value),
-        )
-    except (AttributeError, OSError, TypeError, ValueError):
-        # Colouring the client area is still useful on unsupported systems.
-        return
