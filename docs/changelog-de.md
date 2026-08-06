@@ -2,7 +2,13 @@
 
 ## [Unveröffentlicht]
 
+### Hinzugefügt
+
 - Der Name der aktiven Datenbank wird nun in der Titelleiste angezeigt.
+
+- Neues Variablensystem hinzugefügt, um beim Einfügen von Textbausteinen bestimmte Werte, beispielsweise Datum, Zeit oder interaktiv abgefragte Werte automatisch auszufüllen. Näheres hierzu ist im Benutzerhandbuch zu finden.
+
+## Fehlerbehebungen
 
 - Hotstring-Erweiterung bei nicht verfügbaren Zwischenablageformaten behoben.
 
