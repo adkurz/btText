@@ -25,6 +25,8 @@ class SearchDialog(wx.Dialog):
         )
         self._model = model
         self._selected_snippet_id = None
+        self._updating_results = False
+        self._selection_check_pending = False
         self._search_timer = wx.Timer(self)
 
         pane = wx.Panel(self)
@@ -106,12 +108,12 @@ class SearchDialog(wx.Dialog):
         self.Bind(wx.EVT_TIMER, self._on_search_timer, self._search_timer)
         self.search_input.Bind(wx.EVT_TEXT, self._on_search_text_changed)
         self.result_list.Bind(
-            wx.EVT_LIST_ITEM_FOCUSED,
-            self._on_result_focused,
+            wx.EVT_LIST_ITEM_SELECTED,
+            self._on_result_selected,
         )
         self.result_list.Bind(
-            wx.EVT_LIST_ITEM_SELECTED,
-            self._on_result_focused,
+            wx.EVT_LIST_ITEM_DESELECTED,
+            self._on_result_deselected,
         )
         self.result_list.Bind(
             wx.EVT_LIST_ITEM_ACTIVATED,
@@ -140,6 +142,7 @@ class SearchDialog(wx.Dialog):
         """Populate the result list from the current literal search term."""
         term = self.search_input.GetValue()
         with utils.frozen(self.result_list):
+            self._updating_results = True
             try:
                 self.result_list.DeleteAllItems()
                 self._selected_snippet_id = None
@@ -166,7 +169,7 @@ class SearchDialog(wx.Dialog):
                     )
                     self.result_list.SetItemData(index, snippet.id or 0)
                 if self.result_list.GetItemCount():
-                    self.result_list.Focus(0)
+                    self._select_result(0)
             except datamodel.DataModelError as error:
                 wx.MessageBox(
                     format_user_error(error),
@@ -175,15 +178,45 @@ class SearchDialog(wx.Dialog):
                     wx.OK | wx.ICON_ERROR,
                     self,
                 )
+            finally:
+                self._updating_results = False
 
-    def _on_result_focused(self, event: wx.ListEvent):
-        """Remember the model ID associated with the focused result."""
+    def _select_result(self, index: int):
+        """Select and focus one result while synchronizing dialog state."""
+        self.result_list.Select(index)
+        self.result_list.Focus(index)
+        self._selected_snippet_id = self.result_list.GetItemData(index)
+        self.open_button.Enable(True)
+
+    def _on_result_selected(self, event: wx.ListEvent):
+        """Remember the model ID associated with the selected result."""
         self._selected_snippet_id = self.result_list.GetItemData(event.GetIndex())
         self.open_button.Enable(True)
 
+    def _on_result_deselected(self, event: wx.ListEvent):
+        """Check for a missing selection after native events have settled."""
+        if self._updating_results or not self.result_list.GetItemCount():
+            return
+        if self._selection_check_pending:
+            return
+        self._selection_check_pending = True
+        wx.CallAfter(self._ensure_result_selected, event.GetIndex())
+
+    def _ensure_result_selected(self, fallback_index: int):
+        """Restore a selection only when no newer result was selected."""
+        self._selection_check_pending = False
+        if self._updating_results or not self.result_list.GetItemCount():
+            return
+        if self.result_list.GetFirstSelected() != -1:
+            return
+        index = fallback_index
+        if index < 0 or index >= self.result_list.GetItemCount():
+            index = 0
+        self._select_result(index)
+
     def _on_result_activated(self, event: wx.ListEvent):
         """Accept a result activated by keyboard or mouse."""
-        self._on_result_focused(event)
+        self._on_result_selected(event)
         self._accept_selection()
 
     def _on_open(self, event: wx.CommandEvent):

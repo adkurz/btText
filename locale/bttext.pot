@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-06 14:50+0200\n"
+"POT-Creation-Date: 2026-08-06 19:40+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -640,7 +640,7 @@ msgstr ""
 #. closes the dialog. "&" marks the keyboard mnemonic.
 #. Translators: Snippet-editor button that discards unsaved changes and
 #. Translators: Button that closes the variable picker without inserting.
-#: ui/database_selection.py:57 ui/search_dialog.py:61 ui/settings_dialog.py:98
+#: ui/database_selection.py:57 ui/search_dialog.py:63 ui/settings_dialog.py:98
 #: ui/snippet_editor.py:165 ui/variable_dialog.py:193
 msgid "&Cancel"
 msgstr ""
@@ -881,48 +881,48 @@ msgstr ""
 
 #. Translators: Label for the text field used to search snippets.
 #. "&" marks the keyboard mnemonic for the adjacent field.
-#: ui/search_dialog.py:33
+#: ui/search_dialog.py:35
 msgid "&Search"
 msgstr ""
 
 #. Translators: Label for the list of snippets matching the search.
 #. "&" marks the keyboard mnemonic for the adjacent result list.
-#: ui/search_dialog.py:37
+#: ui/search_dialog.py:39
 msgid "Search &results"
 msgstr ""
 
 #. Translators: Search-results column containing each snippet's name.
 #. Translators: Snippet-list column containing each snippet's name.
-#: ui/search_dialog.py:43 ui/snippet_list.py:53
+#: ui/search_dialog.py:45 ui/snippet_list.py:53
 msgid "Name"
 msgstr ""
 
 #. Translators: Search-results column containing the snippet's category.
-#: ui/search_dialog.py:45
+#: ui/search_dialog.py:47
 msgid "Category"
 msgstr ""
 
 #. Translators: Search-results column containing the snippet's search rank.
 #. Translators: Snippet-list column containing the localized search rank.
-#: ui/search_dialog.py:47 ui/snippet_list.py:55
+#: ui/search_dialog.py:49 ui/snippet_list.py:55
 msgid "Weight"
 msgstr ""
 
 #. Translators: Search-results column showing the beginning of the
 #. snippet text.
 #. Translators: Snippet-list column showing the beginning of its content.
-#: ui/search_dialog.py:51 ui/snippet_list.py:62
+#: ui/search_dialog.py:53 ui/snippet_list.py:62
 msgid "Content preview"
 msgstr ""
 
 #. Translators: Search-dialog button that selects the highlighted result
 #. in the main window and closes the dialog. "&" marks the mnemonic.
-#: ui/search_dialog.py:57
+#: ui/search_dialog.py:59
 msgid "&Show snippet"
 msgstr ""
 
 #. Translators: Title of an error while searching snippets.
-#: ui/search_dialog.py:174
+#: ui/search_dialog.py:177
 msgid "Search error"
 msgstr ""
 
