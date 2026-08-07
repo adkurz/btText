@@ -132,10 +132,20 @@ end;
 function InitializeUninstall: Boolean;
 var
   MutexName: String;
+  WaitAttempt: Integer;
 begin
   MutexName := ExpandConstant('{#MyAppName}-{username}');
   while CheckForMutexes(MutexName) do
   begin
+    SignalRunningApplicationToExit;
+    for WaitAttempt := 1 to 50 do
+    begin
+      if not CheckForMutexes(MutexName) then
+        Break;
+      Sleep(100);
+    end;
+    if not CheckForMutexes(MutexName) then
+      Break;
     if SuppressibleMsgBox(
       ExpandConstant(CustomMessage('ApplicationStillRunning')),
       mbError,

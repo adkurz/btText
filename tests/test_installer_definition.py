@@ -102,6 +102,10 @@ class InstallerDefinitionTests(unittest.TestCase):
             self.script,
         )
         self.assertIn("while CheckForMutexes(MutexName) do", self.script)
+        self.assertIn("SignalRunningApplicationToExit;", self.script)
+        self.assertIn("for WaitAttempt := 1 to 50 do", self.script)
+        self.assertIn("Sleep(100);", self.script)
+        self.assertIn("if not CheckForMutexes(MutexName) then", self.script)
         self.assertIn("MB_RETRYCANCEL", self.script)
         self.assertIn("IDRETRY", self.script)
         self.assertIn("ApplicationStillRunning", self.script)
