@@ -1,6 +1,6 @@
 # Änderungsprotokoll für btText
 
-## [Unveröffentlicht]
+## [v1.1]
 
 ### Hinzugefügt
 
@@ -8,7 +8,7 @@
 
 - Neues Variablensystem hinzugefügt, um beim Einfügen von Textbausteinen bestimmte Werte, beispielsweise Datum, Zeit oder interaktiv abgefragte Werte automatisch auszufüllen. Näheres hierzu ist im Benutzerhandbuch zu finden.
 
-## Fehlerbehebungen
+### Fehlerbehebungen
 
 - Hotstring-Erweiterung bei nicht verfügbaren Zwischenablageformaten behoben.
 
