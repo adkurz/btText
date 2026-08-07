@@ -149,7 +149,8 @@ In the text snippet editor, **Insert variable** shows the available variables on
 Open btText using the global keyboard shortcut or via the icon in the system tray and select a text snippet. You can then:
 
 - Press `Enter` or select **Insert text snippet** (Textbaustein einfügen) from the context menu to insert it into the previously active Windows window;
-- Select **Copy text to clipboard** (Text in die Zwischenablage kopieren) or press `Ctrl`+`Shift`+`C` to copy only the content.
+- Select **Copy text to clipboard** (Text in die Zwischenablage kopieren) or press `Ctrl`+`Shift`+`C` to resolve variables and copy the resulting text. Interactive variables are requested in the same combined dialog used when inserting a snippet.
+- Select **Copy raw content to clipboard** (Rohinhalt in die Zwischenablage kopieren) to copy the unchanged snippet source, including its variable placeholders.
 
 When inserting, btText remembers the previously active window, hides its own window, and uses the Windows clipboard. After the process, the previous clipboard content is restored, as far as possible. btText does not terminate but continues to run in the background and remains available via keyboard shortcut and the system tray. The target program must provide a standard text input field. If no valid previous window is available or it cannot be activated, btText displays an error.
 
@@ -223,9 +224,9 @@ btText only monitors the keyboard if "Enable hotstrings" is activated in the set
 ### General (Allgemein)
 
 - **Language** (Sprache): Changes the user interface language. The change only takes effect after restarting the program.
-- **Save copied text snippet in Windows clipboard history** (Kopierten Textbaustein im Windows-Zwischenablageverlauf speichern): If enabled, a text snippet copied via the context menu entry "Copy text to clipboard" or the shortcut `Ctrl`+`Shift`+`C` will be saved in the Windows clipboard history.
+- **Save copied text snippet in Windows clipboard history** (Kopierten Textbaustein im Windows-Zwischenablageverlauf speichern): If enabled, text copied via either clipboard context-menu command or the shortcut `Ctrl`+`Shift`+`C` will be saved in the Windows clipboard history.
 
-- **Save copied text snippets in the Windows Cloud** (Kopierte Textbausteine in der Windows-Cloud speichern): Allows synchronization of copied text snippets via the Windows cloud clipboard. This only applies to copying via the context menu entry "Copy text to clipboard" or the shortcut `Ctrl`+`Shift`+`C`.
+- **Save copied text snippets in the Windows Cloud** (Kopierte Textbausteine in der Windows-Cloud speichern): Allows synchronization of copied text snippets via the Windows cloud clipboard. This applies to either clipboard context-menu command and the shortcut `Ctrl`+`Shift`+`C`.
 
 ### Hotstrings
 

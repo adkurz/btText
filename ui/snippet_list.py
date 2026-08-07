@@ -8,12 +8,17 @@ from platform_support import clipboard, clipboard_paste
 from core import datamodel
 from core.error_messages import format_user_error
 from core.events import EventEmitter
-from core.variables import RenderedSnippet
+from core.variables import (
+    RenderedSnippet,
+    VariableError,
+    VariableRenderingCancelled,
+)
 from i18n import _, ngettext
 from ui import utils
 from ui.snippet_editor import SnippetEditor
 from ui.transfer import TransferBuffer
 from ui.variable_dialog import VariableSuggestion
+from ui.variable_resolver import show_variable_error
 
 CONTENT_PREVIEW_LENGTH = 40
 
@@ -171,6 +176,17 @@ class SnippetList(wx.ListView):
                     _("Copy text to clipboard\tCtrl+Shift+C"),
                 )
                 menu.Bind(wx.EVT_MENU, self.copy_text_to_clipboard, copy_text)
+                copy_raw_text = menu.Append(
+                    wx.ID_ANY,
+                    # Translators: Snippet-list menu command that copies the
+                    # selected snippet without resolving variables.
+                    _("Copy raw content to clipboard"),
+                )
+                menu.Bind(
+                    wx.EVT_MENU,
+                    self.copy_raw_text_to_clipboard,
+                    copy_raw_text,
+                )
                 edit_snippet = menu.Append(
                     wx.ID_ANY,
                     # Translators: Snippet-list menu command that opens the
@@ -250,31 +266,71 @@ class SnippetList(wx.ListView):
         self,
         event: wx.CommandEvent | wx.KeyEvent,
     ):
-        """Copy the single selected snippet's content to the Windows clipboard."""
+        """Resolve and copy the single selected snippet to the clipboard."""
         snippet_ids = self.get_selected_ids()
         if len(snippet_ids) != 1:
             wx.Bell()
             return
         try:
             snippet = self._model.get_snippet(snippet_ids[0])
+            rendered = self._render_snippet(snippet.content)
+        except VariableRenderingCancelled:
+            return
+        except VariableError as error:
+            show_variable_error(self, error)
+            return
+        except datamodel.DataModelError as error:
+            self._show_clipboard_error(error)
+            return
+        if not self._copy_text(rendered.text):
+            return
+        # Translators: Status after a resolved snippet's text was copied to the
+        # Windows clipboard.
+        self._ee.emit("status.changed", _("Text copied to clipboard."))
+
+    def copy_raw_text_to_clipboard(
+        self,
+        event: wx.CommandEvent | wx.KeyEvent,
+    ):
+        """Copy the single selected snippet without resolving variables."""
+        snippet_ids = self.get_selected_ids()
+        if len(snippet_ids) != 1:
+            wx.Bell()
+            return
+        try:
+            snippet = self._model.get_snippet(snippet_ids[0])
+        except datamodel.DataModelError as error:
+            self._show_clipboard_error(error)
+            return
+        if not self._copy_text(snippet.content):
+            return
+        # Translators: Status after a snippet's unresolved source content was
+        # copied to the Windows clipboard.
+        self._ee.emit("status.changed", _("Raw content copied to clipboard."))
+
+    def _copy_text(self, text: str) -> bool:
+        """Copy text with the configured Windows clipboard privacy options."""
+        try:
             clipboard.copy_text(
-                snippet.content,
+                text,
                 include_in_history=(self._include_copied_text_in_clipboard_history()),
                 allow_cloud_upload=self._allow_copied_text_cloud_upload(),
             )
         except (datamodel.DataModelError, clipboard.ClipboardError) as error:
-            wx.MessageBox(
-                format_user_error(error),
-                # Translators: Title of an error copying snippet text to the
-                # Windows clipboard.
-                _("Clipboard error"),
-                wx.OK | wx.ICON_ERROR,
-                self,
-            )
-            return
-        # Translators: Status after a snippet's text was copied to the Windows
-        # clipboard.
-        self._ee.emit("status.changed", _("Text copied to clipboard."))
+            self._show_clipboard_error(error)
+            return False
+        return True
+
+    def _show_clipboard_error(self, error: Exception) -> None:
+        """Present an error raised while loading or copying snippet text."""
+        wx.MessageBox(
+            format_user_error(error),
+            # Translators: Title of an error copying snippet text to the
+            # Windows clipboard.
+            _("Clipboard error"),
+            wx.OK | wx.ICON_ERROR,
+            self,
+        )
 
     def copy_or_cut(self, copy: bool):
         """Place all selected snippets in the local transfer buffer."""

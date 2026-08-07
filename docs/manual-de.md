@@ -149,7 +149,8 @@ Im Textbaustein-Editor zeigt **Variable einfügen** links die verfügbaren Varia
 Öffnen Sie btText mit der globalen Tastenkombination oder über das Symbol im Infobereich und markieren Sie einen Textbaustein. Anschließend können Sie:
 
 - `Eingabe` drücken oder im Kontextmenü **Textbaustein einfügen** wählen, um ihn in das zuvor aktive Windows-Fenster einzufügen;
-- wählen Sie **Text in die Zwischenablage kopieren** oder drücken Sie `Strg`+`Umschalt`+`C`, um nur den Inhalt zu kopieren.
+- wählen Sie **Text in die Zwischenablage kopieren** oder drücken Sie `Strg`+`Umschalt`+`C`, um Variablen aufzulösen und den resultierenden Text zu kopieren. Interaktive Variablen werden dabei im selben gemeinsamen Dialog wie beim Einfügen eines Textbausteins abgefragt;
+- wählen Sie **Rohinhalt in die Zwischenablage kopieren**, um den unveränderten Textbaustein einschließlich seiner Variablen-Platzhalter zu kopieren.
 
 Beim Einfügen merkt sich btText das zuvor aktive Fenster, blendet sein eigenes Fenster aus und verwendet die Windows-Zwischenablage. Nach dem Vorgang wird der vorherige Inhalt der Zwischenablage wiederhergestellt, soweit dies möglich ist. btText wird dabei nicht beendet, sondern läuft im Hintergrund weiter und bleibt über Tastenkombination und Infobereich verfügbar. Das Zielprogramm muss ein normales Texteingabefeld bereitstellen. Ist kein gültiges vorheriges Fenster vorhanden oder kann es nicht aktiviert werden, zeigt btText einen Fehler an.
 
@@ -223,8 +224,8 @@ btText überwacht die Tastatur nur, wenn Hotstrings in den Einstellungen aktivie
 ### Allgemein
 
 - **Sprache**: Ändert die Sprache der Benutzeroberfläche. Die Änderung wird erst nach einem Neustart des Programms wirksam.
-- **Kopierten Textbaustein im Windows-Zwischenablageverlauf speichern**: Ist diese Einstellung aktiviert, wird ein über btText kopierter Textbaustein im Windows-Zwischenablageverlauf gespeichert. Dies betrifft lediglich das Kopieren des Textbausteins über den Kontextmenüeintrag "Text in die Zwischenablage kopieren", bzw. die Tastenkombination "Strg+Umschalt+C".
-- **Kopierte Textbausteine in der Windows-Cloud speichern**: Erlaubt die Synchronisierung kopierter Textbausteine über die Windows-Cloud-Zwischenablage. Dies betrifft lediglich das Kopieren des Textbausteins über den Kontextmenüeintrag "Text in die Zwischenablage kopieren", bzw. die Tastenkombination "Strg+Umschalt+C".
+- **Kopierten Textbaustein im Windows-Zwischenablageverlauf speichern**: Ist diese Einstellung aktiviert, wird ein über btText kopierter Textbaustein im Windows-Zwischenablageverlauf gespeichert. Dies betrifft beide Kopierbefehle im Kontextmenü sowie die Tastenkombination `Strg`+`Umschalt`+`C`.
+- **Kopierte Textbausteine in der Windows-Cloud speichern**: Erlaubt die Synchronisierung kopierter Textbausteine über die Windows-Cloud-Zwischenablage. Dies betrifft beide Kopierbefehle im Kontextmenü sowie die Tastenkombination `Strg`+`Umschalt`+`C`.
 
 ### Hotstrings
 

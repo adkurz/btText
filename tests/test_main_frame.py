@@ -9,6 +9,7 @@ import wx
 from core.app_settings import AppSettings, SettingsStore
 from core.datamodel import DataModel
 from core.events import EventEmitter
+from core.variables import RenderedSnippet, VariableRenderingCancelled
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY
 from i18n import _
 from ui.category_tree import CategoryTree
@@ -253,6 +254,84 @@ class SnippetListUpdateTestCase(unittest.TestCase):
 
         snippet_list.Focus.assert_called_once_with(0)
         snippet_list.Select.assert_not_called()
+
+
+class SnippetListClipboardTestCase(unittest.TestCase):
+    @patch("ui.snippet_list.clipboard.copy_text")
+    def test_copy_text_resolves_variables_before_copying(self, copy_text):
+        events = Mock()
+        snippet_list = SimpleNamespace(
+            get_selected_ids=Mock(return_value=[7]),
+            _model=SimpleNamespace(
+                get_snippet=Mock(
+                    return_value=SimpleNamespace(content="Hello {{input:Name}}")
+                )
+            ),
+            _render_snippet=Mock(return_value=RenderedSnippet("Hello Ada")),
+            _include_copied_text_in_clipboard_history=Mock(return_value=False),
+            _allow_copied_text_cloud_upload=Mock(return_value=True),
+            _copy_text=lambda text: SnippetList._copy_text(snippet_list, text),
+            _show_clipboard_error=Mock(),
+            _ee=events,
+        )
+
+        SnippetList.copy_text_to_clipboard(snippet_list, Mock())
+
+        snippet_list._render_snippet.assert_called_once_with(
+            "Hello {{input:Name}}"
+        )
+        copy_text.assert_called_once_with(
+            "Hello Ada",
+            include_in_history=False,
+            allow_cloud_upload=True,
+        )
+        events.emit.assert_called_once_with(
+            "status.changed", _("Text copied to clipboard.")
+        )
+
+    @patch("ui.snippet_list.clipboard.copy_text")
+    def test_copy_text_stops_when_interactive_rendering_is_cancelled(self, copy_text):
+        snippet_list = SimpleNamespace(
+            get_selected_ids=Mock(return_value=[7]),
+            _model=SimpleNamespace(
+                get_snippet=Mock(return_value=SimpleNamespace(content="{{input:Name}}"))
+            ),
+            _render_snippet=Mock(side_effect=VariableRenderingCancelled),
+            _ee=Mock(),
+        )
+
+        SnippetList.copy_text_to_clipboard(snippet_list, Mock())
+
+        copy_text.assert_not_called()
+        snippet_list._ee.emit.assert_not_called()
+
+    @patch("ui.snippet_list.clipboard.copy_text")
+    def test_copy_raw_text_keeps_variable_placeholders(self, copy_text):
+        events = Mock()
+        snippet_list = SimpleNamespace(
+            get_selected_ids=Mock(return_value=[7]),
+            _model=SimpleNamespace(
+                get_snippet=Mock(
+                    return_value=SimpleNamespace(content="Hello {{input:Name}}")
+                )
+            ),
+            _include_copied_text_in_clipboard_history=Mock(return_value=True),
+            _allow_copied_text_cloud_upload=Mock(return_value=False),
+            _copy_text=lambda text: SnippetList._copy_text(snippet_list, text),
+            _show_clipboard_error=Mock(),
+            _ee=events,
+        )
+
+        SnippetList.copy_raw_text_to_clipboard(snippet_list, Mock())
+
+        copy_text.assert_called_once_with(
+            "Hello {{input:Name}}",
+            include_in_history=True,
+            allow_cloud_upload=False,
+        )
+        events.emit.assert_called_once_with(
+            "status.changed", _("Raw content copied to clipboard.")
+        )
 
 
 class HotkeyLayoutChangeTestCase(unittest.TestCase):
