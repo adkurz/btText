@@ -1,2 +1,2 @@
-wxPython>=4.3.0
-Babel>=2.14
+wxPython>=4.3.1
+Babel>=2.18
