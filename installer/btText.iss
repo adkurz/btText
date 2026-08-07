@@ -2,7 +2,7 @@
 ; The build supplies the version, source, and output directory with ISCC /D switches.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.1"
+  #error MyAppVersion must be supplied by build.ps1
 #endif
 #ifndef MySourceDir
   #define MySourceDir "..\build\installer-payload\btText"
@@ -36,7 +36,7 @@ UninstallDisplayIcon={app}\{#MyAppExeName}
 Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
-CloseApplications=yes
+CloseApplications=force
 RestartApplications=no
 VersionInfoVersion={#MyAppVersion}
 VersionInfoCompany={#MyAppPublisher}
@@ -78,6 +78,50 @@ german.ApplicationStillRunning=btText wird noch ausgeführt. Schließen Sie btTe
 [Code]
 var
   RemoveUserData: Boolean;
+
+const
+  EVENT_MODIFY_STATE = $0002;
+  UpdateShutdownEventName = 'Local\btText.UpdateShutdown';
+
+function OpenEvent(
+  DesiredAccess: LongWord;
+  InheritHandle: Boolean;
+  Name: string
+): THandle;
+  external 'OpenEventW@kernel32.dll stdcall';
+function SetEvent(Event: THandle): Boolean;
+  external 'SetEvent@kernel32.dll stdcall';
+function CloseHandle(Handle: THandle): Boolean;
+  external 'CloseHandle@kernel32.dll stdcall';
+
+procedure SignalRunningApplicationToExit;
+var
+  ShutdownEvent: THandle;
+begin
+  ShutdownEvent := OpenEvent(
+    EVENT_MODIFY_STATE,
+    False,
+    UpdateShutdownEventName
+  );
+  if ShutdownEvent <> 0 then
+  begin
+    SetEvent(ShutdownEvent);
+    CloseHandle(ShutdownEvent);
+  end;
+end;
+
+function NextButtonClick(CurPageID: Integer): Boolean;
+begin
+  if CurPageID = wpReady then
+    SignalRunningApplicationToExit;
+  Result := True;
+end;
+
+function PrepareToInstall(var NeedsRestart: Boolean): string;
+begin
+  SignalRunningApplicationToExit;
+  Result := '';
+end;
 
 function InitializeUninstall: Boolean;
 var

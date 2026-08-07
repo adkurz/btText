@@ -33,6 +33,7 @@ from ui.variable_dialog import get_builtin_variable_suggestions
 from ui.variable_resolver import SnippetVariableResolver
 
 HOTKEY_LAYOUT_CHECK_INTERVAL_MS = 500
+UPDATE_SHUTDOWN_CHECK_INTERVAL_MS = 100
 FOREGROUND_RETRY_INTERVAL_MS = 50
 FOREGROUND_ACTIVATION_ATTEMPTS = 5
 
@@ -94,6 +95,14 @@ class MainFrame(sc.SizedFrame):
             self._hotkey_layout_timer,
         )
         self._hotkey_layout_timer.Start(HOTKEY_LAYOUT_CHECK_INTERVAL_MS)
+        self._update_shutdown_signal = windows.UpdateShutdownSignal()
+        self._update_shutdown_timer = wx.Timer(self)
+        self.Bind(
+            wx.EVT_TIMER,
+            self._on_update_shutdown_timer,
+            self._update_shutdown_timer,
+        )
+        self._update_shutdown_timer.Start(UPDATE_SHUTDOWN_CHECK_INTERVAL_MS)
         self._variable_resolver = SnippetVariableResolver(
             create_builtin_variable_engine(),
             self,
@@ -318,6 +327,12 @@ class MainFrame(sc.SizedFrame):
         failed_hotkey = self._global_hotkey.refresh_keyboard_layout()
         if failed_hotkey is not None:
             self._settings_controller.show_hotkey_registration_error(failed_hotkey)
+
+    def _on_update_shutdown_timer(self, event: wx.TimerEvent) -> None:
+        """Exit cleanly after the installer signals an imminent update."""
+        if self._update_shutdown_signal.consume():
+            self.allow_close = True
+            self.Close()
 
     def on_global_hotkey(self, event):
         """Toggle main-window visibility in response to the global shortcut."""
@@ -611,9 +626,11 @@ class MainFrame(sc.SizedFrame):
         self.tray_icon = TrayIcon(self)
 
     def on_close(self, event: wx.CloseEvent):
-        """Hide normally, or release resources during an explicit exit."""
-        if self.allow_close:
+        """Hide user closes, but clean up for explicit or system shutdown."""
+        if self.allow_close or not event.CanVeto():
             self._hotkey_layout_timer.Stop()
+            self._update_shutdown_timer.Stop()
+            self._update_shutdown_signal.close()
             self._settings_controller.unregister_hotkey()
             self._hotstring_controller.stop()
             self.tray_icon.RemoveIcon()

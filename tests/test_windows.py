@@ -8,6 +8,48 @@ from platform_support import windows
 
 
 class NativeWindowTestCase(unittest.TestCase):
+    def test_update_shutdown_signal_consumes_auto_reset_event(self):
+        with (
+            patch.object(
+                windows.kernel32,
+                "CreateEventW",
+                return_value=123,
+            ) as create_event,
+            patch.object(
+                windows.kernel32,
+                "WaitForSingleObject",
+                return_value=windows.WAIT_OBJECT_0,
+            ) as wait_for_single_object,
+            patch.object(windows.kernel32, "CloseHandle") as close_handle,
+        ):
+            signal = windows.UpdateShutdownSignal()
+            self.assertTrue(signal.consume())
+            signal.close()
+            signal.close()
+
+        create_event.assert_called_once_with(
+            None,
+            False,
+            False,
+            windows.UPDATE_SHUTDOWN_EVENT_NAME,
+        )
+        wait_for_single_object.assert_called_once_with(123, 0)
+        close_handle.assert_called_once_with(123)
+
+    def test_update_shutdown_signal_reports_no_pending_request(self):
+        with (
+            patch.object(windows.kernel32, "CreateEventW", return_value=123),
+            patch.object(
+                windows.kernel32,
+                "WaitForSingleObject",
+                return_value=windows.WAIT_TIMEOUT,
+            ),
+            patch.object(windows.kernel32, "CloseHandle"),
+        ):
+            signal = windows.UpdateShutdownSignal()
+            self.assertFalse(signal.consume())
+            signal.close()
+
     def test_missing_foreground_window_returns_none(self):
         with patch.object(
             windows.user32,

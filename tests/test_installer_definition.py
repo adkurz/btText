@@ -27,6 +27,23 @@ class InstallerDefinitionTests(unittest.TestCase):
             self.script,
         )
 
+    def test_installer_requires_version_from_build_script(self):
+        self.assertIn(
+            "#error MyAppVersion must be supplied by build.ps1",
+            self.script,
+        )
+        self.assertNotIn('#define MyAppVersion "', self.script)
+
+    def test_installer_requests_graceful_update_shutdown_with_force_fallback(self):
+        self.assertIn("CloseApplications=force", self.script)
+        self.assertIn(
+            "UpdateShutdownEventName = 'Local\\btText.UpdateShutdown'",
+            self.script,
+        )
+        self.assertIn("procedure SignalRunningApplicationToExit;", self.script)
+        self.assertIn("function NextButtonClick(CurPageID: Integer)", self.script)
+        self.assertIn("function PrepareToInstall(var NeedsRestart: Boolean)", self.script)
+
     def test_installer_adds_shortcuts_and_uninstall_metadata(self):
         self.assertIn("AppId=btText.AdrianKurz", self.script)
         self.assertIn(r'Name: "{group}\{#MyAppName}"', self.script)

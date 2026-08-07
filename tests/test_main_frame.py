@@ -481,13 +481,40 @@ class HotkeyLayoutChangeTestCase(unittest.TestCase):
             )
         )
 
+    def test_update_shutdown_signal_requests_explicit_exit(self):
+        frame = SimpleNamespace(
+            allow_close=False,
+            _update_shutdown_signal=Mock(consume=Mock(return_value=True)),
+            Close=Mock(),
+        )
+
+        MainFrame._on_update_shutdown_timer(frame, Mock())
+
+        self.assertTrue(frame.allow_close)
+        frame.Close.assert_called_once_with()
+
+    def test_update_shutdown_timer_ignores_missing_request(self):
+        frame = SimpleNamespace(
+            allow_close=False,
+            _update_shutdown_signal=Mock(consume=Mock(return_value=False)),
+            Close=Mock(),
+        )
+
+        MainFrame._on_update_shutdown_timer(frame, Mock())
+
+        self.assertFalse(frame.allow_close)
+        frame.Close.assert_not_called()
+
 
 class ShutdownTestCase(unittest.TestCase):
     def test_explicit_exit_releases_process_wide_resources(self):
         event = Mock()
+        event.CanVeto.return_value = True
         frame = SimpleNamespace(
             allow_close=True,
             _hotkey_layout_timer=Mock(),
+            _update_shutdown_timer=Mock(),
+            _update_shutdown_signal=Mock(),
             _settings_controller=Mock(),
             _hotstring_controller=Mock(),
             tray_icon=Mock(),
@@ -496,12 +523,68 @@ class ShutdownTestCase(unittest.TestCase):
         MainFrame.on_close(frame, event)
 
         frame._hotkey_layout_timer.Stop.assert_called_once_with()
+        frame._update_shutdown_timer.Stop.assert_called_once_with()
+        frame._update_shutdown_signal.close.assert_called_once_with()
         frame._settings_controller.unregister_hotkey.assert_called_once_with()
         frame._hotstring_controller.stop.assert_called_once_with()
         frame.tray_icon.RemoveIcon.assert_called_once_with()
         frame.tray_icon.Destroy.assert_called_once_with()
         event.Skip.assert_called_once_with()
         event.Veto.assert_not_called()
+
+    def test_system_close_releases_resources_even_without_explicit_exit(self):
+        event = Mock()
+        event.CanVeto.return_value = False
+        frame = SimpleNamespace(
+            allow_close=False,
+            _hotkey_layout_timer=Mock(),
+            _update_shutdown_timer=Mock(),
+            _update_shutdown_signal=Mock(),
+            _settings_controller=Mock(),
+            _hotstring_controller=Mock(),
+            tray_icon=Mock(),
+            Hide=Mock(),
+        )
+
+        MainFrame.on_close(frame, event)
+
+        frame._hotkey_layout_timer.Stop.assert_called_once_with()
+        frame._update_shutdown_timer.Stop.assert_called_once_with()
+        frame._update_shutdown_signal.close.assert_called_once_with()
+        frame._settings_controller.unregister_hotkey.assert_called_once_with()
+        frame._hotstring_controller.stop.assert_called_once_with()
+        frame.tray_icon.RemoveIcon.assert_called_once_with()
+        frame.tray_icon.Destroy.assert_called_once_with()
+        frame.Hide.assert_not_called()
+        event.Skip.assert_called_once_with()
+        event.Veto.assert_not_called()
+
+    def test_user_close_still_hides_the_application(self):
+        event = Mock()
+        event.CanVeto.return_value = True
+        frame = SimpleNamespace(
+            allow_close=False,
+            _hotkey_layout_timer=Mock(),
+            _update_shutdown_timer=Mock(),
+            _update_shutdown_signal=Mock(),
+            _settings_controller=Mock(),
+            _hotstring_controller=Mock(),
+            tray_icon=Mock(),
+            Hide=Mock(),
+        )
+
+        MainFrame.on_close(frame, event)
+
+        frame.Hide.assert_called_once_with()
+        event.Veto.assert_called_once_with()
+        event.Skip.assert_not_called()
+        frame._hotkey_layout_timer.Stop.assert_not_called()
+        frame._update_shutdown_timer.Stop.assert_not_called()
+        frame._update_shutdown_signal.close.assert_not_called()
+        frame._settings_controller.unregister_hotkey.assert_not_called()
+        frame._hotstring_controller.stop.assert_not_called()
+        frame.tray_icon.RemoveIcon.assert_not_called()
+        frame.tray_icon.Destroy.assert_not_called()
 
 
 if __name__ == "__main__":

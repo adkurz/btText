@@ -7,6 +7,9 @@ import os
 
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 SW_RESTORE = 9
+WAIT_OBJECT_0 = 0
+WAIT_TIMEOUT = 258
+UPDATE_SHUTDOWN_EVENT_NAME = r"Local\btText.UpdateShutdown"
 
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -48,6 +51,47 @@ kernel32.QueryFullProcessImageNameW.argtypes = (
 kernel32.QueryFullProcessImageNameW.restype = wintypes.BOOL
 kernel32.CloseHandle.argtypes = (wintypes.HANDLE,)
 kernel32.CloseHandle.restype = wintypes.BOOL
+kernel32.CreateEventW.argtypes = (
+    wintypes.LPVOID,
+    wintypes.BOOL,
+    wintypes.BOOL,
+    wintypes.LPCWSTR,
+)
+kernel32.CreateEventW.restype = wintypes.HANDLE
+kernel32.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
+kernel32.WaitForSingleObject.restype = wintypes.DWORD
+
+
+class UpdateShutdownSignal:
+    """Expose an auto-reset event through which the installer requests exit."""
+
+    def __init__(self) -> None:
+        """Create the process-owned side of the per-session update signal."""
+        self._handle = kernel32.CreateEventW(
+            None,
+            False,
+            False,
+            UPDATE_SHUTDOWN_EVENT_NAME,
+        )
+        if not self._handle:
+            raise ctypes.WinError(ctypes.get_last_error())
+
+    def consume(self) -> bool:
+        """Return and reset a pending installer shutdown request."""
+        if not self._handle:
+            return False
+        result = kernel32.WaitForSingleObject(self._handle, 0)
+        if result == WAIT_OBJECT_0:
+            return True
+        if result == WAIT_TIMEOUT:
+            return False
+        raise ctypes.WinError(ctypes.get_last_error())
+
+    def close(self) -> None:
+        """Release the process-owned event handle; repeated calls are safe."""
+        if self._handle:
+            kernel32.CloseHandle(self._handle)
+            self._handle = None
 
 
 def get_foreground_window() -> int | None:

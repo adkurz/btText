@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-07 23:22+0200\n"
+"POT-Creation-Date: 2026-08-08 00:03+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,7 +20,7 @@ msgstr ""
 #. Translators: Title for an error opening a selected snippet
 #. database.
 #. Translators: Title for a failed database selection or creation.
-#: btText.py:61 ui/database_selection.py:100 ui/main_frame.py:484
+#: btText.py:61 ui/database_selection.py:100 ui/main_frame.py:499
 msgid "Database error"
 msgstr ""
 
@@ -44,7 +44,7 @@ msgstr ""
 
 #. Translators: Title of the startup warning for log setup.
 #. Translators: Title of an error opening the log directory.
-#: btText.py:139 ui/main_frame.py:602
+#: btText.py:139 ui/main_frame.py:617
 msgid "Logging error"
 msgstr ""
 
@@ -440,7 +440,7 @@ msgstr ""
 
 #. Translators: Root label of the main window's category tree.
 #. Translators: Accessible name for the main window's category tree.
-#: ui/category_tree.py:68 ui/main_frame.py:165
+#: ui/category_tree.py:68 ui/main_frame.py:174
 msgid "Categories"
 msgstr ""
 
@@ -687,19 +687,19 @@ msgstr ""
 
 #. Translators: Heading for the tree used to select a category.
 #. "&" marks the keyboard mnemonic for the category tree.
-#: ui/main_frame.py:155
+#: ui/main_frame.py:164
 msgid "&Categories"
 msgstr ""
 
 #. Translators: Heading for the list of snippets in the selected
 #. category. "&" marks the keyboard mnemonic for the snippet list.
-#: ui/main_frame.py:170
+#: ui/main_frame.py:179
 msgid "&Snippets"
 msgstr ""
 
 #. Translators: Accessible name for the main window list showing snippets
 #. from the selected category.
-#: ui/main_frame.py:191
+#: ui/main_frame.py:200
 msgid "Snippets in the selected category"
 msgstr ""
 
@@ -707,7 +707,7 @@ msgstr ""
 #. Translators: Generic title for a failed snippet operation.
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
-#: ui/main_frame.py:278 ui/main_frame.py:297 ui/main_frame.py:309
+#: ui/main_frame.py:287 ui/main_frame.py:306 ui/main_frame.py:318
 #: ui/paste_controller.py:73 ui/snippet_list.py:488 ui/snippet_list.py:520
 #: ui/snippet_list.py:552
 msgid "Error"
@@ -715,107 +715,107 @@ msgstr ""
 
 #. Translators: Error shown when a selected snippet points to a
 #. category that was deleted meanwhile.
-#: ui/main_frame.py:295
+#: ui/main_frame.py:304
 msgid "The category of the selected snippet no longer exists."
 msgstr ""
 
 #. Translators: Error shown when the selected snippet was deleted
 #. before it could be displayed or inserted.
-#: ui/main_frame.py:307
+#: ui/main_frame.py:316
 msgid "The selected snippet no longer exists."
 msgstr ""
 
 #. Translators: File-menu command for selecting another snippet
 #. database. The selection is used after restarting btText.
-#: ui/main_frame.py:404
+#: ui/main_frame.py:419
 msgid "Change &database..."
 msgstr ""
 
 #. Translators: File-menu command that hides the main window while
 #. keeping btText available in the notification area.
-#: ui/main_frame.py:409
+#: ui/main_frame.py:424
 msgid "&Close"
 msgstr ""
 
 #. Translators: File-menu command that exits btText completely,
 #. including its notification-area icon. Keep Ctrl+Q after "\t".
-#: ui/main_frame.py:414
+#: ui/main_frame.py:429
 msgid "E&xit\tCtrl+Q"
 msgstr ""
 
 #. Translators: Main-window menu containing window-close and full-exit
 #. commands. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:418
+#: ui/main_frame.py:433
 msgid "&File"
 msgstr ""
 
 #. Translators: Edit-menu command that opens the snippet search
 #. dialog. "&" marks the mnemonic; keep F3 after "\t".
-#: ui/main_frame.py:424
+#: ui/main_frame.py:439
 msgid "&Search...\tF3"
 msgstr ""
 
 #. Translators: Edit-menu command that opens the settings dialog.
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
-#: ui/main_frame.py:431
+#: ui/main_frame.py:446
 msgid "&Settings...\tCtrl+,"
 msgstr ""
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:435
+#: ui/main_frame.py:450
 msgid "&Edit"
 msgstr ""
 
 #. Translators: Help-menu command that opens the user manual. Keep F1
 #. after "\t" so wxPython registers the standard help shortcut.
-#: ui/main_frame.py:439
+#: ui/main_frame.py:454
 msgid "View user &manual\tF1"
 msgstr ""
 
 #. Translators: Help-menu command that opens the version history.
 #. "&" marks the mnemonic.
-#: ui/main_frame.py:443
+#: ui/main_frame.py:458
 msgid "View &changelog"
 msgstr ""
 
 #. Translators: Help-menu command that opens the local diagnostic-log
 #. directory in Windows Explorer. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:447
+#: ui/main_frame.py:462
 msgid "Open &log folder"
 msgstr ""
 
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:451
+#: ui/main_frame.py:466
 msgid "About"
 msgstr ""
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:455
+#: ui/main_frame.py:470
 msgid "&Help"
 msgstr ""
 
 #. Translators: Confirmation after choosing the database that btText
 #. should open following its next restart.
-#: ui/main_frame.py:498
+#: ui/main_frame.py:513
 msgid "The selected database will be used the next time btText starts."
 msgstr ""
 
 #. Translators: Title confirming that another database was selected.
-#: ui/main_frame.py:500
+#: ui/main_frame.py:515
 msgid "Database selected"
 msgstr ""
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:539
+#: ui/main_frame.py:554
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr ""
 
 #. Translators: Error shown when the HTML user manual cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:564
+#: ui/main_frame.py:579
 #, python-brace-format
 msgid ""
 "The user manual could not be opened.\n"
@@ -824,13 +824,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Title of the user-manual opening error.
-#: ui/main_frame.py:568
+#: ui/main_frame.py:583
 msgid "User manual error"
 msgstr ""
 
 #. Translators: Error shown when the HTML changelog cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:581
+#: ui/main_frame.py:596
 #, python-brace-format
 msgid ""
 "The changelog could not be opened.\n"
@@ -839,13 +839,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Title of the changelog opening error.
-#: ui/main_frame.py:585
+#: ui/main_frame.py:600
 msgid "Changelog error"
 msgstr ""
 
 #. Translators: Error shown when the local log directory cannot
 #. be created or opened. {reason} is a technical system message.
-#: ui/main_frame.py:598
+#: ui/main_frame.py:613
 #, python-brace-format
 msgid ""
 "The log folder could not be opened.\n"
