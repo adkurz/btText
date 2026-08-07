@@ -198,12 +198,14 @@ class HotstringControllerTestCase(unittest.TestCase):
         move_cursor_left.assert_called_once_with(3)
 
     @patch("ui.hotstring_controller.show_variable_error")
+    @patch("ui.hotstring_controller.hotstring_expansion.replay_suppressed_boundary")
     @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
     def test_variable_error_does_not_expand_hotstring(
         self,
         keyboard_hook,
         expand_hotstring,
+        replay_boundary,
         show_error,
     ):
         render_snippet = Mock(
@@ -233,15 +235,18 @@ class HotstringControllerTestCase(unittest.TestCase):
         controller._expand(42, snippet, 32)
 
         expand_hotstring.assert_not_called()
+        replay_boundary.assert_called_once_with(42, 32)
         show_error.assert_called_once()
 
     @patch("ui.hotstring_controller.show_variable_error")
+    @patch("ui.hotstring_controller.hotstring_expansion.replay_suppressed_boundary")
     @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
-    def test_cancelled_input_does_not_expand_or_report_an_error(
+    def test_cancelled_input_restores_boundary_without_expanding(
         self,
         keyboard_hook,
         expand_hotstring,
+        replay_boundary,
         show_error,
     ):
         controller = HotstringController(
@@ -263,7 +268,49 @@ class HotstringControllerTestCase(unittest.TestCase):
         controller._expand(42, snippet, 32)
 
         expand_hotstring.assert_not_called()
+        replay_boundary.assert_called_once_with(42, 32)
         show_error.assert_not_called()
+
+    @patch("ui.hotstring_controller.wx.MessageBox")
+    @patch("ui.hotstring_controller.format_user_error")
+    @patch("ui.hotstring_controller.hotstring_expansion.replay_suppressed_boundary")
+    @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
+    def test_cancelled_input_reports_boundary_replay_failure(
+        self,
+        keyboard_hook,
+        replay_boundary,
+        format_user_error,
+        message_box,
+    ):
+        error = HotstringExpansionError(
+            "hotstring_target_window_activation_failed",
+            "The active window could not be activated.",
+        )
+        replay_boundary.side_effect = error
+        format_user_error.return_value = (
+            "Das aktive Fenster konnte nicht aktiviert werden."
+        )
+        controller = HotstringController(
+            Mock(),
+            Mock(),
+            Mock(),
+            lambda: AppSettings(),
+            Mock(),
+            Mock(),
+            Mock(side_effect=VariableRenderingCancelled()),
+        )
+        snippet = datamodel.Snippet(
+            category_id=1,
+            name="Interactive",
+            content="{{input:Customer number}}",
+            hotstring="customer",
+        )
+
+        controller._expand(42, snippet, 32)
+
+        replay_boundary.assert_called_once_with(42, 32)
+        format_user_error.assert_called_once_with(error)
+        message_box.assert_called_once()
 
     @patch("ui.hotstring_controller.wx.MessageBox")
     @patch("ui.hotstring_controller.format_user_error")

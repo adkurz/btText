@@ -6,6 +6,21 @@ from platform_support.clipboard import ClipboardError
 from platform_support.clipboard_paste import PendingPaste, restore_after_failure
 
 
+def replay_suppressed_boundary(target_window: int, boundary_key: int) -> None:
+    """Return a hook-suppressed boundary key to its original target window."""
+    if not windows.is_valid_window(target_window):
+        raise HotstringExpansionError(
+            "hotstring_target_window_missing",
+            "The active window no longer exists.",
+        )
+    if not windows.activate_window(target_window):
+        raise HotstringExpansionError(
+            "hotstring_target_window_activation_failed",
+            "The active window could not be activated.",
+        )
+    keyboard_input.send_virtual_key(boundary_key)
+
+
 def expand_hotstring(
     target_window: int,
     text: str,

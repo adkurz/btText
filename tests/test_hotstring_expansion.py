@@ -7,6 +7,72 @@ from platform_support.clipboard_paste import ClipboardRestoreError, PendingPaste
 
 
 class HotstringExpansionTestCase(unittest.TestCase):
+    def test_suppressed_boundary_is_replayed_in_original_window(self):
+        with (
+            patch.object(
+                hotstring_expansion.windows,
+                "is_valid_window",
+                return_value=True,
+            ),
+            patch.object(
+                hotstring_expansion.windows,
+                "activate_window",
+                return_value=True,
+            ) as activate_window,
+            patch.object(
+                hotstring_expansion.keyboard_input,
+                "send_virtual_key",
+            ) as send_virtual_key,
+        ):
+            hotstring_expansion.replay_suppressed_boundary(123, 0x20)
+
+        activate_window.assert_called_once_with(123)
+        send_virtual_key.assert_called_once_with(0x20)
+
+    def test_suppressed_boundary_rejects_invalid_target(self):
+        with (
+            patch.object(
+                hotstring_expansion.windows,
+                "is_valid_window",
+                return_value=False,
+            ),
+            patch.object(
+                hotstring_expansion.keyboard_input,
+                "send_virtual_key",
+            ) as send_virtual_key,
+        ):
+            with self.assertRaises(HotstringExpansionError) as raised:
+                hotstring_expansion.replay_suppressed_boundary(123, 0x20)
+
+        self.assertEqual(raised.exception.code, "hotstring_target_window_missing")
+        send_virtual_key.assert_not_called()
+
+    def test_suppressed_boundary_reports_activation_failure(self):
+        with (
+            patch.object(
+                hotstring_expansion.windows,
+                "is_valid_window",
+                return_value=True,
+            ),
+            patch.object(
+                hotstring_expansion.windows,
+                "activate_window",
+                return_value=False,
+            ),
+            patch.object(
+                hotstring_expansion.keyboard_input,
+                "send_virtual_key",
+            ) as send_virtual_key,
+        ):
+            with self.assertRaises(HotstringExpansionError) as raised:
+                hotstring_expansion.replay_suppressed_boundary(123, 0x20)
+
+        self.assertEqual(
+            raised.exception.code,
+            "hotstring_target_window_activation_failed",
+        )
+        send_virtual_key.assert_not_called()
+
     def _expand(self, boundary_key):
         pending = Mock(spec=PendingPaste)
         with (

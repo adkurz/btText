@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-08-07 23:12+0200\n"
+"POT-Creation-Date: 2026-08-07 23:22+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -688,7 +688,7 @@ msgstr "Die ausgewählte Datei ist bereits vorhanden. Wählen Sie einen anderen 
 
 #. Translators: Title for a failure to monitor or expand a
 #. globally typed snippet hotstring.
-#: ui/hotstring_controller.py:66 ui/hotstring_controller.py:139
+#: ui/hotstring_controller.py:66 ui/hotstring_controller.py:163
 msgid "Hotstring error"
 msgstr "Hotstring-Fehler"
 

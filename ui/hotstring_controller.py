@@ -109,8 +109,10 @@ class HotstringController:
         try:
             rendered = self._render_snippet(snippet.content, target_window)
         except VariableRenderingCancelled:
+            self._replay_suppressed_boundary(target_window, boundary_key)
             return
         except VariableError as error:
+            self._replay_suppressed_boundary(target_window, boundary_key)
             show_variable_error(self._parent, error)
             return
         pending = None
@@ -132,15 +134,33 @@ class HotstringController:
         except (clipboard.ClipboardError, HotstringExpansionError) as error:
             if pending is not None:
                 self._schedule_clipboard_restore(pending)
-            wx.MessageBox(
-                format_user_error(error),
-                # Translators: Title for a failure to monitor or expand a
-                # globally typed snippet hotstring.
-                _("Hotstring error"),
-                wx.OK | wx.ICON_ERROR,
-                self._parent,
-            )
+            self._show_hotstring_error(error)
             return
         self._schedule_clipboard_restore(pending)
         if settings.notify_hotstring_expansion:
             self._notify_expansion(snippet)
+
+    def _replay_suppressed_boundary(
+        self,
+        target_window: int,
+        boundary_key: int,
+    ) -> None:
+        """Restore a boundary consumed before variable rendering completed."""
+        try:
+            hotstring_expansion.replay_suppressed_boundary(
+                target_window,
+                boundary_key,
+            )
+        except (clipboard.ClipboardError, HotstringExpansionError) as error:
+            self._show_hotstring_error(error)
+
+    def _show_hotstring_error(self, error: Exception) -> None:
+        """Present a localized hotstring operation failure."""
+        wx.MessageBox(
+            format_user_error(error),
+            # Translators: Title for a failure to monitor or expand a
+            # globally typed snippet hotstring.
+            _("Hotstring error"),
+            wx.OK | wx.ICON_ERROR,
+            self._parent,
+        )

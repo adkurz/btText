@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-07 23:12+0200\n"
+"POT-Creation-Date: 2026-08-07 23:22+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -681,7 +681,7 @@ msgstr ""
 
 #. Translators: Title for a failure to monitor or expand a
 #. globally typed snippet hotstring.
-#: ui/hotstring_controller.py:66 ui/hotstring_controller.py:139
+#: ui/hotstring_controller.py:66 ui/hotstring_controller.py:163
 msgid "Hotstring error"
 msgstr ""
 
