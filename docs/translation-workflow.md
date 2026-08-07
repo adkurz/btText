@@ -297,7 +297,7 @@ It performs the required checks and packaging steps in order:
 3. runs the complete test suite;
 4. creates a windowed PyInstaller application;
 5. writes `build/btText-<version>-portable-windows.zip`;
-6. writes `build/btText-<version>-setup.exe` with Inno Setup 7.
+6. writes `build/btText-<version>-setup-windows.exe` with Inno Setup 7.
 
 Both artifacts contain `btText.exe`, its runtime dependencies, the application
 icon, and compiled translation catalogs. They deliberately do not contain

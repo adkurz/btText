@@ -69,8 +69,8 @@ Prebuilt Windows releases are produced as:
 See [`docs/setup.md`](docs/setup.md) for installation, portable use, database
 selection, updates, uninstall behavior, and build options.
 
-The German end-user manual is available at
-[`docs/benutzerhandbuch.md`](docs/benutzerhandbuch.md).
+The end-user manuals are available in
+[English](docs/manual-en.md) and [German](docs/manual-de.md).
 
 ## Requirements
 

@@ -5,7 +5,7 @@ archive. Neither packaged version requires Python to be installed.
 
 ## Install btText on Windows
 
-1. Run `btText-<version>-setup.exe`.
+1. Run `btText-<version>-setup-windows.exe`.
 2. Select the installer language.
 3. Optionally enable the desktop shortcut.
 4. Complete the installation and start btText.
@@ -145,7 +145,7 @@ The default build requires Inno Setup 7 and creates both release artifacts:
 
 ```text
 build\btText-<version>-portable-windows.zip
-build\btText-<version>-setup.exe
+build\btText-<version>-setup-windows.exe
 ```
 
 The build script:
