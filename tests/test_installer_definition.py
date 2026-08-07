@@ -50,6 +50,19 @@ class InstallerDefinitionTests(unittest.TestCase):
         self.assertIn(r'Name: "{autodesktop}\{#MyAppName}"', self.script)
         self.assertIn("UninstallDisplayIcon=", self.script)
 
+    def test_installer_offers_per_user_startup_shortcut(self):
+        self.assertIn(
+            'Name: "autostart"; Description: "{cm:AutoStartProgram,{#MyAppName}}";',
+            self.script,
+        )
+        self.assertIn(
+            r'Name: "{userstartup}\{#MyAppName}"; '
+            r'Filename: "{app}\{#MyAppExeName}";',
+            self.script,
+        )
+        self.assertIn("Tasks: autostart", self.script)
+        self.assertNotIn("uninsneveruninstall", self.script.lower())
+
     def test_installer_marks_only_its_payload_as_installed(self):
         self.assertTrue(INSTALL_MODE_MARKER.is_file())
         self.assertEqual(
