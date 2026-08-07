@@ -8,6 +8,8 @@
 
 - Der Name der aktiven Datenbank wird nun in der Titelleiste angezeigt.
 
+- Einstellung zum Installationsprogramm hinzugefügt, um btText automatisch nach der Anmeldung zu starten.
+
 ### Fehlerbehebungen
 
 - Hotstring-Erweiterung bei nicht verfügbaren Zwischenablageformaten behoben.

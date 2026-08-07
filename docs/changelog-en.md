@@ -8,6 +8,8 @@
 
 - The name of the active database is now displayed in the title bar.
 
+- Added setting to installer to automatically start btText after login.
+
 ### Bug fixes
 
 - Fixed hotstring expansion for unavailable clipboard formats.
