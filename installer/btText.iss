@@ -2,7 +2,7 @@
 ; The build supplies the version, source, and output directory with ISCC /D switches.
 
 #ifndef MyAppVersion
-  #define MyAppVersion "1.0"
+  #define MyAppVersion "1.1"
 #endif
 #ifndef MySourceDir
   #define MySourceDir "..\build\installer-payload\btText"

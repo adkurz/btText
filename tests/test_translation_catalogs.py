@@ -2,6 +2,8 @@ import gettext
 import unittest
 from pathlib import Path
 
+import info
+
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 TEMPLATE_FILE = PROJECT_ROOT / "locale" / "bttext.pot"
 GERMAN_CATALOG = PROJECT_ROOT / "locale" / "de" / "LC_MESSAGES" / "bttext.po"
@@ -20,7 +22,10 @@ class TranslationCatalogsTestCase(unittest.TestCase):
     def test_template_contains_project_metadata_and_translator_guidance(self):
         template = TEMPLATE_FILE.read_text(encoding="utf-8")
 
-        self.assertIn("Project-Id-Version: btText 1.0", template)
+        self.assertIn(
+            "Project-Id-Version: btText {}".format(info.version),
+            template,
+        )
         self.assertIn("#. Translators:", template)
         self.assertIn('msgctxt "snippet weight"', template)
         self.assertIn("msgid_plural", template)

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-08-07 14:16+0200\n"
+"POT-Creation-Date: 2026-08-07 23:12+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -1673,3 +1673,4 @@ msgstr "Aufgelöster Textbausteintext"
 #: ui/variable_resolver.py:108
 msgid "Variable error"
 msgstr "Variablenfehler"
+
