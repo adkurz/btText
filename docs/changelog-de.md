@@ -4,9 +4,9 @@
 
 ### Hinzugefügt
 
-- Der Name der aktiven Datenbank wird nun in der Titelleiste angezeigt.
-
 - Neues Variablensystem hinzugefügt, um beim Einfügen von Textbausteinen bestimmte Werte, beispielsweise Datum, Zeit oder interaktiv abgefragte Werte automatisch auszufüllen. Näheres hierzu ist im Benutzerhandbuch zu finden.
+
+- Der Name der aktiven Datenbank wird nun in der Titelleiste angezeigt.
 
 ### Fehlerbehebungen
 
@@ -17,6 +17,8 @@
 - Wird die Liste der Textbausteine nach dem Wechseln einer Kategorie fokussiert, erhält deren erster Listeneintrag nun korrekt den Fokus.
 
 - Die Suche berücksichtigt nun auch Hotstrings.
+
+- Fehler behoben, wenn das Installationsprogramm btText für ein Upgrade schließt.
 
 ## [v1.0] 02.08.2026
 
