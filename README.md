@@ -12,8 +12,8 @@ available without leaving the active application.
 - Organize snippets in a hierarchical category tree.
 - Search, create, edit, move, copy, and delete snippets and categories.
 - Assign a weight and an optional hotstring to each snippet.
-- Insert localized, contextual, and interactive values and position the caret after insertion.
-- Paste Unicode text into the active Windows application.
+- Variables: Insert localized, contextual, and interactive values and position the caret after insertion.
+- Paste snippet content into active Windows application.
 - Preserve and restore the previous clipboard contents after a paste.
 - Configure global hotkeys and react to the active keyboard layout.
 - Follow the Windows light or dark app mode at startup, or select a fixed
@@ -21,7 +21,7 @@ available without leaving the active application.
 - Multilingual user interface (english and german).
 - Store data in a portable directory or in the per-user Windows application
   data directory.
-- Open an existing SQLite database or create a new one.
+- Open an existing database or create a new one.
 - Run as a portable application or install per user without administrator
   privileges.
 
@@ -29,7 +29,7 @@ available without leaving the active application.
 
 btText is designed to be accessible with screen readers. The user interface
 uses native controls with descriptive labels and supports keyboard navigation,
-so snippets and categories can be managed without relying on visual input.
+so snippets and categories can be managed without relying on visual input. What is more, dark mode is supported.
 
 ## Snippets, weights, and hotstrings
 
@@ -76,7 +76,7 @@ The end-user manuals are available in
 
 - Windows 11 x64. May also work with older versions of Windows, but this has not been tested.
 - Python 3.14 or newer when running from source.
-- wxPython 4.3 or newer and the dependencies in
+- wxPython 4.3.1 or newer and the dependencies in
   [`requirements.txt`](requirements.txt).
 
 Packaged releases include the Python runtime and do not require Python to be
