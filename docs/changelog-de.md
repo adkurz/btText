@@ -8,6 +8,8 @@
 
 - Der Name der aktiven Datenbank wird nun in der Titelleiste angezeigt.
 
+- Der vollständige Pfad der aktiven Datenbank kann nun angezeigt, kopiert und im Explorer geöffnet werden.
+
 - Einstellung zum Installationsprogramm hinzugefügt, um btText automatisch nach der Anmeldung zu starten.
 
 ### Fehlerbehebungen

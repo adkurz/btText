@@ -180,6 +180,7 @@ Die Tastenkürzel werden in der deutschen Oberfläche als `Strg`, `Umschalt`, `A
 ### Menü „Datei“
 
 - **Datenbank wechseln**: Für den nächsten Start eine andere vorhandene Datenbank öffnen oder eine neue Datenbank anlegen.
+- **Datenbankspeicherort anzeigen**: Den vollständigen Pfad der aktuell verwendeten Datenbank anzeigen, kopieren oder ihren Ordner öffnen.
 - **Schließen**: Das Hauptfenster ausblenden. btText bleibt im Infobereich aktiv.
 - **Beenden**: btText vollständig schließen.
 

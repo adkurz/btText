@@ -8,6 +8,8 @@
 
 - The name of the active database is now displayed in the title bar.
 
+- The full path of the active database can now be displayed, copied, and opened in File Explorer.
+
 - Added setting to installer to automatically start btText after login.
 
 ### Bug fixes

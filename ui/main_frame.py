@@ -19,6 +19,7 @@ from platform_support.documentation import open_changelog, open_manual
 from platform_support.logging_support import open_log_directory
 from ui import utils
 from ui.category_tree import CategoryTree
+from ui.database_location_dialog import DatabaseLocationDialog
 from ui.database_selection import select_database
 from ui.global_hotkey import WxGlobalHotkeyBinding
 from ui.hotstring_controller import HotstringController
@@ -50,7 +51,8 @@ class MainFrame(sc.SizedFrame):
     ):
         """Build the main views and register process-wide event handlers."""
         app_name = wx.GetApp().GetAppName()
-        database_name = Path(settings.database_file).name
+        self._active_database_file = Path(settings.database_file).resolve()
+        database_name = self._active_database_file.name
         super().__init__(None, title=f"{app_name} – {database_name}")
         self._ee = ee
         self._model = model
@@ -238,6 +240,7 @@ class MainFrame(sc.SizedFrame):
         self._search_command_id = wx.NewIdRef()
         self._settings_command_id = wx.NewIdRef()
         self._database_command_id = wx.NewIdRef()
+        self._database_location_command_id = wx.NewIdRef()
         self.Bind(
             wx.EVT_MENU,
             self.on_search,
@@ -252,6 +255,11 @@ class MainFrame(sc.SizedFrame):
             wx.EVT_MENU,
             self.on_select_database,
             id=int(self._database_command_id),
+        )
+        self.Bind(
+            wx.EVT_MENU,
+            self.on_show_database_location,
+            id=int(self._database_location_command_id),
         )
 
     def _start_process_integrations(self) -> None:
@@ -418,6 +426,12 @@ class MainFrame(sc.SizedFrame):
             # database. The selection is used after restarting btText.
             _("Change &database..."),
         )
+        file_menu.Append(
+            int(self._database_location_command_id),
+            # Translators: File-menu command that displays the full path of the
+            # database currently used by btText.
+            _("Show database &location..."),
+        )
         file_menu.AppendSeparator()
         # Translators: File-menu command that hides the main window while
         # keeping btText available in the notification area.
@@ -516,6 +530,13 @@ class MainFrame(sc.SizedFrame):
             wx.OK | wx.ICON_INFORMATION,
             self,
         )
+
+    def on_show_database_location(self, event: wx.CommandEvent) -> None:
+        """Show the full path of the database opened by this process."""
+        with utils.managed_dialog(
+            DatabaseLocationDialog(self, self._active_database_file)
+        ) as dialog:
+            dialog.ShowModal()
 
     def on_settings(self, event: wx.CommandEvent):
         """Open the settings dialog."""

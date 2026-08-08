@@ -180,6 +180,7 @@ Keyboard shortcuts are displayed in the German interface as `Strg` (Ctrl), `Umsc
 ### "File" (Datei) Menu
 
 - **Switch Database** (Datenbank wechseln): Open a different existing database or create a new one for the next start.
+- **Show Database Location** (Datenbankspeicherort anzeigen): Display or copy the full path of the database currently in use, or open its folder.
 - **Close** (Schließen): Hides the main window. btText remains active in the system tray.
 - **Exit** (Beenden): Completely closes btText.
 

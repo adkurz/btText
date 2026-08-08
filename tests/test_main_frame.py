@@ -18,6 +18,16 @@ from ui.snippet_list import SnippetList
 
 
 class ApplicationMenuTestCase(unittest.TestCase):
+    @patch("ui.main_frame.DatabaseLocationDialog")
+    def test_database_location_command_shows_active_database(self, dialog_class):
+        database_file = Path("active.db").resolve()
+        frame = SimpleNamespace(_active_database_file=database_file)
+
+        MainFrame.on_show_database_location(frame, Mock())
+
+        dialog_class.assert_called_once_with(frame, database_file)
+        dialog_class.return_value.ShowModal.assert_called_once_with()
+
     @patch("ui.main_frame.wx.MessageBox")
     @patch("ui.main_frame.open_log_directory")
     def test_log_directory_command_opens_directory(
