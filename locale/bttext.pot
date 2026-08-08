@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-08 15:31+0200\n"
+"POT-Creation-Date: 2026-08-08 15:36+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -650,7 +650,7 @@ msgstr ""
 
 #. Translators: Error shown when the database path cannot be
 #. copied. {reason} is a technical system message.
-#: ui/database_location_dialog.py:75
+#: ui/database_location_dialog.py:74
 #, python-brace-format
 msgid ""
 "The database path could not be copied.\n"
@@ -661,13 +661,13 @@ msgstr ""
 #. Translators: Title of an error copying the database path.
 #. Translators: Title of an error copying snippet text to the
 #. Windows clipboard.
-#: ui/database_location_dialog.py:79 ui/snippet_list.py:330
+#: ui/database_location_dialog.py:78 ui/snippet_list.py:330
 msgid "Clipboard error"
 msgstr ""
 
 #. Translators: Error shown when the database directory cannot
 #. be opened. {reason} is a technical system message.
-#: ui/database_location_dialog.py:92
+#: ui/database_location_dialog.py:91
 #, python-brace-format
 msgid ""
 "The database folder could not be opened.\n"
@@ -676,7 +676,7 @@ msgid ""
 msgstr ""
 
 #. Translators: Title of an error opening the database directory.
-#: ui/database_location_dialog.py:96
+#: ui/database_location_dialog.py:95
 msgid "Database folder error"
 msgstr ""
 

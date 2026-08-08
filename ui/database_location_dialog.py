@@ -44,7 +44,7 @@ class DatabaseLocationDialog(wx.Dialog):
         self.copy_button = wx.Button(self, label=_("&Copy path"))
         # Translators: Button that opens the database's containing directory.
         self.open_folder_button = wx.Button(self, label=_("Open &folder"))
-        close_button = wx.Button(self, wx.ID_CLOSE, _("&Close"))
+        close_button = wx.Button(self, wx.ID_CANCEL, _("&Close"))
         actions.AddButton(self.copy_button)
         actions.AddButton(self.open_folder_button)
         actions.AddButton(close_button)
@@ -62,7 +62,6 @@ class DatabaseLocationDialog(wx.Dialog):
 
         self.copy_button.Bind(wx.EVT_BUTTON, self._on_copy_path)
         self.open_folder_button.Bind(wx.EVT_BUTTON, self._on_open_folder)
-        close_button.Bind(wx.EVT_BUTTON, lambda event: self.EndModal(wx.ID_CLOSE))
 
     def _on_copy_path(self, event: wx.CommandEvent) -> None:
         """Copy the absolute database path to the Windows clipboard."""

@@ -25,6 +25,11 @@ class DatabaseLocationDialogTestCase(unittest.TestCase):
         self.assertTrue(self.dialog.path_field.IsEditable() is False)
         self.assertTrue(self.dialog.path_field.AcceptsFocusFromKeyboard())
 
+    def test_cancel_button_allows_native_escape_key_closing(self):
+        cancel_button = self.dialog.FindWindowById(wx.ID_CANCEL)
+
+        self.assertIsInstance(cancel_button, wx.Button)
+
     @patch("ui.database_location_dialog.clipboard.copy_text")
     def test_copy_button_copies_database_path(self, copy_text):
         self.dialog._on_copy_path(wx.CommandEvent())
