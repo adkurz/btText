@@ -82,13 +82,13 @@ class ManualSelectionTests(unittest.TestCase):
                 self.directory / "manual-en.html",
             )
 
-    @patch("platform_support.documentation.os.startfile", create=True)
-    def test_open_manual_uses_windows_file_association(self, startfile):
+    @patch("platform_support.documentation.open_path")
+    def test_open_manual_uses_windows_file_association(self, open_path):
         with patch.object(
             documentation, "get_documentation_directory", return_value=self.directory
         ):
             manual = documentation.open_manual("en")
-        startfile.assert_called_once_with(manual)
+        open_path.assert_called_once_with(manual)
 
     def test_changelog_uses_base_language_before_english_fallback(self):
         german = self.directory / "changelog-de.html"
@@ -98,14 +98,14 @@ class ManualSelectionTests(unittest.TestCase):
         ):
             self.assertEqual(documentation.get_changelog_file("de-AT"), german)
 
-    @patch("platform_support.documentation.os.startfile", create=True)
-    def test_open_changelog_uses_windows_file_association(self, startfile):
+    @patch("platform_support.documentation.open_path")
+    def test_open_changelog_uses_windows_file_association(self, open_path):
         with patch.object(
             documentation, "get_documentation_directory", return_value=self.directory
         ):
             changelog = documentation.open_changelog("fr")
         self.assertEqual(changelog, self.directory / "changelog-en.html")
-        startfile.assert_called_once_with(changelog)
+        open_path.assert_called_once_with(changelog)
 
 
 if __name__ == "__main__":

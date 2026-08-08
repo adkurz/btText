@@ -592,7 +592,7 @@ class MainFrame(sc.SizedFrame):
     def on_open_manual(self, event: wx.CommandEvent):
         """Open the manual matching the active user-interface language."""
         try:
-            open_manual()
+            open_manual(i18n.get_active_language())
         except OSError as error:
             wx.MessageBox(
                 # Translators: Error shown when the HTML user manual cannot be
@@ -609,7 +609,7 @@ class MainFrame(sc.SizedFrame):
     def on_open_changelog(self, event: wx.CommandEvent):
         """Open the changelog matching the active user-interface language."""
         try:
-            open_changelog()
+            open_changelog(i18n.get_active_language())
         except OSError as error:
             wx.MessageBox(
                 # Translators: Error shown when the HTML changelog cannot be

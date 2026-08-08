@@ -6,7 +6,7 @@ import wx
 
 from i18n import _
 from platform_support import clipboard
-from platform_support.file_manager import open_containing_directory
+from platform_support.shell import open_containing_directory
 from ui.controls import FocusableReadOnlyTextCtrl
 
 

@@ -7,8 +7,8 @@ from platform_support import logging_support
 
 
 class LoggingSupportTestCase(unittest.TestCase):
-    @patch("platform_support.logging_support.os.startfile", create=True)
-    def test_open_log_directory_creates_and_opens_directory(self, startfile):
+    @patch("platform_support.logging_support.open_path")
+    def test_open_log_directory_creates_and_opens_directory(self, open_path):
         with tempfile.TemporaryDirectory() as temporary_directory:
             directory = Path(temporary_directory) / "logs"
             with patch.object(
@@ -19,4 +19,4 @@ class LoggingSupportTestCase(unittest.TestCase):
                 result = logging_support.open_log_directory()
 
         self.assertEqual(result, directory)
-        startfile.assert_called_once_with(directory)
+        open_path.assert_called_once_with(directory)
