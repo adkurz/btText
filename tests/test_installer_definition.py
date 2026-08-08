@@ -46,6 +46,16 @@ class InstallerDefinitionTests(unittest.TestCase):
 
     def test_installer_adds_shortcuts_and_uninstall_metadata(self):
         self.assertIn("AppId=btText.AdrianKurz", self.script)
+        self.assertIn(
+            'Name: "desktopicon"; '
+            'Description: "{cm:CreateDesktopShortcut}";',
+            self.script,
+        )
+        self.assertIn(
+            "german.CreateDesktopShortcut=Desktop-Symbol erstellen",
+            self.script,
+        )
+        self.assertNotIn("{cm:CreateDesktopIcon}", self.script)
         self.assertIn(r'Name: "{group}\{#MyAppName}"', self.script)
         self.assertIn(r'Name: "{autodesktop}\{#MyAppName}"', self.script)
         self.assertIn("UninstallDisplayIcon=", self.script)

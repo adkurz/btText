@@ -49,7 +49,7 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "german"; MessagesFile: "compiler:Languages\German.isl"
 
 [Tasks]
-Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; \
+Name: "desktopicon"; Description: "{cm:CreateDesktopShortcut}"; \
     GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 Name: "autostart"; Description: "{cm:AutoStartProgram,{#MyAppName}}"; \
     GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
@@ -72,6 +72,8 @@ Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#MyAppName}}
     Flags: nowait postinstall skipifsilent
 
 [CustomMessages]
+english.CreateDesktopShortcut=Create a desktop shortcut
+german.CreateDesktopShortcut=Desktop-Symbol erstellen
 english.AutoStartProgram=Start %1 automatically when I sign in
 german.AutoStartProgram=%1 bei der Anmeldung automatisch starten
 english.RemoveUserDataPrompt=Do you also want to permanently delete all btText settings and databases stored in {userappdata}\btText? External databases will not be deleted. This cannot be undone.
