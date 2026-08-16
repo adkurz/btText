@@ -3,7 +3,7 @@
 
 Unicode true
 RequestExecutionLevel user
-ManifestSupportedOS all
+ManifestSupportedOS Win10
 CRCCheck on
 SetCompressor /SOLID lzma
 
@@ -82,6 +82,12 @@ LangString ApplicationStillRunning ${LANG_ENGLISH} "btText is still running. Clo
 LangString ApplicationStillRunning ${LANG_GERMAN} "btText wird noch ausgeführt. Schließen Sie btText und klicken Sie anschließend auf Wiederholen."
 LangString RemoveUserDataPrompt ${LANG_ENGLISH} "Do you also want to permanently delete all btText settings and databases stored in $APPDATA\btText? External databases will not be deleted. This cannot be undone."
 LangString RemoveUserDataPrompt ${LANG_GERMAN} "Möchten Sie zusätzlich alle btText-Einstellungen und Datenbanken unter $APPDATA\btText dauerhaft löschen? Externe Datenbanken werden nicht gelöscht. Dies kann nicht rückgängig gemacht werden."
+LangString RemoveUserDataFailed ${LANG_ENGLISH} "Not all btText user data could be removed. Please delete $APPDATA\btText manually."
+LangString RemoveUserDataFailed ${LANG_GERMAN} "Nicht alle btText-Nutzerdaten konnten entfernt werden. Bitte löschen Sie $APPDATA\btText manuell."
+LangString UnsupportedWindows ${LANG_ENGLISH} "Windows 10 or newer is required."
+LangString UnsupportedWindows ${LANG_GERMAN} "Windows 10 oder neuer ist erforderlich."
+LangString UnsupportedArchitecture ${LANG_ENGLISH} "64-bit Windows is required."
+LangString UnsupportedArchitecture ${LANG_GERMAN} "64-Bit-Windows ist erforderlich."
 
 Var PreviousUninstaller
 Var PreviousInstallDir
@@ -95,7 +101,11 @@ Function SignalRunningApplicationToExit
 FunctionEnd
 
 Function IsApplicationRunning
-  ReadEnvStr $2 "USERNAME"
+  StrCpy $2 ""
+  System::Call 'advapi32::GetUserName(t .r2, *i ${NSIS_MAX_STRLEN} r3) i.r4'
+  ${If} $4 = 0
+    ReadEnvStr $2 "USERNAME"
+  ${EndIf}
   System::Call 'kernel32::OpenMutexW(i 0x00100000, i 0, w "btText-$2") p.r0'
   ${If} $0 P<> 0
     System::Call 'kernel32::CloseHandle(p r0)'
@@ -123,6 +133,7 @@ Function WaitForApplication
   IfSilent abort_running
   MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "$(ApplicationStillRunning)" IDRETRY retry_running
   abort_running:
+  SetErrorLevel 2
   Abort
 FunctionEnd
 
@@ -142,7 +153,8 @@ Function RemovePreviousInstallations
   ${If} $PreviousUninstaller != ""
     ExecWait '$PreviousUninstaller /VERYSILENT /SUPPRESSMSGBOXES /NORESTART /SP-' $0
     ${If} $0 != 0
-      MessageBox MB_OK|MB_ICONSTOP "$(InnoUpgradeFailed)"
+      MessageBox MB_OK|MB_ICONSTOP "$(InnoUpgradeFailed)" /SD IDOK
+      SetErrorLevel 2
       Abort
     ${EndIf}
   ${EndIf}
@@ -152,7 +164,8 @@ Function RemovePreviousInstallations
   ${If} $PreviousUninstaller != ""
     ExecWait '$PreviousUninstaller /S _?=$PreviousInstallDir' $0
     ${If} $0 != 0
-      MessageBox MB_OK|MB_ICONSTOP "$(OldUpgradeFailed)"
+      MessageBox MB_OK|MB_ICONSTOP "$(OldUpgradeFailed)" /SD IDOK
+      SetErrorLevel 2
       Abort
     ${EndIf}
   ${EndIf}
@@ -184,6 +197,8 @@ Section "$(MainSection)" MainSection
   WriteRegStr HKCU "${NSIS_UNINSTALL_KEY}" "QuietUninstallString" '"$INSTDIR\uninstall.exe" /S'
   WriteRegDWORD HKCU "${NSIS_UNINSTALL_KEY}" "NoModify" 1
   WriteRegDWORD HKCU "${NSIS_UNINSTALL_KEY}" "NoRepair" 1
+  SectionGetSize ${MainSection} $0
+  WriteRegDWORD HKCU "${NSIS_UNINSTALL_KEY}" "EstimatedSize" $0
 SectionEnd
 
 Section /o "$(DesktopShortcut)" DesktopSection
@@ -197,7 +212,13 @@ SectionEnd
 Function .onInit
   SetShellVarContext current
   ${IfNot} ${AtLeastWin10}
-    MessageBox MB_OK|MB_ICONSTOP "Windows 10 or newer is required."
+    MessageBox MB_OK|MB_ICONSTOP "$(UnsupportedWindows)" /SD IDOK
+    SetErrorLevel 2
+    Abort
+  ${EndIf}
+  ${IfNot} ${RunningX64}
+    MessageBox MB_OK|MB_ICONSTOP "$(UnsupportedArchitecture)" /SD IDOK
+    SetErrorLevel 2
     Abort
   ${EndIf}
   !insertmacro UnselectSection ${DesktopSection}
@@ -226,7 +247,11 @@ Function un.SignalRunningApplicationToExit
 FunctionEnd
 
 Function un.IsApplicationRunning
-  ReadEnvStr $2 "USERNAME"
+  StrCpy $2 ""
+  System::Call 'advapi32::GetUserName(t .r2, *i ${NSIS_MAX_STRLEN} r3) i.r4'
+  ${If} $4 = 0
+    ReadEnvStr $2 "USERNAME"
+  ${EndIf}
   System::Call 'kernel32::OpenMutexW(i 0x00100000, i 0, w "btText-$2") p.r0'
   ${If} $0 P<> 0
     System::Call 'kernel32::CloseHandle(p r0)'
@@ -254,18 +279,28 @@ Function un.WaitForApplication
   IfSilent abort_uninstall_running
   MessageBox MB_RETRYCANCEL|MB_ICONEXCLAMATION "$(ApplicationStillRunning)" IDRETRY retry_uninstall_running
   abort_uninstall_running:
+  SetErrorLevel 2
   Abort
 FunctionEnd
 
 Section "Uninstall"
   Delete "$DESKTOP\${APP_NAME}.lnk"
   Delete "$SMSTARTUP\${APP_NAME}.lnk"
-  RMDir /r "$SMPROGRAMS\${APP_NAME}"
+  Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
+  RMDir "$SMPROGRAMS\${APP_NAME}"
   DeleteRegKey HKCU "${NSIS_UNINSTALL_KEY}"
-  RMDir /r "$INSTDIR"
+  SetOutPath "$TEMP"
+  Delete "$INSTDIR\${APP_EXE}"
+  RMDir /r "$INSTDIR\_internal"
+  Delete "$INSTDIR\uninstall.exe"
+  RMDir "$INSTDIR"
 
   IfSilent keep_user_data
   MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONQUESTION "$(RemoveUserDataPrompt)" IDNO keep_user_data
+  ClearErrors
   RMDir /r "$APPDATA\btText"
+  IfErrors 0 keep_user_data
+  MessageBox MB_OK|MB_ICONSTOP "$(RemoveUserDataFailed)" /SD IDOK
+  SetErrorLevel 3
   keep_user_data:
 SectionEnd

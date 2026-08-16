@@ -16,8 +16,15 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
 
     def test_installer_is_per_user_and_uses_build_version(self):
         self.assertIn("RequestExecutionLevel user", SCRIPT)
+        self.assertIn("ManifestSupportedOS Win10", SCRIPT)
         self.assertIn(r'InstallDir "$LOCALAPPDATA\Programs\${APP_NAME}"', SCRIPT)
         self.assertIn('!error "VERSION must be supplied by build.ps1"', SCRIPT)
+
+    def test_installer_requires_supported_64_bit_windows(self):
+        self.assertIn("${AtLeastWin10}", SCRIPT)
+        self.assertIn("${RunningX64}", SCRIPT)
+        self.assertIn("UnsupportedWindows", SCRIPT)
+        self.assertIn("UnsupportedArchitecture", SCRIPT)
 
     def test_matches_shortcut_and_launch_choices(self):
         self.assertIn('Section /o "$(DesktopShortcut)"', SCRIPT)
@@ -60,6 +67,7 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
 
     def test_shutdown_protocol_is_used_for_install_and_uninstall(self):
         self.assertIn('Local\\btText.UpdateShutdown', SCRIPT)
+        self.assertIn("advapi32::GetUserName", SCRIPT)
         self.assertIn('OpenMutexW', SCRIPT)
         self.assertIn('Call WaitForApplication', SCRIPT)
         self.assertIn('Call un.WaitForApplication', SCRIPT)
@@ -69,6 +77,26 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
         self.assertIn('IfSilent keep_user_data', uninstall)
         self.assertIn('MB_DEFBUTTON2', uninstall)
         self.assertIn('RMDir /r "$APPDATA\\btText"', uninstall)
+        self.assertIn("ClearErrors", uninstall)
+        self.assertIn("IfErrors 0 keep_user_data", uninstall)
+        self.assertIn("RemoveUserDataFailed", uninstall)
+
+    def test_uninstaller_does_not_recursively_delete_shared_directories(self):
+        uninstall = SCRIPT.split('Section "Uninstall"', 1)[1]
+        self.assertNotIn('RMDir /r "$INSTDIR"', uninstall)
+        self.assertNotIn('RMDir /r "$SMPROGRAMS', uninstall)
+        self.assertIn('RMDir /r "$INSTDIR\\_internal"', uninstall)
+        self.assertIn('Delete "$INSTDIR\\${APP_EXE}"', uninstall)
+        self.assertIn('RMDir "$INSTDIR"', uninstall)
+
+    def test_silent_failure_messages_have_defaults_and_error_codes(self):
+        self.assertIn('"$(InnoUpgradeFailed)" /SD IDOK', SCRIPT)
+        self.assertIn('"$(OldUpgradeFailed)" /SD IDOK', SCRIPT)
+        self.assertIn("SetErrorLevel 2", SCRIPT)
+
+    def test_add_remove_programs_metadata_includes_estimated_size(self):
+        self.assertIn("SectionGetSize ${MainSection} $0", SCRIPT)
+        self.assertIn('"EstimatedSize" $0', SCRIPT)
 
 
 if __name__ == "__main__":
