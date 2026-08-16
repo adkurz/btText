@@ -1,7 +1,7 @@
 param(
     [string]$Python = "python",
     [switch]$PortableOnly,
-    [string]$InnoCompiler = ""
+    [string]$NsisCompiler = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -19,29 +19,27 @@ if ($ResolvedBuildDirectory -ne $ExpectedBuildDirectory) {
     throw "Refusing to use an unexpected build directory."
 }
 
-function Resolve-InnoCompiler {
+function Resolve-NsisCompiler {
     param([string]$RequestedCompiler)
 
     if ($RequestedCompiler) {
         if (-not (Test-Path -LiteralPath $RequestedCompiler -PathType Leaf)) {
-            throw "The specified Inno Setup compiler does not exist: $RequestedCompiler"
+            throw "The specified NSIS compiler does not exist: $RequestedCompiler"
         }
         return [IO.Path]::GetFullPath($RequestedCompiler)
     }
 
-    $Command = Get-Command "ISCC.exe" -ErrorAction SilentlyContinue
+    $Command = Get-Command "makensis.exe" -ErrorAction SilentlyContinue
     if ($Command) {
         return $Command.Source
     }
 
     $Candidates = @()
-    if (${env:ProgramFiles(x86)}) {
-        $Candidates += Join-Path (
-            ${env:ProgramFiles(x86)}
-        ) "Inno Setup 7\ISCC.exe"
-    }
     if ($env:ProgramFiles) {
-        $Candidates += Join-Path $env:ProgramFiles "Inno Setup 7\ISCC.exe"
+        $Candidates += Join-Path $env:ProgramFiles "NSIS\makensis.exe"
+    }
+    if (${env:ProgramFiles(x86)}) {
+        $Candidates += Join-Path ${env:ProgramFiles(x86)} "NSIS\makensis.exe"
     }
     foreach ($Candidate in $Candidates) {
         if (Test-Path -LiteralPath $Candidate -PathType Leaf) {
@@ -49,34 +47,12 @@ function Resolve-InnoCompiler {
         }
     }
 
-    throw (
-        "Inno Setup 7 was not found. Install it, pass -InnoCompiler, " +
-        "or use -PortableOnly."
-    )
+    throw "NSIS was not found. Install it, pass -NsisCompiler, or use -PortableOnly."
 }
 
-function Assert-InnoSetup7 {
-    param([string]$Compiler)
-
-    $PreviousErrorActionPreference = $ErrorActionPreference
-    try {
-        $ErrorActionPreference = "Continue"
-        $VersionOutput = (& $Compiler /? 2>&1 | Out-String)
-    }
-    finally {
-        $ErrorActionPreference = $PreviousErrorActionPreference
-    }
-    if ($VersionOutput -notmatch "Inno Setup 7 Command-Line Compiler") {
-        throw (
-            "The selected compiler is not Inno Setup 7: $Compiler"
-        )
-    }
-}
-
-$ResolvedInnoCompiler = $null
+$ResolvedNsisCompiler = $null
 if (-not $PortableOnly) {
-    $ResolvedInnoCompiler = Resolve-InnoCompiler $InnoCompiler
-    Assert-InnoSetup7 $ResolvedInnoCompiler
+    $ResolvedNsisCompiler = Resolve-NsisCompiler $NsisCompiler
 }
 
 $TemporaryRoot = Join-Path (
@@ -215,6 +191,14 @@ try {
     if ($Version -notmatch "^[0-9A-Za-z._-]+$") {
         throw "The application version contains unsafe filename characters."
     }
+    $NumericVersionParts = @($Version.Split(".") | Where-Object { $_ -match "^\d+$" })
+    if ($NumericVersionParts.Count -ne $Version.Split(".").Count -or $NumericVersionParts.Count -gt 4) {
+        throw "The application version cannot be represented as a Windows file version."
+    }
+    while ($NumericVersionParts.Count -lt 4) {
+        $NumericVersionParts += "0"
+    }
+    $FileVersion = $NumericVersionParts -join "."
 
     if (Test-Path -LiteralPath $BuildDirectory) {
         Remove-Item -LiteralPath $BuildDirectory -Recurse -Force
@@ -235,13 +219,17 @@ try {
     $Installer = $null
     if (-not $PortableOnly) {
         Write-Host "Creating per-user Windows installer..."
-        & $ResolvedInnoCompiler `
-            "/DMyAppVersion=$Version" `
-            "/DMySourceDir=$ApplicationDirectory" `
-            "/DMyOutputDir=$BuildDirectory" `
-            (Join-Path $ProjectRoot "installer\btText.iss")
+        & $ResolvedNsisCompiler `
+            "/INPUTCHARSET" `
+            "UTF8" `
+            "/DVERSION=$Version" `
+            "/DFILE_VERSION=$FileVersion" `
+            "/DSOURCE_DIR=$ApplicationDirectory" `
+            "/DOUTPUT_DIR=$BuildDirectory" `
+            "/DMARKER_FILE=$(Join-Path $ProjectRoot 'installer\bttext-install-mode.json')" `
+            (Join-Path $ProjectRoot "installer\btText.nsi")
         if ($LASTEXITCODE -ne 0) {
-            throw "Inno Setup failed with exit code $LASTEXITCODE."
+            throw "NSIS failed with exit code $LASTEXITCODE."
         }
         $Installers = @(
             Get-ChildItem -LiteralPath $BuildDirectory `
@@ -249,7 +237,7 @@ try {
                 -File
         )
         if ($Installers.Count -ne 1) {
-            throw "Inno Setup did not create exactly one installer."
+            throw "NSIS did not create exactly one installer."
         }
         $Installer = $Installers[0].FullName
     }

@@ -137,7 +137,7 @@ For development, translation work, tests, and packaging, install:
 
 ## Build the Windows releases
 
-The default build requires Inno Setup 7 and creates both release artifacts:
+The default build requires NSIS and creates both release artifacts:
 
 ```powershell
 .\build.ps1
@@ -157,17 +157,17 @@ The build script:
 5. creates the PyInstaller onedir application;
 6. verifies that the payload contains no user data;
 7. creates the portable ZIP;
-8. verifies and invokes the Inno Setup 7 compiler;
+8. locates and invokes the NSIS compiler;
 9. creates the per-user x64 installer.
 
-The script locates `ISCC.exe` on `PATH` or in the standard Inno Setup 7
+The script locates `makensis.exe` on `PATH` or in the standard NSIS
 installation directory. Supply a non-standard location explicitly:
 
 ```powershell
-.\build.ps1 -InnoCompiler "C:\Path\To\Inno Setup 7\ISCC.exe"
+.\build.ps1 -NsisCompiler "C:\Path\To\NSIS\makensis.exe"
 ```
 
-Create only the portable artifact without Inno Setup:
+Create only the portable artifact without NSIS:
 
 ```powershell
 .\build.ps1 -PortableOnly

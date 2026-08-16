@@ -297,14 +297,14 @@ It performs the required checks and packaging steps in order:
 3. runs the complete test suite;
 4. creates a windowed PyInstaller application;
 5. writes `build/btText-<version>-portable-windows.zip`;
-6. writes `build/btText-<version>-setup-windows.exe` with Inno Setup 7.
+6. writes `build/btText-<version>-setup-windows.exe` with NSIS.
 
 Both artifacts contain `btText.exe`, its runtime dependencies, the application
 icon, and compiled translation catalogs. They deliberately do not contain
 `data.db`, `settings.ini`, or `settings.ini.tmp`.
 
-The default build requires Inno Setup 7. Pass `-InnoCompiler <path>` when
-`ISCC.exe` is installed in a non-standard location, or pass `-PortableOnly` to
+The default build requires NSIS. Pass `-NsisCompiler <path>` when
+`makensis.exe` is installed in a non-standard location, or pass `-PortableOnly` to
 create and validate only the portable archive.
 
 To use a specific Python executable for creating `.venv`:
