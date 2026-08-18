@@ -62,7 +62,7 @@ def get_builtin_variable_suggestions(
     """Return localized editor choices for every built-in variable format."""
     preview_context = ResolutionContext(
         timestamp or datetime.now().astimezone(),
-        locale or i18n.get_active_language(),
+        locale or i18n.get_formatting_locale(),
         # Translators: Non-private example used to preview {{clipboard}}.
         get_clipboard_text=lambda: _("Example clipboard text"),
         get_application_name=lambda: "example.exe",

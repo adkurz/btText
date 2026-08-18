@@ -14,6 +14,19 @@ from ui.variable_resolver import SnippetVariableResolver, show_variable_error
 
 
 class SnippetVariableResolverTestCase(unittest.TestCase):
+    @patch("ui.variable_resolver.i18n.get_formatting_locale", return_value="fr_FR")
+    def test_default_locale_uses_the_formatting_locale(self, get_locale):
+        engine = Mock()
+        engine.plan.return_value = ResolutionPlan()
+        engine.render.return_value = RenderedSnippet("resolved")
+        resolver = SnippetVariableResolver(engine)
+
+        resolver.render("{{date}}")
+
+        context = engine.render.call_args.args[1]
+        self.assertEqual(context.locale, "fr_FR")
+        get_locale.assert_called_once_with()
+
     def test_timestamp_and_locale_are_captured_once_per_rendering(self):
         timestamp = datetime(2026, 8, 6, 14, 35, tzinfo=timezone.utc)
         get_timestamp = Mock(return_value=timestamp)

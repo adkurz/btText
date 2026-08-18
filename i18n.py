@@ -16,6 +16,7 @@ SYSTEM_LANGUAGE = "system"
 _translation: gettext.NullTranslations = gettext.NullTranslations()
 _wx_locale: Any | None = None
 _active_language = DEFAULT_LANGUAGE
+_formatting_locale = DEFAULT_LANGUAGE
 
 
 class LanguageError(UserFacingError, ValueError):
@@ -138,10 +139,18 @@ def initialize(
     wx_module: Any | None = None,
 ) -> str:
     """Load translations and return the resolved active language."""
-    global _active_language, _translation, _wx_locale
+    global _active_language, _formatting_locale, _translation, _wx_locale
 
     locale_path = Path(locale_directory)
     active_language = resolve_language(language, locale_path, wx_module)
+    formatting_locale = active_language
+    if validate_language(language) == SYSTEM_LANGUAGE:
+        system_locale = _get_system_language(wx_module)
+        if system_locale:
+            try:
+                formatting_locale = _normalize_language_code(system_locale)
+            except ValueError:
+                pass
     catalog_error = None
     catalog_exception = None
     try:
@@ -163,9 +172,10 @@ def initialize(
         active_language = DEFAULT_LANGUAGE
 
     wx_locale = _create_wx_locale(active_language, locale_path, wx_module)
-    _translation, _active_language, _wx_locale = (
+    _translation, _active_language, _formatting_locale, _wx_locale = (
         translation,
         active_language,
+        formatting_locale,
         wx_locale,
     )
     if catalog_error is not None:
@@ -176,6 +186,11 @@ def initialize(
 def get_active_language() -> str:
     """Return the resolved language currently used for translations."""
     return _active_language
+
+
+def get_formatting_locale() -> str:
+    """Return the locale used for localized date and time values."""
+    return _formatting_locale
 
 
 def gettext_(message: str) -> str:

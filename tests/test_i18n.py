@@ -133,6 +133,24 @@ class I18nTestCase(unittest.TestCase):
             "en",
         )
 
+    @patch("i18n.locale.getlocale", return_value=("fr_FR", "UTF-8"))
+    def test_system_fallback_preserves_locale_for_formatting(self, getlocale):
+        active_language = i18n.initialize(
+            "system",
+            "missing-locale-directory",
+        )
+
+        self.assertEqual(active_language, "en")
+        self.assertEqual(i18n.get_active_language(), "en")
+        self.assertEqual(i18n.get_formatting_locale(), "fr_FR")
+
+    @patch("i18n.locale.getlocale", return_value=("de_DE", "UTF-8"))
+    def test_explicit_language_controls_formatting_locale(self, getlocale):
+        i18n.initialize("en", "missing-locale-directory")
+
+        self.assertEqual(i18n.get_formatting_locale(), "en")
+        getlocale.assert_not_called()
+
     def test_source_english_does_not_require_a_catalog(self):
         active_language = i18n.initialize(
             "en",

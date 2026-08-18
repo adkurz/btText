@@ -27,7 +27,7 @@ class SnippetVariableResolver:
         engine: VariableEngine,
         parent: wx.Window | None = None,
         get_timestamp: Callable[[], datetime] | None = None,
-        get_locale: Callable[[], str] = i18n.get_active_language,
+        get_locale: Callable[[], str] | None = None,
         request_inputs: (
             Callable[[tuple[str, ...]], dict[str, str] | None] | None
         ) = None,
@@ -35,7 +35,7 @@ class SnippetVariableResolver:
         self._engine = engine
         self._parent = parent
         self._get_timestamp = get_timestamp or self._current_timestamp
-        self._get_locale = get_locale
+        self._get_locale = get_locale or i18n.get_formatting_locale
         self._request_inputs = request_inputs or self._show_input_dialog
 
     def render(

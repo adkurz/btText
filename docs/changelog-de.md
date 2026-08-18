@@ -4,6 +4,8 @@
 
 - Hinzugefügt: Der Dialog **Variable einfügen** zeigt jetzt, sofern möglich, eine Vorschau der aktuell ausgewählten Variable an.
 
+- Behoben: Ist die Sprache auf den Systemstandard festgelegt, werden Sprachabhängige Variablen, etwa Datum und Uhrzeit, in der aktuell eingestellten Sprache des Betriebssystems ausgegeben, auch wenn noch keine passende btText-Übersetzung existiert.
+
 ## [v1.1] 10.08.2026
 
 - Hinzugefügt: Neues Variablensystem, um bestimmte Werte, wie Datum, Uhrzeit oder interaktiv abgefragte Werte, beim Einfügen von Textbausteinen automatisch auszufüllen. Weitere Informationen sind im Benutzerhandbuch nachzuschlagen.

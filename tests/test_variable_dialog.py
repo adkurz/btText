@@ -62,6 +62,25 @@ class VariableDialogTestCase(unittest.TestCase):
         self.assertIsNone(previews["{{cursor}}"])
         self.assertIsNone(previews["{{input:Prompt}}"])
 
+    @patch(
+        "ui.variable_dialog.i18n.get_formatting_locale",
+        return_value="fr_FR",
+    )
+    def test_builtin_catalog_previews_default_to_formatting_locale(
+        self,
+        get_formatting_locale,
+    ):
+        suggestions = get_builtin_variable_suggestions(
+            datetime(2026, 8, 6, 14, 35, 27, tzinfo=timezone.utc),
+        )
+        previews = {
+            suggestion.expression: suggestion.preview
+            for suggestion in suggestions
+        }
+
+        self.assertEqual(previews["{{date:long}}"], "6 août 2026")
+        get_formatting_locale.assert_called_once_with()
+
     def test_picker_splits_variables_and_formats_into_two_lists(self):
         suggestions = (
             VariableSuggestion("{{date}}", "Current date, default format."),

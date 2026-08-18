@@ -4,6 +4,8 @@
 
 - Added: The **Insert Variable** dialog now shows a preview of the currently selected variable, if possible.
 
+- Fixed: If the language is set to the system standard, language-dependent variables, such as date and time, are output in the currently set language of the operating system, even if a suitable btText translation does not yet exist.
+
 ## [v1.1] 10.08.2026
 
 - Added: New variable system to automatically fill in certain values, such as date, time or interactively queried values, when inserting snippets. Further information can be found in the user manual.
