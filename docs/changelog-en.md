@@ -1,5 +1,9 @@
 # Changelog for btText
 
+## [Unreleased] 
+
+- Added: The **Insert Variable** dialog now shows a preview of the currently selected variable, if possible.
+
 ## [v1.1] 10.08.2026
 
 - Added: New variable system to automatically fill in certain values, such as date, time or interactively queried values, when inserting snippets. Further information can be found in the user manual.

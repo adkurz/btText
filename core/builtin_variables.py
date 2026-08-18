@@ -52,6 +52,7 @@ class BuiltinVariable:
     editor_kind: VariableEditorKind = VariableEditorKind.PLAIN
     editor_options: tuple[str, ...] = ()
     editor_placeholder: str | None = None
+    preview_enabled: bool = True
 
     def __post_init__(self) -> None:
         """Reject inconsistent editor metadata when defining the catalog."""
@@ -314,6 +315,7 @@ BUILTIN_VARIABLE_CATALOG = (
         VariableDescription.INPUT,
         VariableEditorKind.INPUT_LABEL,
         editor_placeholder="Prompt",
+        preview_enabled=False,
     ),
     BuiltinVariable(
         VariableDefinition(
@@ -323,6 +325,7 @@ BUILTIN_VARIABLE_CATALOG = (
             maximum_occurrences=1,
         ),
         VariableDescription.CURSOR,
+        preview_enabled=False,
     ),
 )
 

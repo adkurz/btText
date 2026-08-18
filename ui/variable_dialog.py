@@ -1,14 +1,18 @@
 """Accessible dialogs and presentation metadata for snippet variables."""
 
 from dataclasses import dataclass
+from datetime import datetime
 
 import wx
 
+import i18n
 from core.builtin_variables import (
     BUILTIN_VARIABLE_CATALOG,
     VariableDescription,
     VariableEditorKind,
+    create_builtin_variable_engine,
 )
+from core.variables import ResolutionContext
 from i18n import _
 from platform_support import windows
 from ui.controls import FocusableReadOnlyTextCtrl
@@ -22,6 +26,7 @@ class VariableSuggestion:
     description: str
     variable_description: str | None = None
     editor_kind: VariableEditorKind = VariableEditorKind.PLAIN
+    preview: str | None = None
 
 
 def _get_variable_description(description: VariableDescription) -> str:
@@ -50,19 +55,50 @@ def _get_variable_description(description: VariableDescription) -> str:
     return descriptions[description]
 
 
-def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
+def get_builtin_variable_suggestions(
+    timestamp: datetime | None = None,
+    locale: str | None = None,
+) -> tuple[VariableSuggestion, ...]:
     """Return localized editor choices for every built-in variable format."""
+    preview_context = ResolutionContext(
+        timestamp or datetime.now().astimezone(),
+        locale or i18n.get_active_language(),
+        # Translators: Non-private example used to preview {{clipboard}}.
+        get_clipboard_text=lambda: _("Example clipboard text"),
+        get_application_name=lambda: "example.exe",
+    )
+    engine = create_builtin_variable_engine()
+
+    def create_suggestion(
+        expression: str,
+        description: str,
+        value_description: str,
+        editor_kind: VariableEditorKind,
+        preview_enabled: bool,
+    ) -> VariableSuggestion:
+        preview = None
+        if preview_enabled:
+            preview = engine.render(expression, preview_context).text
+        return VariableSuggestion(
+            expression,
+            description,
+            value_description,
+            editor_kind,
+            preview,
+        )
+
     suggestions = []
     for variable in BUILTIN_VARIABLE_CATALOG:
         name = variable.definition.name
         value_description = _get_variable_description(variable.description)
         if variable.editor_kind is VariableEditorKind.PLAIN:
             suggestions.append(
-                VariableSuggestion(
+                create_suggestion(
                     "{{" + name + "}}",
                     value_description + ".",
                     value_description,
                     variable.editor_kind,
+                    variable.preview_enabled,
                 )
             )
             continue
@@ -73,18 +109,19 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                     f"Variable {name!r} requires an editor placeholder."
                 )
             suggestions.append(
-                VariableSuggestion(
+                create_suggestion(
                     "{{" + name + ":" + placeholder + "}}",
                     # Translators: Description for the editable placeholder in
                     # an interactive input variable expression.
                     _("Replace 'Prompt' with the requested value's label."),
                     value_description,
                     variable.editor_kind,
+                    variable.preview_enabled,
                 )
             )
             continue
         suggestions.append(
-            VariableSuggestion(
+            create_suggestion(
                 "{{" + name + "}}",
                 # Translators: Description for a variable without an explicit
                 # format. {value} is a localized date/time value description.
@@ -93,13 +130,14 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                 ),
                 value_description,
                 variable.editor_kind,
+                variable.preview_enabled,
             )
         )
         for format_name in variable.editor_options:
             if format_name == "iso":
                 continue
             suggestions.append(
-                VariableSuggestion(
+                create_suggestion(
                     "{{" + name + ":" + format_name + "}}",
                     # Translators: Description for a localized date/time
                     # variable. {value} is its value type; {format} is a
@@ -110,10 +148,11 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                     ),
                     value_description,
                     variable.editor_kind,
+                    variable.preview_enabled,
                 )
             )
         suggestions.append(
-            VariableSuggestion(
+            create_suggestion(
                 "{{" + name + ":iso}}",
                 # Translators: Description for a language-independent date/time
                 # variable. {value} is a localized value description.
@@ -122,6 +161,7 @@ def get_builtin_variable_suggestions() -> tuple[VariableSuggestion, ...]:
                 ),
                 value_description,
                 variable.editor_kind,
+                variable.preview_enabled,
             )
         )
     return tuple(suggestions)
@@ -185,6 +225,20 @@ class VariablePickerDialog(wx.Dialog):
         settings_sizer.Add(self.input_text, 0, wx.EXPAND)
         self.settings_panel.SetSizer(settings_sizer)
 
+        self.preview_panel = wx.Panel(self)
+        preview_sizer = wx.BoxSizer(wx.VERTICAL)
+        self.preview_label = wx.StaticText(
+            self.preview_panel,
+            # Translators: Label for the resolved example in the variable picker.
+            label=_("&Preview"),
+        )
+        self.preview_text = FocusableReadOnlyTextCtrl(self.preview_panel)
+        # Translators: Accessible name for a resolved variable example.
+        self.preview_text.SetName(_("Variable preview"))
+        preview_sizer.Add(self.preview_label, 0, wx.BOTTOM, self.FromDIP(6))
+        preview_sizer.Add(self.preview_text, 0, wx.EXPAND)
+        self.preview_panel.SetSizer(preview_sizer)
+
         button_sizer = wx.StdDialogButtonSizer()
         # Translators: Button that inserts the selected variable expression.
         self.insert_button = wx.Button(self, wx.ID_OK, _("&Insert"))
@@ -199,6 +253,7 @@ class VariablePickerDialog(wx.Dialog):
         self.SetEscapeId(wx.ID_CANCEL)
         self.variable_list.Bind(wx.EVT_LISTBOX, self._on_variable_selected)
         self.variable_list.Bind(wx.EVT_LISTBOX_DCLICK, self._on_variable_activated)
+        self.settings_list.Bind(wx.EVT_LISTBOX, self._on_setting_selected)
         self.settings_list.Bind(wx.EVT_LISTBOX_DCLICK, self._on_activate)
         self.input_text.Bind(wx.EVT_TEXT, self._on_input_changed)
 
@@ -216,6 +271,12 @@ class VariablePickerDialog(wx.Dialog):
             choices_sizer,
             1,
             wx.EXPAND | wx.ALL,
+            self.FromDIP(12),
+        )
+        dialog_sizer.Add(
+            self.preview_panel,
+            0,
+            wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
             self.FromDIP(12),
         )
         dialog_sizer.Add(
@@ -294,8 +355,27 @@ class VariablePickerDialog(wx.Dialog):
         self.input_label.Show(has_custom_input)
         self.input_text.Show(has_custom_input)
         self.settings_panel.Show(has_settings or has_custom_input)
+        self._update_preview()
         self._update_insert_button()
         self.Layout()
+
+    def _get_selected_suggestion(self) -> VariableSuggestion | None:
+        """Return the complete currently selected catalog suggestion."""
+        if not self._visible_suggestions:
+            return None
+        if len(self._visible_suggestions) == 1:
+            return self._visible_suggestions[0]
+        selection = self.settings_list.GetSelection()
+        if selection == wx.NOT_FOUND:
+            return None
+        return self._visible_suggestions[selection]
+
+    def _update_preview(self) -> None:
+        """Display the preview supplied by the selected catalog entry."""
+        suggestion = self._get_selected_suggestion()
+        preview = suggestion.preview if suggestion is not None else None
+        self.preview_text.SetValue(preview or "")
+        self.preview_panel.Show(preview is not None)
 
     @staticmethod
     def _input_label_is_valid(label: str) -> bool:
@@ -316,6 +396,9 @@ class VariablePickerDialog(wx.Dialog):
 
     def _on_variable_selected(self, event: wx.CommandEvent) -> None:
         self._update_settings()
+
+    def _on_setting_selected(self, event: wx.CommandEvent) -> None:
+        self._update_preview()
 
     def _on_variable_activated(self, event: wx.CommandEvent) -> None:
         """Insert a setting-free variable or move to its settings list."""

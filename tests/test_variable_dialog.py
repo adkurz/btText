@@ -1,4 +1,5 @@
 import unittest
+from datetime import datetime, timezone
 from unittest.mock import Mock, patch
 
 import wx
@@ -44,6 +45,22 @@ class VariableDialogTestCase(unittest.TestCase):
                     )
 
         self.assertEqual(len(suggestions), expected_count)
+
+    def test_builtin_catalog_previews_use_the_shared_variable_resolvers(self):
+        suggestions = get_builtin_variable_suggestions(
+            datetime(2026, 8, 6, 14, 35, 27, tzinfo=timezone.utc),
+            "de",
+        )
+        previews = {
+            suggestion.expression: suggestion.preview
+            for suggestion in suggestions
+        }
+
+        self.assertEqual(previews["{{date:short}}"], "06.08.26")
+        self.assertEqual(previews["{{date:long}}"], "6. August 2026")
+        self.assertEqual(previews["{{app}}"], "example.exe")
+        self.assertIsNone(previews["{{cursor}}"])
+        self.assertIsNone(previews["{{input:Prompt}}"])
 
     def test_picker_splits_variables_and_formats_into_two_lists(self):
         suggestions = (
@@ -94,6 +111,7 @@ class VariableDialogTestCase(unittest.TestCase):
             dialog._update_settings()
 
             self.assertTrue(dialog.settings_panel.IsShown())
+            self.assertFalse(dialog.preview_panel.IsShown())
             self.assertTrue(dialog.input_text.IsShown())
             self.assertFalse(dialog.settings_list.IsShown())
             self.assertFalse(dialog.insert_button.IsEnabled())
@@ -105,6 +123,33 @@ class VariableDialogTestCase(unittest.TestCase):
                 dialog.get_selected_expression(),
                 "{{input:Kundennummer}}",
             )
+        finally:
+            dialog.Destroy()
+
+    def test_picker_updates_preview_when_format_selection_changes(self):
+        suggestions = (
+            VariableSuggestion(
+                "{{date}}",
+                "Current date, default format.",
+                preview="8/6/26",
+            ),
+            VariableSuggestion(
+                "{{date:long}}",
+                "Current date, long format.",
+                preview="August 6, 2026",
+            ),
+        )
+        dialog = VariablePickerDialog(None, suggestions)
+        try:
+            self.assertTrue(dialog.preview_panel.IsShown())
+            self.assertEqual(dialog.preview_text.GetValue(), "8/6/26")
+
+            dialog.settings_list.SetSelection(1)
+            dialog._update_preview()
+
+            self.assertEqual(dialog.preview_text.GetValue(), "August 6, 2026")
+            self.assertFalse(dialog.preview_text.IsEditable())
+            self.assertTrue(dialog.preview_text.AcceptsFocusFromKeyboard())
         finally:
             dialog.Destroy()
 

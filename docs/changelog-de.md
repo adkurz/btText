@@ -1,5 +1,9 @@
 # Änderungsprotokoll für btText
 
+## [Unveröffentlicht] 
+
+- Hinzugefügt: Der Dialog **Variable einfügen** zeigt jetzt, sofern möglich, eine Vorschau der aktuell ausgewählten Variable an.
+
 ## [v1.1] 10.08.2026
 
 - Hinzugefügt: Neues Variablensystem, um bestimmte Werte, wie Datum, Uhrzeit oder interaktiv abgefragte Werte, beim Einfügen von Textbausteinen automatisch auszufüllen. Weitere Informationen sind im Benutzerhandbuch nachzuschlagen.

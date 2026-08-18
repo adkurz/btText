@@ -142,7 +142,7 @@ Use `{{input:Label}}` to request a value interactively. For example, `{{input:Cu
 
 To insert the characters `{{` or `}}` literally, double the corresponding sequence as `{{{{` or `}}}}`. Unknown variables, unsupported formats, and malformed braces prevent insertion and are reported as errors.
 
-In the text snippet editor, **Insert variable** shows the available variables on the left and their possible formats or settings on the right. For `input`, enter the requested label on the right. The right-hand area is hidden for variables without an additional choice, such as `{{app}}`. The chosen expression replaces the current selection or is inserted at the caret. **Preview** displays the fully resolved text in a read-only field that can be reached with Tab and copied when needed. btText validates variables again when saving, but continues to store the original expression rather than the currently displayed value.
+In the text snippet editor, **Insert variable** shows the available variables and their possible formats or settings. For `input`, enter the desired label for the input field to be created instead of a format. For variables without additional selection, such as `{{app}}`, the settings area is hidden. A preview of the variable is displayed in the Preview input field. For variables for which this is not possible, this area is also hidden. The selected expression replaces the current selection or is inserted at the cursor. **Preview** allows you to review and, if necessary, copy the fully resolved text in a read-only, tab-accessible text field. When saving, btText checks the variables again, but still saves the original expression and not the currently displayed value.
 
 ### Inserting or Copying Text
 
