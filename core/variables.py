@@ -1,4 +1,19 @@
-"""Parse and resolve variables embedded in snippet text."""
+"""Parse, validate, plan, and resolve variables embedded in snippet text.
+
+This module contains the generic variable engine.  It deliberately knows
+nothing about btText's concrete variables or wx UI.  Most new built-in
+variables therefore do *not* require changes here: implement their callbacks
+and add a catalog entry in :mod:`core.builtin_variables` instead.
+
+A definition participates in up to three separate phases:
+
+* ``validate_arguments`` checks an expression without reading runtime state.
+* ``collect_input_labels`` declares values that the UI must collect first.
+* ``resolver`` turns the already validated expression into text at insertion.
+
+Keeping those phases separate lets the editor validate snippets without side
+effects and lets the UI ask for all interactive values in a single dialog.
+"""
 
 from collections.abc import Callable, Iterable
 from dataclasses import dataclass
@@ -33,7 +48,13 @@ class VariableRenderingCancelled(Exception):
 
 @dataclass(frozen=True)
 class ResolutionContext:
-    """Values captured once and shared by every variable in one rendering."""
+    """Runtime services and snapshot values shared by one rendering.
+
+    New resolvers should obtain time, locale, clipboard, application, and user
+    input exclusively through this object.  Do not read those sources directly:
+    the UI layer captures or memoizes them so repeated variables in the same
+    snippet observe consistent values and remain straightforward to test.
+    """
 
     timestamp: datetime
     locale: str
@@ -44,12 +65,18 @@ class ResolutionContext:
 
 @dataclass(frozen=True)
 class ResolvedVariable:
-    """Return variable text and optional rendering instructions."""
+    """Return text plus an insertion instruction from a resolver.
+
+    A normal textual variable may simply return ``str``.  Use this wrapper only
+    when the variable also needs engine-level metadata, such as ``{{cursor}}``.
+    """
 
     text: str = ""
     cursor_position: bool = False
 
 
+# Resolver and extension-hook signatures are aliases so a new definition can
+# be type checked without depending on the engine's private token model.
 VariableResolver = Callable[
     [ResolutionContext, tuple[str, ...]],
     str | ResolvedVariable,
@@ -60,7 +87,14 @@ VariableInputCollector = Callable[[tuple[str, ...]], tuple[str, ...]]
 
 @dataclass(frozen=True)
 class VariableDefinition:
-    """Describe one named variable and the function that resolves it."""
+    """Describe the runtime contract of one named variable.
+
+    ``resolver`` is the only mandatory hook.  Add ``validate_arguments`` when
+    arguments have a constrained shape; it must not read external state.
+    ``collect_input_labels`` is for interactive variables and must return the
+    labels needed before rendering.  ``maximum_occurrences`` enforces a limit
+    across one template, rather than one call to the resolver.
+    """
 
     name: str
     resolver: VariableResolver
@@ -79,7 +113,11 @@ class RenderedSnippet:
 
 @dataclass(frozen=True)
 class ResolutionPlan:
-    """Describe user input required before resolving a template."""
+    """Describe user input required before resolving a template.
+
+    Labels are distinct and retain their first-occurrence order so a UI can
+    present one predictable combined dialog.  Planning never calls resolvers.
+    """
 
     input_labels: tuple[str, ...] = ()
 
@@ -138,7 +176,12 @@ class VariableRegistry:
 
 
 class VariableEngine:
-    """Render snippet templates through an explicit variable registry."""
+    """Render snippet templates through an explicit variable registry.
+
+    Resolution is intentionally nonrecursive: text returned by a resolver is
+    inserted literally even if it contains ``{{...}}``.  This prevents values
+    from accidentally becoming executable template syntax.
+    """
 
     def __init__(self, registry: VariableRegistry) -> None:
         self._registry = registry
@@ -195,7 +238,7 @@ class VariableEngine:
         self.plan(template)
 
     def plan(self, template: str) -> ResolutionPlan:
-        """Validate a template and collect its distinct interactive inputs."""
+        """Validate and collect interactive inputs without resolving values."""
         occurrences: dict[str, int] = {}
         input_labels: list[str] = []
         known_labels: set[str] = set()

@@ -20,7 +20,15 @@ from ui.variable_dialog import InteractiveVariablesDialog
 
 
 class SnippetVariableResolver:
-    """Resolve snippet text using values captured once per insertion."""
+    """Bridge the generic engine to wx and Windows insertion-time services.
+
+    The plan-first flow is important for extensions: interactive definitions
+    declare labels in the core catalog, this class opens one combined dialog,
+    and only then does the engine resolve the template.  A new variable should
+    need changes here only if it requires a genuinely new runtime service, in
+    which case expose that service through ``ResolutionContext`` as a callable
+    so validation stays side-effect free and tests can inject a replacement.
+    """
 
     def __init__(
         self,
@@ -43,7 +51,7 @@ class SnippetVariableResolver:
         template: str,
         target_window: int | None = None,
     ) -> RenderedSnippet:
-        """Collect interactive values, then capture context and render."""
+        """Collect all interactive values, capture context, then render once."""
         plan = self._engine.plan(template)
         answers: dict[str, str] = {}
         if plan.input_labels:
@@ -58,6 +66,8 @@ class SnippetVariableResolver:
             get_application_name=self._memoize(
                 lambda: windows.get_window_application_name(target_window)
             ),
+            # Interactive resolvers look up answers collected during planning;
+            # they never create UI while the engine is resolving the template.
             request_input=lambda label: answers[label],
         )
         return self._engine.render(template, context)

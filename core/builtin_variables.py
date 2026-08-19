@@ -1,4 +1,19 @@
-"""Built-in snippet variables with locale-aware date and time formatting."""
+"""Built-in snippet-variable implementations and their editor catalog.
+
+To add a built-in variable, normally:
+
+1. Implement a resolver that uses only ``ResolutionContext`` and arguments.
+2. Implement a side-effect-free argument validator when arguments are allowed.
+3. Add one ``BuiltinVariable`` to ``BUILTIN_VARIABLE_CATALOG`` with its editor
+   metadata and a ``VariableDescription`` member.
+4. Add the localized description mapping in ``ui.variable_dialog`` and cover
+   rendering, validation, and suggestion behavior with tests.
+
+The catalog is the shared source for both the runtime registry and the snippet
+editor.  Parser, controller, and dialog special cases should not be needed for
+ordinary variables.  Interactive variables additionally provide an input-label
+collector so all prompts can be gathered before any runtime value is resolved.
+"""
 
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -24,7 +39,11 @@ _DEFAULT_FORMAT = "short"
 
 
 class VariableEditorKind(Enum):
-    """Describe how the editor configures a built-in variable."""
+    """Describe how the editor constructs a variable expression.
+
+    Add a new kind only when none of the existing expression shapes can model
+    the variable; doing so also requires corresponding picker UI behavior.
+    """
 
     PLAIN = auto()
     TEMPORAL_FORMAT = auto()
@@ -32,7 +51,7 @@ class VariableEditorKind(Enum):
 
 
 class VariableDescription(Enum):
-    """Identify a localizable built-in variable description."""
+    """Identify localizable UI text without putting gettext into core code."""
 
     DATE = auto()
     TIME = auto()
@@ -45,7 +64,13 @@ class VariableDescription(Enum):
 
 @dataclass(frozen=True)
 class BuiltinVariable:
-    """Declare runtime and editor metadata for one built-in variable."""
+    """Declare runtime and editor metadata for one built-in variable.
+
+    ``definition`` drives rendering.  The remaining fields drive suggestions:
+    ``editor_options`` lists technical argument values, ``editor_placeholder``
+    marks user-editable argument text, and ``preview_enabled`` must be false if
+    a safe deterministic preview cannot be produced from the preview context.
+    """
 
     definition: VariableDefinition
     description: VariableDescription
@@ -222,6 +247,8 @@ def _resolve_input(
     context: ResolutionContext,
     arguments: tuple[str, ...],
 ) -> str:
+    # Planning has already collected this label.  The request callback reads
+    # the answer captured by the UI rather than opening a dialog per occurrence.
     label = _input_label(arguments)
     if context.request_input is None:
         raise VariableResolutionError(
@@ -270,6 +297,9 @@ def _validate_no_arguments(
     return validate
 
 
+# Keep every built-in in this catalog instead of assembling separate runtime
+# and editor lists.  BuiltinVariable.__post_init__ guards the metadata shapes,
+# while tests enforce unique definitions and complete description coverage.
 BUILTIN_VARIABLE_CATALOG = (
     BuiltinVariable(
         VariableDefinition("date", _resolve_date, _validate_temporal("date")),
@@ -328,6 +358,7 @@ BUILTIN_VARIABLE_CATALOG = (
         preview_enabled=False,
     ),
 )
+
 
 def create_builtin_variable_engine() -> VariableEngine:
     """Create an engine containing every built-in snippet variable."""

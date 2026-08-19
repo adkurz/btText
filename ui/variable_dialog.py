@@ -30,7 +30,12 @@ class VariableSuggestion:
 
 
 def _get_variable_description(description: VariableDescription) -> str:
-    """Localize one stable description identifier from the core catalog."""
+    """Localize one stable description identifier from the core catalog.
+
+    Every new ``VariableDescription`` member must be mapped here.  Keeping this
+    mapping in the UI layer allows the core catalog to remain independent of
+    gettext while still making missing descriptions fail loudly.
+    """
     descriptions = {
         # Translators: Description used in the snippet variable picker.
         VariableDescription.DATE: _("Current date"),
@@ -59,7 +64,13 @@ def get_builtin_variable_suggestions(
     timestamp: datetime | None = None,
     locale: str | None = None,
 ) -> tuple[VariableSuggestion, ...]:
-    """Return localized editor choices for every built-in variable format."""
+    """Build localized editor choices entirely from the built-in catalog.
+
+    ``PLAIN`` creates one complete expression, ``INPUT_LABEL`` creates an
+    editable placeholder expression, and ``TEMPORAL_FORMAT`` expands its option
+    list.  If a future variable needs another shape, extend ``VariableEditorKind``
+    and handle it explicitly here rather than branching on the variable name.
+    """
     preview_context = ResolutionContext(
         timestamp or datetime.now().astimezone(),
         locale or i18n.get_formatting_locale(),
