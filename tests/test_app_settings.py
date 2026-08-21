@@ -47,6 +47,7 @@ class SettingsStoreTestCase(unittest.TestCase):
                 hotstrings_enabled=False,
                 preserve_hotstring_boundary=False,
                 notify_hotstring_expansion=True,
+                play_hotstring_sound=False,
             )
 
             store.save(settings)
@@ -96,6 +97,10 @@ class SettingsStoreTestCase(unittest.TestCase):
                 "notify_expansion = True",
                 settings_file.read_text(encoding="utf-8"),
             )
+            self.assertIn(
+                "play_sound = False",
+                settings_file.read_text(encoding="utf-8"),
+            )
 
     def test_language_defaults_to_system(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
@@ -114,6 +119,7 @@ class SettingsStoreTestCase(unittest.TestCase):
             self.assertTrue(settings.hotstrings_enabled)
             self.assertTrue(settings.preserve_hotstring_boundary)
             self.assertFalse(settings.notify_hotstring_expansion)
+            self.assertFalse(settings.play_hotstring_sound)
             self.assertIsNone(settings.database_file)
 
     def test_invalid_appearance_falls_back_to_system(self):
@@ -193,6 +199,7 @@ class SettingsStoreTestCase(unittest.TestCase):
             self.assertTrue(settings.hotstrings_enabled)
             self.assertTrue(settings.preserve_hotstring_boundary)
             self.assertFalse(settings.notify_hotstring_expansion)
+            self.assertFalse(settings.play_hotstring_sound)
 
     def test_language_is_normalized(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

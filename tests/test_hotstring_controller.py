@@ -17,6 +17,11 @@ def render_unchanged(text, target_window=None):
 
 
 class HotstringControllerTestCase(unittest.TestCase):
+    def setUp(self):
+        sound_patcher = patch("ui.hotstring_controller.sounds.play_sound")
+        sound_patcher.start()
+        self.addCleanup(sound_patcher.stop)
+
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
     def test_snippet_mutations_refresh_hook_entries(self, keyboard_hook):
         ee = Mock()
@@ -95,18 +100,23 @@ class HotstringControllerTestCase(unittest.TestCase):
             32,
         )
 
+    @patch("ui.hotstring_controller.sounds.play_sound")
     @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
     def test_expansion_restores_clipboard_and_notifies_when_enabled(
         self,
         keyboard_hook,
         expand_hotstring,
+        play_sound,
     ):
         pending = Mock()
         expand_hotstring.return_value = pending
         schedule_restore = Mock()
         notify = Mock()
-        settings = AppSettings(notify_hotstring_expansion=True)
+        settings = AppSettings(
+            notify_hotstring_expansion=True,
+            play_hotstring_sound=True,
+        )
         controller = HotstringController(
             Mock(),
             Mock(),
@@ -128,6 +138,37 @@ class HotstringControllerTestCase(unittest.TestCase):
         expand_hotstring.assert_called_once_with(42, "Hello", 5, 32)
         schedule_restore.assert_called_once_with(pending)
         notify.assert_called_once_with(snippet)
+        play_sound.assert_called_once_with("hotstring.wav")
+
+    @patch("ui.hotstring_controller.sounds.play_sound")
+    @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
+    @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
+    def test_disabled_sound_is_not_played(
+        self,
+        keyboard_hook,
+        expand_hotstring,
+        play_sound,
+    ):
+        expand_hotstring.return_value = Mock()
+        controller = HotstringController(
+            Mock(),
+            Mock(),
+            Mock(),
+            lambda: AppSettings(play_hotstring_sound=False),
+            Mock(),
+            Mock(),
+            render_unchanged,
+        )
+        snippet = datamodel.Snippet(
+            category_id=1,
+            name="Greeting",
+            content="Hello",
+            hotstring="hello",
+        )
+
+        controller._expand(42, snippet, 32)
+
+        play_sound.assert_not_called()
 
     @patch("ui.hotstring_controller.hotstring_expansion.expand_hotstring")
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")

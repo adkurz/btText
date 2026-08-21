@@ -234,6 +234,7 @@ btText only monitors the keyboard if "Enable hotstrings" is activated in the set
 - **Enable hotstrings** (Hotstrings aktivieren): Turns automatic monitoring on or off.
 - **Retain end character after expansion** (Endezeichen nach der Erweiterung erhalten): Re-outputs the triggering space, `Enter`, `Tab`, or punctuation mark after the inserted text. Deactivate this option if the end character should not be included.
 - **Show Windows notification after expansion** (Nach der Erweiterung eine Windows-Benachrichtigung anzeigen): Displays a notification in the Windows system tray after successful expansion.
+- **Play a sound after expansion** (Nach der Erweiterung einen Sound abspielen): Plays an audible confirmation after a successful expansion. This setting is disabled by default.
 
 ### Design
 

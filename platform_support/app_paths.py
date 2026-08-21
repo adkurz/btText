@@ -77,6 +77,11 @@ def get_icon_file() -> Path:
     return get_resource_directory() / "assets" / "icon.png"
 
 
+def get_sounds_folder() -> Path:
+    """Return the directory containing bundled application sounds."""
+    return get_resource_directory() / "assets" / "sounds"
+
+
 def get_locale_directory() -> Path:
     """Return the directory containing bundled translation catalogs."""
     return get_resource_directory() / "locale"

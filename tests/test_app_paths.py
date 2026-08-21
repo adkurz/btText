@@ -24,6 +24,10 @@ class AppPathsTests(unittest.TestCase):
                 app_paths.get_data_directory(),
                 app_paths.PROJECT_ROOT,
             )
+            self.assertEqual(
+                app_paths.get_sounds_folder(),
+                app_paths.PROJECT_ROOT / "assets" / "sounds",
+            )
 
     def test_frozen_build_without_marker_is_portable(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -92,6 +96,10 @@ class AppPathsTests(unittest.TestCase):
                 self.assertEqual(
                     app_paths.get_resource_directory(),
                     bundle,
+                )
+                self.assertEqual(
+                    app_paths.get_sounds_folder(),
+                    bundle / "assets" / "sounds",
                 )
 
     def test_installed_mode_requires_appdata(self):

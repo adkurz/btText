@@ -44,6 +44,7 @@ class SettingsControllerTestCase(unittest.TestCase):
             self.settings.hotstrings_enabled,
             self.settings.preserve_hotstring_boundary,
             self.settings.notify_hotstring_expansion,
+            self.settings.play_hotstring_sound,
         )
 
         self.assertFalse(changed)
@@ -78,6 +79,7 @@ class SettingsControllerTestCase(unittest.TestCase):
             True,
             self.settings.preserve_hotstring_boundary,
             self.settings.notify_hotstring_expansion,
+            self.settings.play_hotstring_sound,
         )
 
         self.assertFalse(changed)
@@ -99,6 +101,7 @@ class SettingsControllerTestCase(unittest.TestCase):
             self.settings.hotstrings_enabled,
             self.settings.preserve_hotstring_boundary,
             self.settings.notify_hotstring_expansion,
+            self.settings.play_hotstring_sound,
         )
 
         self.assertTrue(changed)
@@ -118,6 +121,7 @@ class SettingsControllerTestCase(unittest.TestCase):
             self.settings.hotstrings_enabled,
             self.settings.preserve_hotstring_boundary,
             self.settings.notify_hotstring_expansion,
+            self.settings.play_hotstring_sound,
         )
 
         self.assertTrue(changed)
@@ -155,6 +159,7 @@ class SettingsControllerTestCase(unittest.TestCase):
             self.settings.hotstrings_enabled,
             self.settings.preserve_hotstring_boundary,
             self.settings.notify_hotstring_expansion,
+            self.settings.play_hotstring_sound,
         )
 
         self.assertFalse(changed)
@@ -180,6 +185,7 @@ class SettingsControllerTestCase(unittest.TestCase):
             False,
             self.settings.preserve_hotstring_boundary,
             self.settings.notify_hotstring_expansion,
+            self.settings.play_hotstring_sound,
         )
 
         self.assertTrue(changed)
@@ -197,6 +203,7 @@ class SettingsControllerTestCase(unittest.TestCase):
             self.settings.hotstrings_enabled,
             self.settings.preserve_hotstring_boundary,
             self.settings.notify_hotstring_expansion,
+            self.settings.play_hotstring_sound,
         )
 
         self.assertTrue(changed)

@@ -20,10 +20,14 @@ from platform_support import (
     hotstring_expansion,
     hotstrings,
     keyboard_input,
+    sounds,
     windows,
 )
 from platform_support.clipboard_paste import PendingPaste
 from ui.variable_resolver import show_variable_error
+
+
+HOTSTRING_SOUND_FILENAME = "hotstring.wav"
 
 
 class HotstringController:
@@ -137,6 +141,8 @@ class HotstringController:
             self._show_hotstring_error(error)
             return
         self._schedule_clipboard_restore(pending)
+        if settings.play_hotstring_sound:
+            sounds.play_sound(HOTSTRING_SOUND_FILENAME)
         if settings.notify_hotstring_expansion:
             self._notify_expansion(snippet)
 

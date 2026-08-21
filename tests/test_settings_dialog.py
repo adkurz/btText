@@ -26,6 +26,7 @@ class SettingsDialogDesignTestCase(unittest.TestCase):
             True,
             True,
             False,
+            True,
             ("en",),
             apply_settings,
             Mock(),
@@ -39,6 +40,34 @@ class SettingsDialogDesignTestCase(unittest.TestCase):
             self.assertTrue(dialog.apply_button.IsEnabled())
             self.assertTrue(dialog._apply())
             self.assertEqual(apply_settings.call_args.args[2], APPEARANCE_DARK)
+        finally:
+            dialog.Destroy()
+
+    def test_hotstring_sound_setting_is_reported(self):
+        apply_settings = Mock(return_value=True)
+        dialog = SettingsDialog(
+            None,
+            DEFAULT_TOGGLE_HOTKEY,
+            "system",
+            APPEARANCE_SYSTEM,
+            True,
+            True,
+            True,
+            True,
+            False,
+            True,
+            ("en",),
+            apply_settings,
+            Mock(),
+            Mock(),
+        )
+        try:
+            dialog.play_hotstring_sound_checkbox.SetValue(False)
+            dialog._on_play_hotstring_sound_changed(Mock())
+
+            self.assertTrue(dialog.apply_button.IsEnabled())
+            self.assertTrue(dialog._apply())
+            self.assertFalse(apply_settings.call_args.args[8])
         finally:
             dialog.Destroy()
 

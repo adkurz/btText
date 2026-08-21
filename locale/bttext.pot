@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.1\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-18 15:46+0200\n"
+"POT-Creation-Date: 2026-08-21 14:35+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -28,7 +28,7 @@ msgstr ""
 #. database path in the application settings.
 #. Translators: Title of a startup warning concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:80 btText.py:159 ui/settings_controller.py:210
+#: btText.py:80 btText.py:159 ui/settings_controller.py:212
 msgid "Settings error"
 msgstr ""
 
@@ -44,7 +44,7 @@ msgstr ""
 
 #. Translators: Title of the startup warning for log setup.
 #. Translators: Title of an error opening the log directory.
-#: btText.py:139 ui/main_frame.py:638
+#: btText.py:139 ui/main_frame.py:639
 msgid "Logging error"
 msgstr ""
 
@@ -434,7 +434,7 @@ msgstr ""
 
 #. Translators: Language-choice entry that follows the operating
 #. system's language when a matching catalog is installed.
-#: i18n.py:60
+#: i18n.py:61
 msgid "System default"
 msgstr ""
 
@@ -715,8 +715,8 @@ msgstr ""
 #. closes the dialog. "&" marks the keyboard mnemonic.
 #. Translators: Snippet-editor button that discards unsaved changes and
 #. Translators: Button that closes the variable picker without inserting.
-#: ui/database_selection.py:57 ui/search_dialog.py:62 ui/settings_dialog.py:97
-#: ui/snippet_editor.py:164 ui/variable_dialog.py:246
+#: ui/database_selection.py:57 ui/search_dialog.py:62 ui/settings_dialog.py:100
+#: ui/snippet_editor.py:164 ui/variable_dialog.py:257
 msgid "&Cancel"
 msgstr ""
 
@@ -744,7 +744,7 @@ msgstr ""
 
 #. Translators: Title for a failure to monitor or expand a
 #. globally typed snippet hotstring.
-#: ui/hotstring_controller.py:66 ui/hotstring_controller.py:163
+#: ui/hotstring_controller.py:70 ui/hotstring_controller.py:169
 msgid "Hotstring error"
 msgstr ""
 
@@ -872,13 +872,13 @@ msgstr ""
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:575
+#: ui/main_frame.py:576
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr ""
 
 #. Translators: Error shown when the HTML user manual cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:600
+#: ui/main_frame.py:601
 #, python-brace-format
 msgid ""
 "The user manual could not be opened.\n"
@@ -887,13 +887,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Title of the user-manual opening error.
-#: ui/main_frame.py:604
+#: ui/main_frame.py:605
 msgid "User manual error"
 msgstr ""
 
 #. Translators: Error shown when the HTML changelog cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:617
+#: ui/main_frame.py:618
 #, python-brace-format
 msgid ""
 "The changelog could not be opened.\n"
@@ -902,13 +902,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Title of the changelog opening error.
-#: ui/main_frame.py:621
+#: ui/main_frame.py:622
 msgid "Changelog error"
 msgstr ""
 
 #. Translators: Error shown when the local log directory cannot
 #. be created or opened. {reason} is a technical system message.
-#: ui/main_frame.py:634
+#: ui/main_frame.py:635
 #, python-brace-format
 msgid ""
 "The log folder could not be opened.\n"
@@ -1011,162 +1011,168 @@ msgstr ""
 #. Translators: Title of an error registering a global shortcut.
 #. Translators: Title of an error changing the global shortcut.
 #. Translators: Title of an error restoring a global shortcut.
-#: ui/settings_controller.py:76 ui/settings_controller.py:125
-#: ui/settings_controller.py:168
+#: ui/settings_controller.py:76 ui/settings_controller.py:126
+#: ui/settings_controller.py:170
 msgid "Hotkey error"
 msgstr ""
 
 #. Translators: Settings error: the requested global shortcut is
 #. occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
-#: ui/settings_controller.py:112
+#: ui/settings_controller.py:113
 #, python-brace-format
 msgid "The selected hotkey {} is already in use. The previous hotkey has been restored."
 msgstr ""
 
 #. Translators: Settings error: the requested shortcut is occupied
 #. and restoring the old one also failed. {} is such as Ctrl+Alt+T.
-#: ui/settings_controller.py:119
+#: ui/settings_controller.py:120
 #, python-brace-format
 msgid "The selected hotkey {} is already in use and the previous hotkey could not be restored. No global hotkey is active."
 msgstr ""
 
 #. Translators: Error after cancelling settings when btText
 #. could not restore the previously active global shortcut.
-#: ui/settings_controller.py:164
+#: ui/settings_controller.py:166
 msgid "The previous hotkey could not be restored. No global hotkey is active."
 msgstr ""
 
 #. Translators: Window title for application settings.
-#: ui/settings_dialog.py:45
+#: ui/settings_dialog.py:46
 msgid "Settings"
 msgstr ""
 
 #. Translators: Tab for general application settings such as language.
 #. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:78
+#: ui/settings_dialog.py:81
 msgid "&General"
 msgstr ""
 
 #. Translators: Tab for selecting the application's visual appearance.
 #. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:82
+#: ui/settings_dialog.py:85
 msgid "&Design"
 msgstr ""
 
 #. Translators: Tab for configuring automatic snippet hotstrings.
 #. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:86
+#: ui/settings_dialog.py:89
 msgid "&Hotstrings"
 msgstr ""
 
 #. Translators: Tab for configuring the global keyboard shortcut.
 #. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:90
+#: ui/settings_dialog.py:93
 msgid "&Keyboard"
 msgstr ""
 
 #. Translators: Settings-dialog button that saves pending changes and
 #. closes the dialog. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:94
+#: ui/settings_dialog.py:97
 msgid "&OK"
 msgstr ""
 
 #. Translators: Settings-dialog button that saves and activates pending
 #. changes without closing the dialog. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:100
+#: ui/settings_dialog.py:103
 msgid "&Apply"
 msgstr ""
 
 #. Translators: Label for the user-interface language selector.
 #. "&" marks the keyboard mnemonic for the adjacent choice control.
-#: ui/settings_dialog.py:133
+#: ui/settings_dialog.py:136
 msgid "&Language"
 msgstr ""
 
 #. Translators: Explains that a newly selected interface language is
 #. loaded the next time the application starts.
-#: ui/settings_dialog.py:154
+#: ui/settings_dialog.py:157
 msgid "Language changes take effect after restarting btText."
 msgstr ""
 
 #. Translators: General setting that controls whether text copied from
 #. a snippet is added to the Windows clipboard history. "&" marks the
 #. keyboard mnemonic.
-#: ui/settings_dialog.py:163
+#: ui/settings_dialog.py:166
 msgid "Include copied snippet &text in the Windows clipboard history"
 msgstr ""
 
 #. Translators: General setting that controls whether copied snippet
 #. text may be synchronized through the Windows cloud clipboard.
 #. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:177
+#: ui/settings_dialog.py:180
 msgid "Allow copied snippet text to be stored in the Windows &cloud"
 msgstr ""
 
 #. Translators: Group label for choosing the light or dark design.
 #. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:227
+#: ui/settings_dialog.py:230
 msgid "&Appearance"
 msgstr ""
 
 #. Translators: Follow the operating system's light/dark mode.
-#: ui/settings_dialog.py:230
+#: ui/settings_dialog.py:233
 msgid "Use &system setting"
 msgstr ""
 
 #. Translators: Always use the light application design.
-#: ui/settings_dialog.py:232
+#: ui/settings_dialog.py:235
 msgid "&Light"
 msgstr ""
 
 #. Translators: Always use the dark application design.
-#: ui/settings_dialog.py:234
+#: ui/settings_dialog.py:237
 msgid "&Dark"
 msgstr ""
 
 #. Translators: Explains when a newly selected design is loaded.
-#: ui/settings_dialog.py:251
+#: ui/settings_dialog.py:254
 msgid "Design changes take effect after restarting btText."
 msgstr ""
 
 #. Translators: Explanation on the hotstring settings page.
-#: ui/settings_dialog.py:278
+#: ui/settings_dialog.py:281
 msgid "Hotstrings expand a snippet after its abbreviation is followed by Space, Enter, Tab, or punctuation."
 msgstr ""
 
 #. Translators: Setting that enables automatic expansion of snippet
 #. hotstrings. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:287
+#: ui/settings_dialog.py:290
 msgid "&Enable hotstrings"
 msgstr ""
 
 #. Translators: Hotstring setting that keeps the typed Space, Enter,
 #. Tab, or punctuation after the expanded snippet.
-#: ui/settings_dialog.py:295
+#: ui/settings_dialog.py:298
 msgid "&Keep the ending character after expansion"
 msgstr ""
 
 #. Translators: Hotstring setting that shows a Windows notification
 #. after a snippet was expanded. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:308
+#: ui/settings_dialog.py:311
 msgid "Show a Windows &notification after expansion"
+msgstr ""
+
+#. Translators: Hotstring setting that plays an audible confirmation
+#. after a successful expansion. "&" marks the keyboard mnemonic.
+#: ui/settings_dialog.py:324
+msgid "Play a &sound after expansion"
 msgstr ""
 
 #. Translators: Settings-page explanation of the global shortcut and
 #. its required modifier keys.
-#: ui/settings_dialog.py:412
+#: ui/settings_dialog.py:443
 msgid "Configure the global shortcut used to show or hide the main window. A shortcut must contain Ctrl, Shift, Alt or the Windows key."
 msgstr ""
 
 #. Translators: Label for the currently configured global shortcut.
 #. "&" marks the keyboard mnemonic for the adjacent read-only field.
-#: ui/settings_dialog.py:421
+#: ui/settings_dialog.py:452
 msgid "Current &hotkey"
 msgstr ""
 
 #. Translators: Accessible name for the read-only field displaying
 #. the currently configured global show-or-hide shortcut.
-#: ui/settings_dialog.py:429
+#: ui/settings_dialog.py:460
 msgid "Current show or hide window shortcut"
 msgstr ""
 
@@ -1174,85 +1180,85 @@ msgstr ""
 #. shortcut. "&" marks the keyboard mnemonic.
 #. Translators: Button label restored after shortcut recording ends; it
 #. starts listening for another shortcut. "&" marks the mnemonic.
-#: ui/settings_dialog.py:436 ui/settings_dialog.py:532
+#: ui/settings_dialog.py:467 ui/settings_dialog.py:563
 msgid "&Record new shortcut"
 msgstr ""
 
 #. Translators: Button that stops the current shortcut recording
 #. without accepting it. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:443
+#: ui/settings_dialog.py:474
 msgid "Cancel &recording"
 msgstr ""
 
 #. Translators: Button that selects btText's default global shortcut as
 #. the pending setting. "&" marks the keyboard mnemonic.
-#: ui/settings_dialog.py:452
+#: ui/settings_dialog.py:483
 msgid "Use &default"
 msgstr ""
 
 #. Translators: Initial status before shortcut recording starts.
-#: ui/settings_dialog.py:459
+#: ui/settings_dialog.py:490
 msgid "Recording is not active."
 msgstr ""
 
 #. Translators: Accessible name for the text that reports shortcut
 #. recording instructions and results.
-#: ui/settings_dialog.py:463
+#: ui/settings_dialog.py:494
 msgid "Shortcut recording status"
 msgstr ""
 
 #. Translators: Temporary button label while btText waits for the user to
 #. press a new global shortcut.
-#: ui/settings_dialog.py:498
+#: ui/settings_dialog.py:529
 msgid "Press shortcut now"
 msgstr ""
 
 #. Translators: Accessible name while btText is waiting for a shortcut;
 #. Escape cancels and Tab leaves the recording control.
-#: ui/settings_dialog.py:503
+#: ui/settings_dialog.py:534
 msgid "Recording shortcut. Press Escape to cancel or Tab to leave recording."
 msgstr ""
 
 #. Translators: Instructions shown while recording a new global
 #. shortcut. Keep Escape, Tab, and Shift+Tab recognizable key names.
-#: ui/settings_dialog.py:512
+#: ui/settings_dialog.py:543
 msgid "Press one shortcut now. Escape cancels; Tab and Shift+Tab remain available."
 msgstr ""
 
 #. Translators: Status after the user cancels shortcut recording.
-#: ui/settings_dialog.py:524
+#: ui/settings_dialog.py:555
 msgid "Shortcut recording cancelled."
 msgstr ""
 
 #. Translators: Accessible button name restored after recording ends; the
 #. button starts recording another global shortcut.
-#: ui/settings_dialog.py:535
+#: ui/settings_dialog.py:566
 msgid "Record new shortcut"
 msgstr ""
 
 #. Translators: Status announced after an invalid shortcut ends
 #. recording. {error} explains why the key was rejected.
-#: ui/settings_dialog.py:572
+#: ui/settings_dialog.py:603
 #, python-brace-format
 msgid "Shortcut not accepted: {error}. Recording has stopped."
 msgstr ""
 
 #. Translators: Status after recording succeeds. The shortcut is not
 #. active until Apply or OK saves it. {shortcut} is such as Ctrl+Alt+T.
-#: ui/settings_dialog.py:585
+#: ui/settings_dialog.py:616
 #, python-brace-format
 msgid "Shortcut {shortcut} recorded. Choose Apply or OK to activate it."
 msgstr ""
 
 #. Translators: Status after selecting btText's default shortcut; it
 #. is only activated when Apply or OK saves the setting.
-#: ui/settings_dialog.py:623
+#: ui/settings_dialog.py:654
 msgid "Default shortcut selected. Choose Apply or OK to activate it."
 msgstr ""
 
 #. Translators: Status confirming that all pending application settings
 #. were saved and activated where possible.
-#: ui/settings_dialog.py:674
+#: ui/settings_dialog.py:709
 msgid "The settings have been applied."
 msgstr ""
 
@@ -1567,55 +1573,55 @@ msgid "The input field must not be empty!"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:36
+#: ui/variable_dialog.py:41
 msgid "Current date"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:38
+#: ui/variable_dialog.py:43
 msgid "Current time"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:40
+#: ui/variable_dialog.py:45
 msgid "Current date and time"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:43
+#: ui/variable_dialog.py:48
 msgid "Current Unicode text from the Windows clipboard"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker. This is
 #. the executable filename, not a possibly private window title.
-#: ui/variable_dialog.py:48
+#: ui/variable_dialog.py:53
 msgid "Executable filename of the target application"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:51
+#: ui/variable_dialog.py:56
 msgid "Text requested during insertion"
 msgstr ""
 
 #. Translators: Description used in the snippet variable picker.
-#: ui/variable_dialog.py:53
+#: ui/variable_dialog.py:58
 msgid "Final cursor position after insertion"
 msgstr ""
 
 #. Translators: Non-private example used to preview {{clipboard}}.
-#: ui/variable_dialog.py:67
+#: ui/variable_dialog.py:78
 msgid "Example clipboard text"
 msgstr ""
 
 #. Translators: Description for the editable placeholder in
 #. an interactive input variable expression.
-#: ui/variable_dialog.py:116
+#: ui/variable_dialog.py:127
 msgid "Replace 'Prompt' with the requested value's label."
 msgstr ""
 
 #. Translators: Description for a variable without an explicit
 #. format. {value} is a localized date/time value description.
-#: ui/variable_dialog.py:128
+#: ui/variable_dialog.py:139
 #, python-brace-format
 msgid "{value} using the default localized short format."
 msgstr ""
@@ -1623,101 +1629,101 @@ msgstr ""
 #. Translators: Description for a localized date/time
 #. variable. {value} is its value type; {format} is a
 #. language-independent technical format name.
-#: ui/variable_dialog.py:145
+#: ui/variable_dialog.py:156
 #, python-brace-format
 msgid "{value} using the localized '{format}' format."
 msgstr ""
 
 #. Translators: Description for a language-independent date/time
 #. variable. {value} is a localized value description.
-#: ui/variable_dialog.py:159
+#: ui/variable_dialog.py:170
 #, python-brace-format
 msgid "{value} using the language-independent ISO format."
 msgstr ""
 
 #. Translators: Window title for choosing a snippet variable.
-#: ui/variable_dialog.py:181
+#: ui/variable_dialog.py:192
 msgid "Insert variable"
 msgstr ""
 
 #. Translators: Label for the list of variables available to insert.
-#: ui/variable_dialog.py:189
+#: ui/variable_dialog.py:200
 msgid "&Available variables"
 msgstr ""
 
 #. Translators: Accessible name for the snippet variable picker list.
-#: ui/variable_dialog.py:199
+#: ui/variable_dialog.py:210
 msgid "Available snippet variables"
 msgstr ""
 
 #. Translators: Label for optional variable formats or settings.
-#: ui/variable_dialog.py:208
+#: ui/variable_dialog.py:219
 msgid "Possible &formats or settings"
 msgstr ""
 
 #. Translators: Accessible name for optional variable
 #. formats/settings.
-#: ui/variable_dialog.py:214
+#: ui/variable_dialog.py:225
 msgid "Available variable formats or settings"
 msgstr ""
 
 #. Translators: Label for the prompt stored in an interactive input
 #. variable. "&" marks the keyboard mnemonic.
-#: ui/variable_dialog.py:218
+#: ui/variable_dialog.py:229
 msgid "&Prompt"
 msgstr ""
 
 #. Translators: Accessible name for the editable prompt of {{input}}.
-#: ui/variable_dialog.py:221
+#: ui/variable_dialog.py:232
 msgid "Interactive variable prompt"
 msgstr ""
 
 #. Translators: Label for the resolved example in the variable picker.
-#: ui/variable_dialog.py:233
+#: ui/variable_dialog.py:244
 msgid "&Preview"
 msgstr ""
 
 #. Translators: Accessible name for a resolved variable example.
 #. Translators: Window title for rendered snippet variable output.
-#: ui/variable_dialog.py:237 ui/variable_dialog.py:535
+#: ui/variable_dialog.py:248 ui/variable_dialog.py:546
 msgid "Variable preview"
 msgstr ""
 
 #. Translators: Button that inserts the selected variable expression.
-#: ui/variable_dialog.py:244
+#: ui/variable_dialog.py:255
 msgid "&Insert"
 msgstr ""
 
 #. Translators: Default choice for a variable with optional formats.
-#: ui/variable_dialog.py:330
+#: ui/variable_dialog.py:341
 msgid "Default"
 msgstr ""
 
 #. Translators: Window title for entering all interactive snippet
 #. variable values in one dialog.
-#: ui/variable_dialog.py:436
+#: ui/variable_dialog.py:447
 msgid "Enter variable values"
 msgstr ""
 
 #. Translators: Instructions above interactive snippet variable
 #. fields.
-#: ui/variable_dialog.py:446
+#: ui/variable_dialog.py:457
 msgid "Enter the values required by this snippet."
 msgstr ""
 
 #. Translators: Label for the rendered snippet text in the preview.
-#: ui/variable_dialog.py:539
+#: ui/variable_dialog.py:550
 msgid "Resolved &text"
 msgstr ""
 
 #. Translators: Accessible name for rendered snippet preview text.
-#: ui/variable_dialog.py:546
+#: ui/variable_dialog.py:557
 msgid "Resolved snippet text"
 msgstr ""
 
 #. Translators: Title for a variable error that prevents a snippet from
 #. being inserted manually or expanded through a hotstring.
-#: ui/variable_resolver.py:108
+#: ui/variable_resolver.py:118
 msgid "Variable error"
 msgstr ""
 

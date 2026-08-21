@@ -31,6 +31,7 @@ class AppSettings:
     hotstrings_enabled: bool = True
     preserve_hotstring_boundary: bool = True
     notify_hotstring_expansion: bool = False
+    play_hotstring_sound: bool = False
 
     def __post_init__(self):
         """Normalize a configured database path once at the settings boundary."""
@@ -117,6 +118,11 @@ class SettingsStore:
                 "notify_expansion",
                 fallback=defaults.notify_hotstring_expansion,
             )
+            play_hotstring_sound = parser.getboolean(
+                "hotstrings",
+                "play_sound",
+                fallback=defaults.play_hotstring_sound,
+            )
             return AppSettings(
                 database_file=database_file,
                 toggle_window_hotkey=Hotkey.parse(value),
@@ -129,6 +135,7 @@ class SettingsStore:
                 hotstrings_enabled=hotstrings_enabled,
                 preserve_hotstring_boundary=preserve_hotstring_boundary,
                 notify_hotstring_expansion=notify_hotstring_expansion,
+                play_hotstring_sound=play_hotstring_sound,
             )
         except (ConfigParserError, OSError, ValueError) as error:
             raise SettingsError(
@@ -180,6 +187,7 @@ class SettingsStore:
                 "enabled": str(settings.hotstrings_enabled),
                 "preserve_boundary": str(settings.preserve_hotstring_boundary),
                 "notify_expansion": str(settings.notify_hotstring_expansion),
+                "play_sound": str(settings.play_hotstring_sound),
             }
             parser["hotkeys"] = {
                 "toggle_window": str(settings.toggle_window_hotkey),

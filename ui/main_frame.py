@@ -558,6 +558,7 @@ class MainFrame(sc.SizedFrame):
                 settings.hotstrings_enabled,
                 settings.preserve_hotstring_boundary,
                 settings.notify_hotstring_expansion,
+                settings.play_hotstring_sound,
                 available_languages,
                 self._settings_controller.apply,
                 self._settings_controller.suspend_hotkey,

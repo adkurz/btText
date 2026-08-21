@@ -31,9 +31,10 @@ class SettingsDialog(wx.Dialog):
         hotstrings_enabled: bool,
         preserve_hotstring_boundary: bool,
         notify_hotstring_expansion: bool,
+        play_hotstring_sound: bool,
         available_languages: tuple[str, ...],
         apply_settings: Callable[
-            [Hotkey, str, str, bool, bool, bool, bool, bool], bool
+            [Hotkey, str, str, bool, bool, bool, bool, bool, bool], bool
         ],
         begin_recording: Callable[[], None],
         end_recording: Callable[[], None],
@@ -65,6 +66,8 @@ class SettingsDialog(wx.Dialog):
         self._candidate_preserve_hotstring_boundary = preserve_hotstring_boundary
         self._current_notify_hotstring_expansion = notify_hotstring_expansion
         self._candidate_notify_hotstring_expansion = notify_hotstring_expansion
+        self._current_play_hotstring_sound = play_hotstring_sound
+        self._candidate_play_hotstring_sound = play_hotstring_sound
         self._available_languages = available_languages
         self._apply_settings = apply_settings
         self._begin_recording = begin_recording
@@ -314,6 +317,19 @@ class SettingsDialog(wx.Dialog):
             wx.EVT_CHECKBOX,
             self._on_notify_hotstring_expansion_changed,
         )
+        self.play_hotstring_sound_checkbox = wx.CheckBox(
+            page,
+            # Translators: Hotstring setting that plays an audible confirmation
+            # after a successful expansion. "&" marks the keyboard mnemonic.
+            label=_("Play a &sound after expansion"),
+        )
+        self.play_hotstring_sound_checkbox.SetValue(
+            self._candidate_play_hotstring_sound
+        )
+        self.play_hotstring_sound_checkbox.Bind(
+            wx.EVT_CHECKBOX,
+            self._on_play_hotstring_sound_changed,
+        )
         sizer = wx.BoxSizer(wx.VERTICAL)
         sizer.Add(description, 0, wx.EXPAND | wx.ALL, 12)
         sizer.Add(
@@ -330,6 +346,12 @@ class SettingsDialog(wx.Dialog):
         )
         sizer.Add(
             self.notify_hotstring_expansion_checkbox,
+            0,
+            wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
+            12,
+        )
+        sizer.Add(
+            self.play_hotstring_sound_checkbox,
             0,
             wx.EXPAND | wx.LEFT | wx.RIGHT | wx.BOTTOM,
             12,
@@ -384,6 +406,13 @@ class SettingsDialog(wx.Dialog):
         )
         self._update_apply_button()
 
+    def _on_play_hotstring_sound_changed(self, event: wx.CommandEvent):
+        """Store whether successful expansions should play a sound."""
+        self._candidate_play_hotstring_sound = (
+            self.play_hotstring_sound_checkbox.GetValue()
+        )
+        self._update_apply_button()
+
     def _update_apply_button(self):
         """Enable Apply whenever either setting differs from its saved value."""
         self.apply_button.Enable(
@@ -399,6 +428,8 @@ class SettingsDialog(wx.Dialog):
             != self._current_preserve_hotstring_boundary
             or self._candidate_notify_hotstring_expansion
             != self._current_notify_hotstring_expansion
+            or self._candidate_play_hotstring_sound
+            != self._current_play_hotstring_sound
         )
 
     def _create_hotkey_page(self, notebook: wx.Notebook) -> wx.Panel:
@@ -639,6 +670,8 @@ class SettingsDialog(wx.Dialog):
             == self._current_preserve_hotstring_boundary
             and self._candidate_notify_hotstring_expansion
             == self._current_notify_hotstring_expansion
+            and self._candidate_play_hotstring_sound
+            == self._current_play_hotstring_sound
         ):
             return True
         if not self._apply_settings(
@@ -650,6 +683,7 @@ class SettingsDialog(wx.Dialog):
             self._candidate_hotstrings_enabled,
             self._candidate_preserve_hotstring_boundary,
             self._candidate_notify_hotstring_expansion,
+            self._candidate_play_hotstring_sound,
         ):
             return False
         self._current_hotkey = self._candidate_hotkey
@@ -668,6 +702,7 @@ class SettingsDialog(wx.Dialog):
         self._current_notify_hotstring_expansion = (
             self._candidate_notify_hotstring_expansion
         )
+        self._current_play_hotstring_sound = self._candidate_play_hotstring_sound
         self.apply_button.Enable(False)
         # Translators: Status confirming that all pending application settings
         # were saved and activated where possible.

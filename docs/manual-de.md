@@ -233,6 +233,7 @@ btText überwacht die Tastatur nur, wenn Hotstrings in den Einstellungen aktivie
 - **Hotstrings aktivieren**: Schaltet die automatische Überwachung ein oder aus.
 - **Endezeichen nach der Erweiterung erhalten**: Gibt das auslösende Leerzeichen, `Eingabe`, `Tab` oder Satzzeichen nach dem eingefügten Text wieder aus. Deaktivieren Sie die Option, wenn das Endezeichen nicht übernommen werden soll.
 - **Nach der Erweiterung eine Windows-Benachrichtigung anzeigen**: Zeigt nach erfolgreicher Erweiterung eine Benachrichtigung im Windows-Infobereich an.
+- **Nach der Erweiterung einen Sound abspielen**: Spielt nach einer erfolgreichen Erweiterung eine akustische Bestätigung ab. Diese Einstellung ist standardmäßig deaktiviert.
 
 ### Design
 

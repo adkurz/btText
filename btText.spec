@@ -70,6 +70,7 @@ application_catalogs = sorted(
 )
 data_files = [
     (str(project_root / "assets" / "icon.png"), "assets"),
+    (str(project_root / "assets" / "sounds" / "*.wav"), "assets/sounds"),
 ]
 documentation_directory = Path(os.environ["BTTEXT_DOCUMENTATION_DIRECTORY"])
 documentation_files = sorted(documentation_directory.rglob("*.html"))

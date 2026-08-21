@@ -88,6 +88,7 @@ class SettingsController:
         hotstrings_enabled: bool,
         preserve_hotstring_boundary: bool,
         notify_hotstring_expansion: bool,
+        play_hotstring_sound: bool,
     ) -> bool:
         """Apply and persist settings, rolling runtime state back on failure."""
         old_hotkey = self._settings.toggle_window_hotkey
@@ -143,6 +144,7 @@ class SettingsController:
             hotstrings_enabled=hotstrings_enabled,
             preserve_hotstring_boundary=preserve_hotstring_boundary,
             notify_hotstring_expansion=notify_hotstring_expansion,
+            play_hotstring_sound=play_hotstring_sound,
         )
         try:
             self._store.save(new_settings)
