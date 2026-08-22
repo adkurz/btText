@@ -6,6 +6,8 @@
 
 - Hinzugefügt: Es existiert nun eine Einstellung, um einen Sound bei der Expansion eines Hotstrings abzuspielen.
 
+- Geändert: Der Installer verwendet nun NSIS, ein Upgrade ist problemlos möglich.
+
 - Behoben: Ist die Sprache auf den Systemstandard festgelegt, werden Sprachabhängige Variablen, etwa Datum und Uhrzeit, in der aktuell eingestellten Sprache des Betriebssystems ausgegeben, auch wenn noch keine passende btText-Übersetzung existiert.
 
 ## [v1.1] 10.08.2026

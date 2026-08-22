@@ -101,7 +101,7 @@ dependencies as well:
 ## Build releases
 
 The Windows build script checks the project, runs the tests, and creates the
-portable application. With Inno Setup 7 installed, it also creates the
+portable application. With NSIS installed, it also creates the
 installer:
 
 ```powershell

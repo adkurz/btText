@@ -20,9 +20,8 @@ The prebuilt packages include the required runtime. Python does not need to be i
 ### Installable version
 
 1. Run `btText-<Version>-setup-windows.exe`.
-2. Select the language of the installer if desired.
-3. Optionally enable the creation of a desktop shortcut.
-4. Complete the installation and start btText via the Start menu or the desktop shortcut if created.
+2. Optionally enable the creation of a desktop shortcut.
+3. Complete the installation and start btText via the Start menu or the desktop shortcut if created.
 
 The installation applies only to the current Windows user and does not require administrator rights. The program files are typically located under:
 

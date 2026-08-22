@@ -20,9 +20,8 @@ Die vorgefertigten Pakete enthalten die benötigte Laufzeit. Python muss nicht i
 ### Installierbare Version
 
 1. Starten Sie `btText-<Version>-setup-windows.exe`.
-2. Wählen Sie bei Bedarf die Sprache des Installationsprogramms.
-3. Aktivieren Sie optional die Erstellung einer Desktopverknüpfung.
-4. Schließen Sie die Installation ab und starten Sie btText über das Startmenü oder die ggf. erstellte Desktopverknüpfung.
+2. Aktivieren Sie optional die Erstellung einer Desktopverknüpfung.
+3. Schließen Sie die Installation ab und starten Sie btText über das Startmenü oder die ggf. erstellte Desktopverknüpfung.
 
 Die Installation gilt nur für den aktuellen Windows-Benutzer und benötigt keine Administratorrechte. Die Programmdateien liegen normalerweise unter:
 
