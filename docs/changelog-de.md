@@ -4,7 +4,7 @@
 
 - Hinzugefügt: Der Dialog **Variable einfügen** zeigt jetzt, sofern möglich, eine Vorschau der aktuell ausgewählten Variable an.
 
-- Hinzugefügt: Es existiert nun eine Einstellung, um einen Sound bei der Expansion eines Hotstrings abzuspielen.
+- Hinzugefügt: Es existiert nun eine Einstellung, um einen Sound bei der Erweiterung eines Hotstrings abzuspielen.
 
 - Geändert: Der Installer verwendet nun NSIS, ein Upgrade ist problemlos möglich.
 
