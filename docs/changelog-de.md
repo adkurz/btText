@@ -1,6 +1,6 @@
 # Änderungsprotokoll für btText
 
-## [Unveröffentlicht] 
+## [v1.2] 22.08.2026
 
 - Hinzugefügt: Der Dialog **Variable einfügen** zeigt jetzt, sofern möglich, eine Vorschau der aktuell ausgewählten Variable an.
 
