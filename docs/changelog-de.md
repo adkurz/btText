@@ -2,7 +2,7 @@
 
 ## [Unveröffentlicht] 
 
-- Verbessert: Der Der Installer achtet nun darauf, das btText nicht in einen bereits vorhandenen Ordner installiert wird, welcher nicht btText selbst enthält. Neuinstallation und Aktualisierungen sind weiterhin problemlos möglich.
+- Verbessert: Der Installer achtet nun darauf, das btText nicht in einen bereits vorhandenen Ordner installiert wird, welcher nicht btText selbst enthält. Neuinstallation und Aktualisierungen sind weiterhin problemlos möglich.
 
 - Verbessert: Hotstrings sind nun zuverlässiger im Zusammenhang mit dem Wechsel von Fenstern und Modifikatortasten (STRG, Alt, Umschalt).
 
