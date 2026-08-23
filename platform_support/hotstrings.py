@@ -19,6 +19,7 @@ WM_SYSKEYUP = 0x0105
 WM_QUIT = 0x0012
 HOOK_THREAD_SHUTDOWN_TIMEOUT_SECONDS = 2
 LLKHF_INJECTED = 0x10
+LLKHF_ALTDOWN = 0x20
 VK_BACK = 0x08
 VK_TAB = 0x09
 VK_RETURN = 0x0D
@@ -34,6 +35,13 @@ VK_LCONTROL = 0xA2
 VK_RCONTROL = 0xA3
 VK_LMENU = 0xA4
 VK_RMENU = 0xA5
+
+SHIFT_KEYS = frozenset((VK_SHIFT, VK_LSHIFT, VK_RSHIFT))
+CONTROL_KEYS = frozenset((VK_CONTROL, VK_LCONTROL, VK_RCONTROL))
+ALT_KEYS = frozenset((VK_MENU, VK_LMENU, VK_RMENU))
+WINDOWS_KEYS = frozenset((VK_LWIN, VK_RWIN))
+NON_SHIFT_MODIFIER_KEYS = CONTROL_KEYS | ALT_KEYS | WINDOWS_KEYS
+MODIFIER_KEYS = SHIFT_KEYS | NON_SHIFT_MODIFIER_KEYS
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
@@ -88,6 +96,8 @@ user32.UnhookWindowsHookEx.argtypes = (wintypes.HHOOK,)
 user32.UnhookWindowsHookEx.restype = wintypes.BOOL
 user32.GetKeyboardState.argtypes = (ctypes.POINTER(ctypes.c_ubyte),)
 user32.GetKeyboardState.restype = wintypes.BOOL
+user32.GetAsyncKeyState.argtypes = (wintypes.INT,)
+user32.GetAsyncKeyState.restype = wintypes.SHORT
 user32.ToUnicodeEx.argtypes = (
     wintypes.UINT,
     wintypes.UINT,
@@ -153,7 +163,6 @@ class KeyboardHook:
         self._input_context: (
             tuple[int | None, int | None, int | None] | None
         ) = None
-        self._shift_keys_down: set[int] = set()
         self._callback = HOOKPROC(self._hook_callback)
 
     def update(self, hotstrings: Mapping[str, object]) -> None:
@@ -193,7 +202,6 @@ class KeyboardHook:
                 return
         self._thread = None
         with self._state_lock:
-            self._shift_keys_down.clear()
             self._matcher.reset()
 
     def _run_message_loop(self) -> None:
@@ -245,12 +253,7 @@ class KeyboardHook:
             return user32.CallNextHookEx(self._handle, code, message, data)
 
     def _process_hook_event(self, code, message, data):
-        """Process one native keyboard event."""
-        with self._state_lock:
-            return self._process_hook_event_locked(code, message, data)
-
-    def _process_hook_event_locked(self, code, message, data):
-        """Process an event while matcher state is protected."""
+        """Pass modifiers through immediately and serialize text processing."""
         keyboard_messages = (
             WM_KEYDOWN,
             WM_KEYUP,
@@ -260,51 +263,86 @@ class KeyboardHook:
         if code != HC_ACTION or message not in keyboard_messages:
             return user32.CallNextHookEx(self._handle, code, message, data)
         event = ctypes.cast(data, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
-        if event.flags & LLKHF_INJECTED:
+        if event.flags & LLKHF_INJECTED or event.vkCode in MODIFIER_KEYS:
+            # A low-level hook must never delay or consume a modifier. In
+            # particular, Alt arrives as a system-key message and Windows
+            # cannot activate menus or Alt-based shortcuts until it returns.
             return user32.CallNextHookEx(self._handle, code, message, data)
-        shift_keys = (VK_SHIFT, VK_LSHIFT, VK_RSHIFT)
-        if event.vkCode in shift_keys:
-            if message in (WM_KEYDOWN, WM_SYSKEYDOWN):
-                self._shift_keys_down.add(event.vkCode)
-            else:
-                self._shift_keys_down.discard(event.vkCode)
-            return user32.CallNextHookEx(self._handle, code, message, data)
+        with self._state_lock:
+            return self._process_hook_event_locked(message, event, data)
+
+    def _process_hook_event_locked(self, message, event, data):
+        """Process an event while matcher state is protected."""
         if message in (WM_KEYUP, WM_SYSKEYUP):
-            return user32.CallNextHookEx(self._handle, code, message, data)
+            return user32.CallNextHookEx(
+                self._handle, HC_ACTION, message, data
+            )
         input_context = self._get_input_context()
         if input_context != self._input_context:
             self._input_context = input_context
             self._matcher.reset()
         if not self._should_monitor():
             self._matcher.reset()
-            return user32.CallNextHookEx(self._handle, code, message, data)
+            return user32.CallNextHookEx(
+                self._handle, HC_ACTION, message, data
+            )
+        altgr_down = self._is_altgr_down(event.flags)
+        if self._has_non_text_modifier_chord(event.flags, altgr_down):
+            # A shortcut does not insert its ordinary key into the target.
+            # Discard partial input instead of feeding control characters or
+            # layout-dependent translations into the hotstring matcher.
+            self._matcher.reset()
+            return user32.CallNextHookEx(
+                self._handle, HC_ACTION, message, data
+            )
         if event.vkCode == VK_BACK:
             self._matcher.backspace()
-            return user32.CallNextHookEx(self._handle, code, message, data)
-        if event.vkCode in (
-            VK_CONTROL,
-            VK_MENU,
-            VK_LWIN,
-            VK_RWIN,
-            VK_LCONTROL,
-            VK_RCONTROL,
-            VK_LMENU,
-            VK_RMENU,
-        ):
-            return user32.CallNextHookEx(self._handle, code, message, data)
+            return user32.CallNextHookEx(
+                self._handle, HC_ACTION, message, data
+            )
         character = self._translate(
             event.vkCode,
             event.scanCode,
-            shift_down=bool(self._shift_keys_down),
+            shift_down=self._is_key_down(SHIFT_KEYS),
+            altgr_down=altgr_down,
             keyboard_layout=input_context[2],
         )
         if not character:
             self._matcher.reset()
-            return user32.CallNextHookEx(self._handle, code, message, data)
+            return user32.CallNextHookEx(
+                self._handle, HC_ACTION, message, data
+            )
         snippet = self._matcher.character(character)
         if snippet is not None and self._on_match(snippet, event.vkCode):
             return 1
-        return user32.CallNextHookEx(self._handle, code, message, data)
+        return user32.CallNextHookEx(self._handle, HC_ACTION, message, data)
+
+    @staticmethod
+    def _is_key_down(virtual_keys: frozenset[int]) -> bool:
+        """Return whether any key in one modifier family is physically down."""
+        return any(user32.GetAsyncKeyState(key) & 0x8000 for key in virtual_keys)
+
+    @classmethod
+    def _is_altgr_down(cls, event_flags: int) -> bool:
+        """Return whether the current key is typed through Windows AltGr."""
+        return bool(
+            event_flags & LLKHF_ALTDOWN
+            and cls._is_key_down(CONTROL_KEYS)
+            and cls._is_key_down(frozenset((VK_RMENU,)))
+        )
+
+    @classmethod
+    def _has_non_text_modifier_chord(
+        cls,
+        event_flags: int,
+        altgr_down: bool,
+    ) -> bool:
+        """Return whether the current ordinary key belongs to a shortcut."""
+        if cls._is_key_down(WINDOWS_KEYS):
+            return True
+        control_down = cls._is_key_down(CONTROL_KEYS)
+        alt_down = bool(event_flags & LLKHF_ALTDOWN) or cls._is_key_down(ALT_KEYS)
+        return (control_down or alt_down) and not altgr_down
 
     @staticmethod
     def _get_input_context() -> tuple[int | None, int | None, int | None]:
@@ -328,6 +366,7 @@ class KeyboardHook:
         virtual_key: int,
         scan_code: int,
         shift_down: bool = False,
+        altgr_down: bool = False,
         keyboard_layout: int | None = None,
     ) -> str | None:
         state = (ctypes.c_ubyte * 256)()
@@ -340,6 +379,15 @@ class KeyboardHook:
         state[VK_SHIFT] = shift_state
         state[VK_LSHIFT] = shift_state
         state[VK_RSHIFT] = shift_state
+        for modifier_key in CONTROL_KEYS | ALT_KEYS:
+            state[modifier_key] &= 0x7F
+        if altgr_down:
+            # Low-level hook callbacks can run before GetKeyboardState reflects
+            # the event. Supply the canonical Ctrl+right-Alt AltGr state.
+            state[VK_CONTROL] = 0x80
+            state[VK_LCONTROL] = 0x80
+            state[VK_MENU] = 0x80
+            state[VK_RMENU] = 0x80
         buffer = ctypes.create_unicode_buffer(8)
         layout = keyboard_layout or user32.GetKeyboardLayout(0)
         count = user32.ToUnicodeEx(
