@@ -7,7 +7,7 @@ from core.error_messages import format_user_error
 from core.events import EventEmitter
 from i18n import _
 from ui import utils
-from ui.transfer import TransferBuffer
+from ui.transfer import TransferBuffer, TransferService
 
 
 class _CategoryDropTarget(wx.TextDropTarget):
@@ -57,6 +57,7 @@ class CategoryTree(wx.TreeCtrl):
         self._ee = ee
         self._model = model
         self._transfer_buffer = transfer_buffer
+        self._transfer_service = TransferService(model, transfer_buffer)
         self._items = {}
         self._empty_item = None
         self._images = wx.ImageList(16, 16)
@@ -403,7 +404,7 @@ class CategoryTree(wx.TreeCtrl):
         category_id = self.get_selected_id()
         if category_id is None:
             return
-        self._transfer_buffer.set("category", category_id, copy)
+        self._transfer_service.stage("category", category_id, copy)
         if copy:
             # Translators: Status after copying a category; it remains pending
             # until pasted. Category copies omit all snippet hotstrings because
@@ -423,7 +424,7 @@ class CategoryTree(wx.TreeCtrl):
 
     def paste(self, event, destination_id):
         """Apply the pending transfer to a category or the tree root."""
-        transfer = self._transfer_buffer.value
+        transfer = self._transfer_service.pending
         if transfer is None:
             wx.Bell()
             return
@@ -439,54 +440,46 @@ class CategoryTree(wx.TreeCtrl):
                 self,
             )
             return
-        if (
-            self.transfer_to(
-                transfer.kind,
-                transfer.entity_ids,
-                destination_id,
-                transfer.copy,
-            )
-            and not transfer.copy
-        ):
-            self._transfer_buffer.clear()
+        self._apply_pending_transfer(destination_id)
 
-    def transfer_to(self, kind, entity_ids, destination_id, copy):
-        """Copy or move an entity to a destination category."""
-        if isinstance(entity_ids, int):
-            entity_ids = (entity_ids,)
+    def _apply_pending_transfer(self, destination_id):
+        """Apply the staged transfer to a destination category."""
         try:
-            if kind == "category":
-                entity_id = entity_ids[0]
-                if copy:
-                    result = self._model.copy_category(
-                        entity_id,
-                        destination_id,
-                    )
-                else:
-                    result = self._model.move_category(
-                        entity_id,
-                        destination_id,
-                    )
-                self.update()
-                self.focus_id(result.id)
-            elif kind == "snippet":
-                if copy:
-                    self._model.copy_snippets(
-                        entity_ids,
-                        destination_id,
-                    )
-                else:
-                    self._model.move_snippets(
-                        entity_ids,
-                        destination_id,
-                    )
-                self.focus_id(destination_id)
-            else:
+            result = self._transfer_service.apply_pending(destination_id)
+            if result is None:
                 return False
+            if result.category is not None:
+                self.update()
+                self.focus_id(result.category.id)
+            else:
+                self.focus_id(destination_id)
         except datamodel.DataModelError as error:
             self._show_error(error)
             return False
         # Translators: Status after a copied or cut category was pasted.
+        self._ee.emit("status.changed", _("Transfer completed."))
+        return True
+
+    def transfer_to(self, kind, entity_ids, destination_id, copy):
+        """Apply an internal drag-and-drop transfer without staging it."""
+        try:
+            result = self._transfer_service.execute(
+                kind,
+                entity_ids,
+                destination_id,
+                copy,
+            )
+            if result is None:
+                return False
+            if result.category is not None:
+                self.update()
+                self.focus_id(result.category.id)
+            else:
+                self.focus_id(destination_id)
+        except datamodel.DataModelError as error:
+            self._show_error(error)
+            return False
+        # Translators: Status after a dragged category or snippet was moved.
         self._ee.emit("status.changed", _("Transfer completed."))
         return True
 

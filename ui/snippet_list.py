@@ -16,7 +16,7 @@ from core.variables import (
 from i18n import _, ngettext
 from ui import utils
 from ui.snippet_editor import SnippetEditor
-from ui.transfer import TransferBuffer
+from ui.transfer import TransferBuffer, TransferService
 from ui.variable_dialog import VariableSuggestion
 from ui.variable_resolver import show_variable_error
 
@@ -46,6 +46,7 @@ class SnippetList(wx.ListView):
         self._ee = ee
         self._model = model
         self._transfer_buffer = transfer_buffer
+        self._transfer_service = TransferService(model, transfer_buffer)
         self._include_copied_text_in_clipboard_history = (
             include_copied_text_in_clipboard_history
         )
@@ -337,7 +338,7 @@ class SnippetList(wx.ListView):
         snippet_ids = self.get_selected_ids()
         if not snippet_ids:
             return
-        self._transfer_buffer.set("snippet", snippet_ids, copy)
+        self._transfer_service.stage("snippet", snippet_ids, copy)
         snippet_count = len(snippet_ids)
         if copy:
             # Translators: Status after copying snippets; they are not pasted
@@ -365,7 +366,7 @@ class SnippetList(wx.ListView):
 
     def paste(self, event, as_top_level: bool = False):
         """Apply the pending entity transfer at the selected destination."""
-        transfer = self._transfer_buffer.value
+        transfer = self._transfer_service.pending
         category_id = self.selected_category_id
         if transfer is None:
             wx.Bell()
@@ -388,33 +389,13 @@ class SnippetList(wx.ListView):
             wx.Bell()
             return
         try:
-            if transfer.kind == "category":
-                if transfer.copy:
-                    self._model.copy_category(
-                        transfer.entity_id,
-                        category_id,
-                    )
-                else:
-                    self._model.move_category(
-                        transfer.entity_id,
-                        category_id,
-                    )
-            elif transfer.kind == "snippet":
-                if transfer.copy:
-                    snippets = self._model.copy_snippets(
-                        transfer.entity_ids,
-                        category_id,
-                    )
-                else:
-                    snippets = self._model.move_snippets(
-                        transfer.entity_ids,
-                        category_id,
-                    )
-                for snippet in snippets:
+            result = self._transfer_service.apply_pending(category_id)
+            if result is None:
+                return
+            if result.snippets:
+                for snippet in result.snippets:
                     if snippet.id is not None:
                         self.focus_id(snippet.id)
-            else:
-                return
         except datamodel.DataModelError as error:
             wx.MessageBox(
                 format_user_error(error),
@@ -424,8 +405,6 @@ class SnippetList(wx.ListView):
                 self,
             )
             return
-        if not transfer.copy:
-            self._transfer_buffer.clear()
         item_count = len(transfer.entity_ids)
         # Translators: Status after a pending copy or cut operation is pasted.
         # {count} includes all transferred categories and snippets.
