@@ -74,11 +74,10 @@ class PendingPasteTestCase(unittest.TestCase):
         replace_clipboard.assert_called_once_with("snippet", marker)
         self.assertIs(pending._snapshot, snapshot)
         self.assertEqual(pending._marker, marker)
-        self.assertEqual(pending._pasted_text, "snippet")
 
     def test_discard_snapshot_releases_saved_clipboard_data(self):
         snapshot = RecordingClipboardSnapshot()
-        pending = PendingPaste(snapshot, b"marker", "snippet")
+        pending = PendingPaste(snapshot, b"marker")
 
         pending.discard_snapshot()
 
@@ -86,14 +85,14 @@ class PendingPasteTestCase(unittest.TestCase):
 
     def test_restore_uses_marker_when_it_is_still_available(self):
         snapshot = RecordingClipboardSnapshot()
-        pending = PendingPaste(snapshot, b"marker", "snippet")
+        pending = PendingPaste(snapshot, b"marker")
 
         with (
             patch.object(clipboard_paste, "_open_clipboard"),
             patch.object(
                 clipboard_paste,
                 "_read_clipboard_bytes",
-                side_effect=[b"marker", None],
+                return_value=b"marker",
             ),
             patch.object(clipboard_paste.user32, "CloseClipboard"),
         ):
@@ -104,7 +103,7 @@ class PendingPasteTestCase(unittest.TestCase):
 
     def test_restore_preserves_a_genuine_new_clipboard_value(self):
         snapshot = RecordingClipboardSnapshot()
-        pending = PendingPaste(snapshot, b"marker", "snippet")
+        pending = PendingPaste(snapshot, b"marker")
 
         with (
             patch.object(clipboard_paste, "_open_clipboard"),
@@ -113,11 +112,6 @@ class PendingPasteTestCase(unittest.TestCase):
                 "_read_clipboard_bytes",
                 return_value=b"different marker",
             ),
-            patch.object(
-                clipboard_paste,
-                "_read_open_clipboard_text",
-                return_value="new value",
-            ),
             patch.object(clipboard_paste.user32, "CloseClipboard"),
         ):
             pending.restore_clipboard()
@@ -125,9 +119,9 @@ class PendingPasteTestCase(unittest.TestCase):
         self.assertEqual(snapshot.restore_calls, 0)
         self.assertEqual(snapshot.close_calls, 1)
 
-    def test_restore_accepts_unchanged_text_when_target_removed_marker(self):
+    def test_restore_preserves_identical_text_after_marker_was_removed(self):
         snapshot = RecordingClipboardSnapshot()
-        pending = PendingPaste(snapshot, b"marker", "snippet")
+        pending = PendingPaste(snapshot, b"marker")
 
         with (
             patch.object(clipboard_paste, "_open_clipboard"),
@@ -136,17 +130,12 @@ class PendingPasteTestCase(unittest.TestCase):
                 "_read_clipboard_bytes",
                 return_value=None,
             ),
-            patch.object(
-                clipboard_paste,
-                "_read_open_clipboard_text",
-                return_value="snippet",
-            ),
             patch.object(clipboard_paste.user32, "CloseClipboard"),
         ):
             pending.restore_clipboard()
 
-        self.assertEqual(snapshot.restore_calls, 1)
-        self.assertEqual(snapshot.close_calls, 0)
+        self.assertEqual(snapshot.restore_calls, 0)
+        self.assertEqual(snapshot.close_calls, 1)
 
 
 class PasteTextTestCase(unittest.TestCase):

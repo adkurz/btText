@@ -12,7 +12,6 @@ from platform_support.clipboard import (
     ClipboardError,
     _exclude_current_item_from_history_and_cloud,
     _open_clipboard,
-    _read_open_clipboard_text,
     _set_clipboard_data,
     _set_clipboard_text,
     kernel32,
@@ -83,14 +82,6 @@ def _read_clipboard_bytes(format_id: int) -> bytes | None:
         kernel32.GlobalUnlock(handle)
 
 
-def _clipboard_text_matches(expected: str) -> bool:
-    """Compare temporary text while tolerating an unavailable text format."""
-    try:
-        return _read_open_clipboard_text() == expected
-    except ClipboardError:
-        return False
-
-
 def _replace_clipboard(text: str, marker: bytes) -> ClipboardSnapshot:
     """Save the clipboard and replace it with marked snippet text."""
     snapshot = ClipboardSnapshot.capture()
@@ -118,33 +109,29 @@ class PendingPaste:
         self,
         snapshot: ClipboardSnapshot,
         marker: bytes,
-        pasted_text: str,
     ):
-        """Retain the snapshot and markers for one delayed restoration."""
+        """Retain the snapshot and its unambiguous ownership marker."""
         self._snapshot = snapshot
         self._marker = marker
-        self._pasted_text = pasted_text
 
     @classmethod
     def prepare(cls, text: str) -> PendingPaste:
         """Replace the clipboard with marked text and retain its snapshot."""
         marker = uuid.uuid4().bytes
-        return cls(_replace_clipboard(text, marker), marker, text)
+        return cls(_replace_clipboard(text, marker), marker)
 
     def restore_clipboard(self) -> None:
         """Restore every old format unless another app changed the clipboard."""
         _open_clipboard()
         try:
             marker_matches = _read_clipboard_bytes(_MARKER_FORMAT) == self._marker
-            text_matches = _clipboard_text_matches(self._pasted_text)
         finally:
             user32.CloseClipboard()
-        if marker_matches or text_matches:
-            # Some targets preserve the text but strip private formats. The
-            # text comparison still identifies our temporary clipboard value.
+        if marker_matches:
             self._snapshot.restore()
         else:
-            # Respect a newer clipboard change and release the retained object.
+            # Missing or changed markers prove that another application wrote
+            # the clipboard. Even identical text is a new value that must win.
             self._snapshot.close()
 
     def discard_snapshot(self) -> None:
