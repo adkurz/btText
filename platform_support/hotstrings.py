@@ -1,6 +1,8 @@
 """Windows low-level keyboard monitoring for snippet hotstrings."""
 
 import ctypes
+import logging
+import threading
 from collections.abc import Mapping
 from ctypes import wintypes
 from typing import Callable
@@ -14,6 +16,8 @@ WM_KEYDOWN = 0x0100
 WM_KEYUP = 0x0101
 WM_SYSKEYDOWN = 0x0104
 WM_SYSKEYUP = 0x0105
+WM_QUIT = 0x0012
+HOOK_THREAD_SHUTDOWN_TIMEOUT_SECONDS = 2
 LLKHF_INJECTED = 0x10
 VK_BACK = 0x08
 VK_TAB = 0x09
@@ -44,6 +48,22 @@ class KBDLLHOOKSTRUCT(ctypes.Structure):
         ("flags", wintypes.DWORD),
         ("time", wintypes.DWORD),
         ("dwExtraInfo", ctypes.c_size_t),
+    )
+
+
+class GUITHREADINFO(ctypes.Structure):
+    """Focus information for the foreground GUI thread."""
+
+    _fields_ = (
+        ("cbSize", wintypes.DWORD),
+        ("flags", wintypes.DWORD),
+        ("hwndActive", wintypes.HWND),
+        ("hwndFocus", wintypes.HWND),
+        ("hwndCapture", wintypes.HWND),
+        ("hwndMenuOwner", wintypes.HWND),
+        ("hwndMoveSize", wintypes.HWND),
+        ("hwndCaret", wintypes.HWND),
+        ("rcCaret", wintypes.RECT),
     )
 
 
@@ -80,8 +100,37 @@ user32.ToUnicodeEx.argtypes = (
 user32.ToUnicodeEx.restype = ctypes.c_int
 user32.GetKeyboardLayout.argtypes = (wintypes.DWORD,)
 user32.GetKeyboardLayout.restype = wintypes.HKL
+user32.GetForegroundWindow.restype = wintypes.HWND
+user32.GetWindowThreadProcessId.argtypes = (
+    wintypes.HWND,
+    ctypes.POINTER(wintypes.DWORD),
+)
+user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+user32.GetGUIThreadInfo.argtypes = (
+    wintypes.DWORD,
+    ctypes.POINTER(GUITHREADINFO),
+)
+user32.GetGUIThreadInfo.restype = wintypes.BOOL
 kernel32.GetModuleHandleW.argtypes = (wintypes.LPCWSTR,)
 kernel32.GetModuleHandleW.restype = wintypes.HMODULE
+kernel32.GetCurrentThreadId.restype = wintypes.DWORD
+user32.GetMessageW.argtypes = (
+    ctypes.POINTER(wintypes.MSG),
+    wintypes.HWND,
+    wintypes.UINT,
+    wintypes.UINT,
+)
+user32.GetMessageW.restype = wintypes.BOOL
+user32.PostThreadMessageW.argtypes = (
+    wintypes.DWORD,
+    wintypes.UINT,
+    wintypes.WPARAM,
+    wintypes.LPARAM,
+)
+user32.PostThreadMessageW.restype = wintypes.BOOL
+
+
+logger = logging.getLogger("bttext.hotstrings")
 
 
 class KeyboardHook:
@@ -96,34 +145,112 @@ class KeyboardHook:
         self._should_monitor = should_monitor
         self._matcher = HotstringMatcher()
         self._handle = None
-        self._foreground_window = None
+        self._thread: threading.Thread | None = None
+        self._thread_id: int | None = None
+        self._startup_complete = threading.Event()
+        self._startup_error: OSError | None = None
+        self._state_lock = threading.Lock()
+        self._input_context: (
+            tuple[int | None, int | None, int | None] | None
+        ) = None
         self._shift_keys_down: set[int] = set()
         self._callback = HOOKPROC(self._hook_callback)
 
     def update(self, hotstrings: Mapping[str, object]) -> None:
         """Replace active hotstrings without reinstalling the hook."""
-        self._matcher.update(hotstrings)
+        with self._state_lock:
+            self._matcher.update(hotstrings)
 
     def start(self) -> None:
-        """Install the hook on the current desktop."""
-        if self._handle:
+        """Install the hook on a dedicated message-loop thread."""
+        if self._thread is not None and self._thread.is_alive():
             return
-        module = kernel32.GetModuleHandleW(None)
-        self._handle = user32.SetWindowsHookExW(
-            WH_KEYBOARD_LL, self._callback, module, 0
+        self._startup_complete.clear()
+        self._startup_error = None
+        self._thread = threading.Thread(
+            target=self._run_message_loop,
+            name="btText hotstring hook",
+            daemon=True,
         )
-        if not self._handle:
-            raise ctypes.WinError(ctypes.get_last_error())
+        self._thread.start()
+        self._startup_complete.wait()
+        if self._startup_error is not None:
+            error = self._startup_error
+            self._thread.join()
+            self._thread = None
+            raise error
 
     def stop(self) -> None:
         """Remove the hook; repeated calls are harmless."""
-        if self._handle:
-            user32.UnhookWindowsHookEx(self._handle)
+        thread = self._thread
+        thread_id = self._thread_id
+        if thread is not None and thread.is_alive() and thread_id is not None:
+            if not user32.PostThreadMessageW(thread_id, WM_QUIT, 0, 0):
+                logger.warning("Could not request hotstring hook shutdown")
+            thread.join(HOOK_THREAD_SHUTDOWN_TIMEOUT_SECONDS)
+            if thread.is_alive():
+                logger.warning("Hotstring hook thread did not stop in time")
+                return
+        self._thread = None
+        with self._state_lock:
+            self._shift_keys_down.clear()
+            self._matcher.reset()
+
+    def _run_message_loop(self) -> None:
+        """Own the native hook and pump its thread message queue."""
+        try:
+            self._thread_id = int(kernel32.GetCurrentThreadId())
+            module = kernel32.GetModuleHandleW(None)
+            self._handle = user32.SetWindowsHookExW(
+                WH_KEYBOARD_LL, self._callback, module, 0
+            )
+            if not self._handle:
+                raise ctypes.WinError(ctypes.get_last_error())
+        except Exception as error:
+            self._startup_error = (
+                error if isinstance(error, OSError) else OSError(str(error))
+            )
+            self._thread_id = None
+            self._startup_complete.set()
+            return
+        logger.info("Hotstring keyboard hook started")
+        self._startup_complete.set()
+        message = wintypes.MSG()
+        try:
+            while True:
+                result = user32.GetMessageW(
+                    ctypes.byref(message),
+                    None,
+                    0,
+                    0,
+                )
+                if result == 0:
+                    break
+                if result == -1:
+                    logger.error("Hotstring hook message loop failed")
+                    break
+        finally:
+            if self._handle and not user32.UnhookWindowsHookEx(self._handle):
+                logger.warning("Could not remove hotstring keyboard hook")
             self._handle = None
-        self._shift_keys_down.clear()
-        self._matcher.reset()
+            self._thread_id = None
+            logger.info("Hotstring keyboard hook stopped")
 
     def _hook_callback(self, code, message, data):
+        """Contain callback failures so ctypes never unwinds into Windows."""
+        try:
+            return self._process_hook_event(code, message, data)
+        except Exception:
+            logger.exception("Hotstring keyboard hook callback failed")
+            return user32.CallNextHookEx(self._handle, code, message, data)
+
+    def _process_hook_event(self, code, message, data):
+        """Process one native keyboard event."""
+        with self._state_lock:
+            return self._process_hook_event_locked(code, message, data)
+
+    def _process_hook_event_locked(self, code, message, data):
+        """Process an event while matcher state is protected."""
         keyboard_messages = (
             WM_KEYDOWN,
             WM_KEYUP,
@@ -144,9 +271,9 @@ class KeyboardHook:
             return user32.CallNextHookEx(self._handle, code, message, data)
         if message in (WM_KEYUP, WM_SYSKEYUP):
             return user32.CallNextHookEx(self._handle, code, message, data)
-        foreground_window = user32.GetForegroundWindow()
-        if foreground_window != self._foreground_window:
-            self._foreground_window = foreground_window
+        input_context = self._get_input_context()
+        if input_context != self._input_context:
+            self._input_context = input_context
             self._matcher.reset()
         if not self._should_monitor():
             self._matcher.reset()
@@ -169,6 +296,7 @@ class KeyboardHook:
             event.vkCode,
             event.scanCode,
             shift_down=bool(self._shift_keys_down),
+            keyboard_layout=input_context[2],
         )
         if not character:
             self._matcher.reset()
@@ -179,10 +307,28 @@ class KeyboardHook:
         return user32.CallNextHookEx(self._handle, code, message, data)
 
     @staticmethod
+    def _get_input_context() -> tuple[int | None, int | None, int | None]:
+        """Identify foreground, focused child, and active keyboard layout."""
+        foreground = user32.GetForegroundWindow()
+        if not foreground:
+            return None, None, None
+        thread_id = user32.GetWindowThreadProcessId(foreground, None)
+        info = GUITHREADINFO()
+        info.cbSize = ctypes.sizeof(info)
+        focused = None
+        if thread_id and user32.GetGUIThreadInfo(thread_id, ctypes.byref(info)):
+            focused = int(info.hwndFocus) if info.hwndFocus else None
+        keyboard_layout = (
+            int(user32.GetKeyboardLayout(thread_id)) if thread_id else None
+        )
+        return int(foreground), focused, keyboard_layout
+
+    @staticmethod
     def _translate(
         virtual_key: int,
         scan_code: int,
         shift_down: bool = False,
+        keyboard_layout: int | None = None,
     ) -> str | None:
         state = (ctypes.c_ubyte * 256)()
         if not user32.GetKeyboardState(state):
@@ -195,7 +341,7 @@ class KeyboardHook:
         state[VK_LSHIFT] = shift_state
         state[VK_RSHIFT] = shift_state
         buffer = ctypes.create_unicode_buffer(8)
-        layout = user32.GetKeyboardLayout(0)
+        layout = keyboard_layout or user32.GetKeyboardLayout(0)
         count = user32.ToUnicodeEx(
             virtual_key, scan_code, state, buffer, len(buffer), 0, layout
         )

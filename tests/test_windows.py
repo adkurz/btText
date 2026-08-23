@@ -66,6 +66,41 @@ class NativeWindowTestCase(unittest.TestCase):
         ):
             self.assertFalse(windows.is_valid_window(123))
 
+    def test_window_identity_captures_handle_thread_and_process(self):
+        def set_process_id(_handle, process_id_pointer):
+            process_id = ctypes.cast(
+                process_id_pointer,
+                ctypes.POINTER(wintypes.DWORD),
+            )
+            process_id.contents.value = 456
+            return 789
+
+        with (
+            patch.object(windows.user32, "IsWindow", return_value=True),
+            patch.object(
+                windows.user32,
+                "GetWindowThreadProcessId",
+                side_effect=set_process_id,
+            ),
+        ):
+            identity = windows.get_window_identity(123)
+
+        self.assertEqual(
+            identity,
+            windows.WindowIdentity(123, 789, 456),
+        )
+
+    def test_reused_window_handle_does_not_match_original_identity(self):
+        original = windows.WindowIdentity(123, 789, 456)
+        replacement = windows.WindowIdentity(123, 790, 457)
+
+        with patch.object(
+            windows,
+            "get_window_identity",
+            return_value=replacement,
+        ):
+            self.assertFalse(windows.matches_window_identity(original))
+
     def test_own_process_window_is_not_external(self):
         def set_process_id(_handle, process_id_pointer):
             process_id = ctypes.cast(

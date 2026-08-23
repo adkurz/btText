@@ -94,9 +94,12 @@ class HotstringController:
         target_window = windows.get_foreground_window()
         if not windows.is_external_window(target_window):
             return False
+        target_identity = windows.get_window_identity(target_window)
+        if target_identity is None:
+            return False
         wx.CallAfter(
             self._expand,
-            target_window,
+            target_identity,
             snippet,
             boundary_key,
         )
@@ -104,25 +107,25 @@ class HotstringController:
 
     def _expand(
         self,
-        target_window: int,
+        target: windows.WindowIdentity,
         snippet: datamodel.Snippet,
         boundary_key: int,
     ) -> None:
         """Replace a recognized hotstring through the clipboard paste path."""
         settings = self._get_settings()
         try:
-            rendered = self._render_snippet(snippet.content, target_window)
+            rendered = self._render_snippet(snippet.content, target.handle)
         except VariableRenderingCancelled:
-            self._replay_suppressed_boundary(target_window, boundary_key)
+            self._replay_suppressed_boundary(target, boundary_key)
             return
         except VariableError as error:
-            self._replay_suppressed_boundary(target_window, boundary_key)
+            self._replay_suppressed_boundary(target, boundary_key)
             show_variable_error(self._parent, error)
             return
         pending = None
         try:
             pending = hotstring_expansion.expand_hotstring(
-                target_window,
+                target,
                 rendered.text,
                 len(snippet.hotstring or ""),
                 boundary_key if settings.preserve_hotstring_boundary else None,
@@ -148,13 +151,13 @@ class HotstringController:
 
     def _replay_suppressed_boundary(
         self,
-        target_window: int,
+        target: windows.WindowIdentity,
         boundary_key: int,
     ) -> None:
         """Restore a boundary consumed before variable rendering completed."""
         try:
             hotstring_expansion.replay_suppressed_boundary(
-                target_window,
+                target,
                 boundary_key,
             )
         except (clipboard.ClipboardError, HotstringExpansionError) as error:

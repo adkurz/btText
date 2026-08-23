@@ -3,7 +3,11 @@ from unittest.mock import Mock, call, patch
 
 from core.hotstrings import HotstringExpansionError
 from platform_support import clipboard, hotstring_expansion
+from platform_support.windows import WindowIdentity
 from platform_support.clipboard_paste import ClipboardRestoreError, PendingPaste
+
+
+TARGET = WindowIdentity(handle=123, thread_id=7, process_id=9)
 
 
 class HotstringExpansionTestCase(unittest.TestCase):
@@ -11,7 +15,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         with (
             patch.object(
                 hotstring_expansion.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=True,
             ),
             patch.object(
@@ -24,7 +28,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
                 "send_virtual_key",
             ) as send_virtual_key,
         ):
-            hotstring_expansion.replay_suppressed_boundary(123, 0x20)
+            hotstring_expansion.replay_suppressed_boundary(TARGET, 0x20)
 
         activate_window.assert_called_once_with(123)
         send_virtual_key.assert_called_once_with(0x20)
@@ -33,7 +37,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         with (
             patch.object(
                 hotstring_expansion.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=False,
             ),
             patch.object(
@@ -42,7 +46,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ) as send_virtual_key,
         ):
             with self.assertRaises(HotstringExpansionError) as raised:
-                hotstring_expansion.replay_suppressed_boundary(123, 0x20)
+                hotstring_expansion.replay_suppressed_boundary(TARGET, 0x20)
 
         self.assertEqual(raised.exception.code, "hotstring_target_window_missing")
         send_virtual_key.assert_not_called()
@@ -51,7 +55,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         with (
             patch.object(
                 hotstring_expansion.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=True,
             ),
             patch.object(
@@ -65,7 +69,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ) as send_virtual_key,
         ):
             with self.assertRaises(HotstringExpansionError) as raised:
-                hotstring_expansion.replay_suppressed_boundary(123, 0x20)
+                hotstring_expansion.replay_suppressed_boundary(TARGET, 0x20)
 
         self.assertEqual(
             raised.exception.code,
@@ -78,7 +82,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         with (
             patch.object(
                 hotstring_expansion.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=True,
             ),
             patch.object(
@@ -101,7 +105,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ) as send_virtual_key,
         ):
             result = hotstring_expansion.expand_hotstring(
-                123,
+                TARGET,
                 "Expanded",
                 3,
                 boundary_key,
@@ -129,13 +133,13 @@ class HotstringExpansionTestCase(unittest.TestCase):
         with (
             patch.object(
                 hotstring_expansion.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=False,
             ),
             patch.object(PendingPaste, "prepare") as prepare,
         ):
             with self.assertRaises(HotstringExpansionError) as raised:
-                hotstring_expansion.expand_hotstring(123, "Expanded", 3, None)
+                hotstring_expansion.expand_hotstring(TARGET, "Expanded", 3, None)
 
         self.assertEqual(raised.exception.code, "hotstring_target_window_missing")
         self.assertEqual(str(raised.exception), "The active window no longer exists.")
@@ -146,7 +150,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         with (
             patch.object(
                 hotstring_expansion.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=True,
             ),
             patch.object(PendingPaste, "prepare", return_value=pending),
@@ -157,7 +161,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ),
         ):
             with self.assertRaises(HotstringExpansionError) as raised:
-                hotstring_expansion.expand_hotstring(123, "Expanded", 3, None)
+                hotstring_expansion.expand_hotstring(TARGET, "Expanded", 3, None)
 
         self.assertEqual(
             raised.exception.code,
@@ -170,7 +174,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         with (
             patch.object(
                 hotstring_expansion.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=True,
             ),
             patch.object(PendingPaste, "prepare", return_value=pending),
@@ -189,7 +193,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
                 clipboard.ClipboardError,
                 "input failed",
             ):
-                hotstring_expansion.expand_hotstring(123, "Expanded", 3, None)
+                hotstring_expansion.expand_hotstring(TARGET, "Expanded", 3, None)
 
         pending.restore_clipboard.assert_called_once_with()
 
@@ -201,7 +205,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         with (
             patch.object(
                 hotstring_expansion.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=True,
             ),
             patch.object(PendingPaste, "prepare", return_value=pending),
@@ -218,7 +222,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         ):
             with self.assertRaises(ClipboardRestoreError) as raised:
                 hotstring_expansion.expand_hotstring(
-                    123,
+                    TARGET,
                     "Expanded",
                     3,
                     None,

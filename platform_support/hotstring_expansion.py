@@ -6,14 +6,17 @@ from platform_support.clipboard import ClipboardError
 from platform_support.clipboard_paste import PendingPaste, restore_after_failure
 
 
-def replay_suppressed_boundary(target_window: int, boundary_key: int) -> None:
+def replay_suppressed_boundary(
+    target: windows.WindowIdentity,
+    boundary_key: int,
+) -> None:
     """Return a hook-suppressed boundary key to its original target window."""
-    if not windows.is_valid_window(target_window):
+    if not windows.matches_window_identity(target):
         raise HotstringExpansionError(
             "hotstring_target_window_missing",
             "The active window no longer exists.",
         )
-    if not windows.activate_window(target_window):
+    if not windows.activate_window(target.handle):
         raise HotstringExpansionError(
             "hotstring_target_window_activation_failed",
             "The active window could not be activated.",
@@ -22,19 +25,19 @@ def replay_suppressed_boundary(target_window: int, boundary_key: int) -> None:
 
 
 def expand_hotstring(
-    target_window: int,
+    target: windows.WindowIdentity,
     text: str,
     hotstring_length: int,
     boundary_key: int | None,
 ) -> PendingPaste:
     """Replace a typed hotstring and optionally replay its boundary key."""
-    if not windows.is_valid_window(target_window):
+    if not windows.matches_window_identity(target):
         raise HotstringExpansionError(
             "hotstring_target_window_missing",
             "The active window no longer exists.",
         )
     pending = PendingPaste.prepare(text)
-    if not windows.activate_window(target_window):
+    if not windows.activate_window(target.handle):
         operation_error = HotstringExpansionError(
             "hotstring_target_window_activation_failed",
             "The active window could not be activated.",

@@ -1,15 +1,25 @@
 """Inspect and activate native Windows application windows."""
 
 import ctypes
-from ctypes import wintypes
 import ntpath
 import os
+from ctypes import wintypes
+from dataclasses import dataclass
 
 PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 SW_RESTORE = 9
 WAIT_OBJECT_0 = 0
 WAIT_TIMEOUT = 258
 UPDATE_SHUTDOWN_EVENT_NAME = r"Local\btText.UpdateShutdown"
+
+
+@dataclass(frozen=True)
+class WindowIdentity:
+    """Stable ownership information captured for a native window handle."""
+
+    handle: int
+    thread_id: int
+    process_id: int
 
 
 user32 = ctypes.WinDLL("user32", use_last_error=True)
@@ -103,6 +113,25 @@ def get_foreground_window() -> int | None:
 def is_valid_window(handle: int | None) -> bool:
     """Return whether ``handle`` identifies an existing native window."""
     return bool(handle and user32.IsWindow(handle))
+
+
+def get_window_identity(handle: int | None) -> WindowIdentity | None:
+    """Capture ownership so a subsequently reused HWND can be rejected."""
+    if not is_valid_window(handle):
+        return None
+    process_id = wintypes.DWORD()
+    thread_id = user32.GetWindowThreadProcessId(
+        handle,
+        ctypes.byref(process_id),
+    )
+    if not thread_id or not process_id.value:
+        return None
+    return WindowIdentity(int(handle), int(thread_id), int(process_id.value))
+
+
+def matches_window_identity(identity: WindowIdentity) -> bool:
+    """Return whether an HWND still belongs to its captured owner."""
+    return get_window_identity(identity.handle) == identity
 
 
 def is_external_window(handle: int | None) -> bool:
