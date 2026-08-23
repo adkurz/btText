@@ -114,6 +114,9 @@ To create only the portable release:
 .\build.ps1 -PortableOnly
 ```
 
+### Note to NSIS
+
+It is recommended to build the installer with this [unofficial version of NSIS](https://github.com/negrutiu/nsis) to get X64 installers.
 ## Project structure
 
 ```text
