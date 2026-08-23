@@ -152,6 +152,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
                 return_value=(123, 789, 1),
             ),
             patch.object(hook, "_translate", return_value="e"),
+            patch.object(hotstrings.user32, "GetAsyncKeyState", return_value=0),
             patch.object(hotstrings.user32, "CallNextHookEx", return_value=0),
         ):
             hook._hook_callback(
@@ -449,6 +450,11 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
                         "_translate",
                         return_value="e",
                     ) as translate,
+                    patch.object(
+                        hotstrings.user32,
+                        "GetAsyncKeyState",
+                        return_value=0,
+                    ),
                 ):
                     down_result = hook._hook_callback(
                         hotstrings.HC_ACTION,
