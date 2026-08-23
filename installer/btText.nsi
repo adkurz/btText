@@ -22,11 +22,15 @@ SetCompressor /SOLID lzma
 !ifndef FILE_VERSION
   !error "FILE_VERSION must be supplied by build.ps1"
 !endif
+!ifndef UNINSTALL_INCLUDE
+  !error "UNINSTALL_INCLUDE must be supplied by build.ps1"
+!endif
 
 !define APP_NAME "btText"
 !define APP_PUBLISHER "Adrian Kurz"
 !define APP_EXE "btText.exe"
 !define APP_ID "btText.AdrianKurz"
+!define INSTALL_MARKER "bttext-install-mode.json"
 !define INNO_UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}_is1"
 !define NSIS_UNINSTALL_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${APP_ID}"
 
@@ -103,6 +107,8 @@ LangString BrowseDialogTitle ${LANG_ENGLISH} "Select the btText install location
 LangString BrowseDialogTitle ${LANG_GERMAN} "Installationsordner für btText auswählen"
 LangString InstallLocationRequired ${LANG_ENGLISH} "Enter an install location."
 LangString InstallLocationRequired ${LANG_GERMAN} "Geben Sie einen Installationsordner ein."
+LangString InstallLocationNotOwned ${LANG_ENGLISH} "The selected folder is not empty and does not contain a complete btText installation. Choose an empty folder or the folder of an existing btText installation. Existing files will not be overwritten."
+LangString InstallLocationNotOwned ${LANG_GERMAN} "Der ausgewählte Ordner ist nicht leer und enthält keine vollständige btText-Installation. Wählen Sie einen leeren Ordner oder den Ordner einer bestehenden btText-Installation. Vorhandene Dateien werden nicht überschrieben."
 
 Var PreviousUninstaller
 Var PreviousInstallDir
@@ -153,7 +159,77 @@ Function LeaveDirectoryPage
     MessageBox MB_OK|MB_ICONEXCLAMATION "$(InstallLocationRequired)"
     Abort
   ${EndIf}
-  GetFullPathName $INSTDIR "$0"
+  Call NormalizeInstallDirectory
+  ${If} $0 == ""
+    MessageBox MB_OK|MB_ICONEXCLAMATION "$(InstallLocationRequired)"
+    Abort
+  ${EndIf}
+  StrCpy $INSTDIR $0
+  Call ValidateInstallDirectory
+  Pop $0
+  ${If} $0 = 0
+    MessageBox MB_OK|MB_ICONEXCLAMATION "$(InstallLocationNotOwned)"
+    Abort
+  ${EndIf}
+FunctionEnd
+
+Function NormalizeInstallDirectory
+  ; The NSIS GetFullPathName instruction clears its result when the target
+  ; directory does not exist. The Windows API canonicalizes the same path
+  ; without requiring any part of the new install directory to exist.
+  System::Call 'kernel32::GetFullPathNameW(w r0, i ${NSIS_MAX_STRLEN}, w .r1, p 0) i.r2'
+  ${If} $2 = 0
+  ${OrIf} $2 >= ${NSIS_MAX_STRLEN}
+    StrCpy $0 ""
+  ${Else}
+    StrCpy $0 $1
+  ${EndIf}
+FunctionEnd
+
+Function ValidateInstallDirectory
+  StrCpy $0 1
+  ClearErrors
+  FindFirst $1 $2 "$INSTDIR\*"
+  IfErrors directory_validation_done
+  directory_check_next_entry:
+  StrCmp $2 "." directory_find_next
+  StrCmp $2 ".." directory_find_next
+  FindClose $1
+  Goto directory_has_contents
+  directory_find_next:
+  ClearErrors
+  FindNext $1 $2
+  IfErrors directory_no_more_entries
+  Goto directory_check_next_entry
+  directory_no_more_entries:
+  FindClose $1
+  Goto directory_validation_done
+  directory_has_contents:
+  IfFileExists "$INSTDIR\_internal\${INSTALL_MARKER}" 0 directory_not_owned
+  IfFileExists "$INSTDIR\${APP_EXE}" 0 directory_not_owned
+  IfFileExists "$INSTDIR\uninstall.exe" directory_validation_done directory_not_owned
+  directory_not_owned:
+  StrCpy $0 0
+  directory_validation_done:
+  Push $0
+FunctionEnd
+
+Function RequireSafeInstallDirectory
+  StrCpy $0 $INSTDIR
+  Call NormalizeInstallDirectory
+  ${If} $0 == ""
+    MessageBox MB_OK|MB_ICONEXCLAMATION "$(InstallLocationRequired)" /SD IDOK
+    SetErrorLevel 2
+    Abort
+  ${EndIf}
+  StrCpy $INSTDIR $0
+  Call ValidateInstallDirectory
+  Pop $0
+  ${If} $0 = 0
+    MessageBox MB_OK|MB_ICONEXCLAMATION "$(InstallLocationNotOwned)" /SD IDOK
+    SetErrorLevel 2
+    Abort
+  ${EndIf}
 FunctionEnd
 
 Function SignalRunningApplicationToExit
@@ -241,6 +317,9 @@ FunctionEnd
 
 Section "$(MainSection)" MainSection
   SectionIn RO
+  ; Custom page callbacks are skipped in silent mode, so enforce the same
+  ; ownership check again before an upgrade or any payload write.
+  Call RequireSafeInstallDirectory
   Call WaitForApplication
   Call RemovePreviousInstallations
   SetOutPath "$INSTDIR"
@@ -354,8 +433,10 @@ Section "Uninstall"
   RMDir "$SMPROGRAMS\${APP_NAME}"
   DeleteRegKey HKCU "${NSIS_UNINSTALL_KEY}"
   SetOutPath "$TEMP"
-  Delete "$INSTDIR\${APP_EXE}"
-  RMDir /r "$INSTDIR\_internal"
+  ; Remove the marker first so the generated list can remove _internal once
+  ; every file actually supplied by this build has been deleted.
+  Delete "$INSTDIR\_internal\${INSTALL_MARKER}"
+  !include "${UNINSTALL_INCLUDE}"
   Delete "$INSTDIR\uninstall.exe"
   RMDir "$INSTDIR"
 

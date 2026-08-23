@@ -47,12 +47,58 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
         self.assertIn('${NSD_CreateDirRequest} 0 44u 78% 13u "$INSTDIR"', page)
         self.assertIn("${NSD_SetFocus} $DirectoryInput", page)
 
-    def test_directory_page_preserves_the_installer_directory_variable(self):
+    def test_directory_page_normalizes_a_nonexistent_install_directory(self):
         leave = SCRIPT.split("Function LeaveDirectoryPage", 1)[1].split(
             "FunctionEnd", 1
         )[0]
+        normalize = SCRIPT.split("Function NormalizeInstallDirectory", 1)[1].split(
+            "FunctionEnd", 1
+        )[0]
         self.assertIn("${NSD_GetText} $DirectoryInput $0", leave)
-        self.assertIn('GetFullPathName $INSTDIR "$0"', leave)
+        self.assertIn("Call NormalizeInstallDirectory", leave)
+        self.assertIn("StrCpy $INSTDIR $0", leave)
+        self.assertNotIn("GetFullPathName", leave)
+        self.assertIn("kernel32::GetFullPathNameW", normalize)
+        self.assertIn("StrCpy $0 $1", normalize)
+
+    def test_nonempty_directory_requires_a_complete_bttext_installation(self):
+        leave = SCRIPT.split("Function LeaveDirectoryPage", 1)[1].split(
+            "FunctionEnd", 1
+        )[0]
+        validation = SCRIPT.split("Function ValidateInstallDirectory", 1)[1].split(
+            "FunctionEnd", 1
+        )[0]
+        main = SCRIPT.split('Section "$(MainSection)"', 1)[1].split(
+            "SectionEnd", 1
+        )[0]
+        self.assertIn("Call ValidateInstallDirectory", leave)
+        self.assertIn('FindFirst $1 $2 "$INSTDIR\\*"', validation)
+        self.assertIn("IfErrors directory_validation_done", validation)
+        self.assertIn('StrCmp $2 "." directory_find_next', validation)
+        self.assertIn('StrCmp $2 ".." directory_find_next', validation)
+        self.assertIn("FindNext $1 $2", validation)
+        self.assertIn("FindClose $1", validation)
+        self.assertNotIn('IfFileExists "$INSTDIR\\*.*"', validation)
+        self.assertIn(
+            'IfFileExists "$INSTDIR\\_internal\\${INSTALL_MARKER}"',
+            validation,
+        )
+        self.assertIn('IfFileExists "$INSTDIR\\${APP_EXE}"', validation)
+        self.assertIn('IfFileExists "$INSTDIR\\uninstall.exe"', validation)
+        self.assertIn("InstallLocationNotOwned", leave)
+        self.assertIn("Abort", leave)
+        self.assertIn("Call RequireSafeInstallDirectory", main)
+        require = SCRIPT.split("Function RequireSafeInstallDirectory", 1)[1].split(
+            "FunctionEnd", 1
+        )[0]
+        self.assertIn('/SD IDOK', require)
+        self.assertIn("SetErrorLevel 2", require)
+        self.assertIn("Call NormalizeInstallDirectory", require)
+        self.assertNotIn("GetFullPathName $INSTDIR", require)
+        self.assertLess(
+            main.index("Call RequireSafeInstallDirectory"),
+            main.index('File /r "${SOURCE_DIR}\\*"'),
+        )
 
     def test_matches_shortcut_and_launch_choices(self):
         self.assertIn('Section /o "$(DesktopShortcut)"', SCRIPT)
@@ -113,8 +159,12 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
         uninstall = SCRIPT.split('Section "Uninstall"', 1)[1]
         self.assertNotIn('RMDir /r "$INSTDIR"', uninstall)
         self.assertNotIn('RMDir /r "$SMPROGRAMS', uninstall)
-        self.assertIn('RMDir /r "$INSTDIR\\_internal"', uninstall)
-        self.assertIn('Delete "$INSTDIR\\${APP_EXE}"', uninstall)
+        self.assertNotIn('RMDir /r "$INSTDIR\\_internal"', uninstall)
+        self.assertIn('!include "${UNINSTALL_INCLUDE}"', uninstall)
+        self.assertIn(
+            'Delete "$INSTDIR\\_internal\\${INSTALL_MARKER}"',
+            uninstall,
+        )
         self.assertIn('RMDir "$INSTDIR"', uninstall)
 
     def test_silent_failure_messages_have_defaults_and_error_codes(self):

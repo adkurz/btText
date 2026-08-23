@@ -31,6 +31,8 @@ class BuildScriptTests(unittest.TestCase):
         self.assertIn('"/INPUTCHARSET"', self.script)
         self.assertIn('"UTF8"', self.script)
         self.assertIn('"/DVERSION=$Version"', self.script)
+        self.assertIn('"/DUNINSTALL_INCLUDE=$UninstallInclude"', self.script)
+        self.assertIn("tools/build_nsis_uninstall_include.py", self.script)
         self.assertNotIn("InnoCompiler", self.script)
         self.assertNotIn("ISCC", self.script)
         self.assertNotIn("InstallerType", self.script)
