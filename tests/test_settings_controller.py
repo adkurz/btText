@@ -14,6 +14,9 @@ class SettingsControllerTestCase(unittest.TestCase):
         self.global_hotkey = Mock()
         self.hotstrings = Mock()
         self.settings = AppSettings()
+        self.global_hotkey.registered_hotkey = (
+            self.settings.toggle_window_hotkey
+        )
         self.controller = SettingsController(
             self.parent,
             self.store,
@@ -172,6 +175,33 @@ class SettingsControllerTestCase(unittest.TestCase):
             ],
         )
         self.global_hotkey.unregister.assert_called_once_with()
+        self.store.save.assert_not_called()
+        message_box.assert_called_once()
+
+    @patch("ui.settings_controller.wx.MessageBox")
+    def test_unchanged_inactive_hotkey_is_retried_and_reports_conflict(
+        self,
+        message_box,
+    ):
+        self.global_hotkey.registered_hotkey = None
+        self.global_hotkey.register.return_value = False
+
+        changed = self.controller.apply(
+            self.settings.toggle_window_hotkey,
+            self.settings.language,
+            self.settings.appearance,
+            self.settings.include_copied_text_in_clipboard_history,
+            self.settings.allow_copied_text_cloud_upload,
+            self.settings.hotstrings_enabled,
+            self.settings.preserve_hotstring_boundary,
+            self.settings.notify_hotstring_expansion,
+            self.settings.play_hotstring_sound,
+        )
+
+        self.assertFalse(changed)
+        self.global_hotkey.register.assert_called_once_with(
+            self.settings.toggle_window_hotkey
+        )
         self.store.save.assert_not_called()
         message_box.assert_called_once()
 

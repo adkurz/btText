@@ -61,11 +61,28 @@ class WxGlobalHotkeyBindingTestCase(unittest.TestCase):
         self.assertEqual(self.window.RegisterHotKey.call_count, 2)
 
     def test_resume_reports_failed_restoration(self):
+        self.window.RegisterHotKey.return_value = True
+        self.binding.register(DEFAULT_TOGGLE_HOTKEY)
         self.binding.suspend()
         self.window.RegisterHotKey.return_value = False
 
         self.assertFalse(self.binding.resume(DEFAULT_TOGGLE_HOTKEY))
 
+        self.assertIsNone(self.binding.registered_hotkey)
+
+    def test_resume_does_not_retry_registration_that_failed_before_suspension(self):
+        self.window.RegisterHotKey.return_value = False
+
+        self.assertFalse(self.binding.register(DEFAULT_TOGGLE_HOTKEY))
+
+        self.binding.suspend()
+        self.assertTrue(self.binding.resume(DEFAULT_TOGGLE_HOTKEY))
+
+        self.window.RegisterHotKey.assert_called_once_with(
+            7,
+            wx.MOD_CONTROL | wx.MOD_SHIFT | wx.MOD_ALT,
+            ord("T"),
+        )
         self.assertIsNone(self.binding.registered_hotkey)
 
     @patch("ui.global_hotkey.activate_keyboard_layout")

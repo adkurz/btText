@@ -93,19 +93,25 @@ class SettingsController:
         """Apply and persist settings, rolling runtime state back on failure."""
         old_hotkey = self._settings.toggle_window_hotkey
         hotkey_changed = hotkey != old_hotkey
+        hotkey_registration_required = (
+            hotkey_changed or self._global_hotkey.registered_hotkey != hotkey
+        )
         hotstrings_started = False
         if hotstrings_enabled and not self._hotstrings_running:
             if not self._hotstrings.start():
                 return False
             self._hotstrings_running = True
             hotstrings_started = True
-        if hotkey_changed:
+        if hotkey_registration_required:
             self.unregister_hotkey()
-        if hotkey_changed and not self._register_hotkey(
+        if hotkey_registration_required and not self._register_hotkey(
             hotkey,
             show_error=False,
         ):
-            restored = self._register_hotkey(old_hotkey, show_error=False)
+            restored = hotkey_changed and self._register_hotkey(
+                old_hotkey,
+                show_error=False,
+            )
             if restored:
                 # Translators: Settings error: the requested global shortcut is
                 # occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
@@ -113,12 +119,19 @@ class SettingsController:
                     "The selected hotkey {} is already in use. "
                     "The previous hotkey has been restored."
                 ).format(format_hotkey(hotkey))
-            else:
+            elif hotkey_changed:
                 # Translators: Settings error: the requested shortcut is occupied
                 # and restoring the old one also failed. {} is such as Ctrl+Alt+T.
                 message = _(
                     "The selected hotkey {} is already in use and the previous "
                     "hotkey could not be restored. No global hotkey is active."
+                ).format(format_hotkey(hotkey))
+            else:
+                # Translators: Settings error: the configured shortcut is still
+                # occupied when the user explicitly tries to activate it again.
+                message = _(
+                    "The selected hotkey {} is already in use. "
+                    "No global hotkey is active."
                 ).format(format_hotkey(hotkey))
             wx.MessageBox(
                 message,

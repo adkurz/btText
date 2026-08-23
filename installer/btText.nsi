@@ -22,10 +22,6 @@ SetCompressor /SOLID lzma
 !ifndef FILE_VERSION
   !error "FILE_VERSION must be supplied by build.ps1"
 !endif
-!ifndef UNINSTALL_INCLUDE
-  !error "UNINSTALL_INCLUDE must be supplied by build.ps1"
-!endif
-
 !define APP_NAME "btText"
 !define APP_PUBLISHER "Adrian Kurz"
 !define APP_EXE "btText.exe"
@@ -107,8 +103,8 @@ LangString BrowseDialogTitle ${LANG_ENGLISH} "Select the btText install location
 LangString BrowseDialogTitle ${LANG_GERMAN} "Installationsordner für btText auswählen"
 LangString InstallLocationRequired ${LANG_ENGLISH} "Enter an install location."
 LangString InstallLocationRequired ${LANG_GERMAN} "Geben Sie einen Installationsordner ein."
-LangString InstallLocationNotOwned ${LANG_ENGLISH} "The selected folder is not empty and does not contain a complete btText installation. Choose an empty folder or the folder of an existing btText installation. Existing files will not be overwritten."
-LangString InstallLocationNotOwned ${LANG_GERMAN} "Der ausgewählte Ordner ist nicht leer und enthält keine vollständige btText-Installation. Wählen Sie einen leeren Ordner oder den Ordner einer bestehenden btText-Installation. Vorhandene Dateien werden nicht überschrieben."
+LangString InstallLocationNotOwned ${LANG_ENGLISH} "The selected folder is not empty and does not contain btText.exe. Choose an empty folder or the folder of an existing btText installation. Existing files will not be overwritten."
+LangString InstallLocationNotOwned ${LANG_GERMAN} "Der ausgewählte Ordner ist nicht leer und enthält keine btText.exe. Wählen Sie einen leeren Ordner oder den Ordner einer bestehenden btText-Installation. Vorhandene Dateien werden nicht überschrieben."
 
 Var PreviousUninstaller
 Var PreviousInstallDir
@@ -205,9 +201,7 @@ Function ValidateInstallDirectory
   FindClose $1
   Goto directory_validation_done
   directory_has_contents:
-  IfFileExists "$INSTDIR\_internal\${INSTALL_MARKER}" 0 directory_not_owned
-  IfFileExists "$INSTDIR\${APP_EXE}" 0 directory_not_owned
-  IfFileExists "$INSTDIR\uninstall.exe" directory_validation_done directory_not_owned
+  IfFileExists "$INSTDIR\${APP_EXE}" directory_validation_done directory_not_owned
   directory_not_owned:
   StrCpy $0 0
   directory_validation_done:
@@ -433,12 +427,7 @@ Section "Uninstall"
   RMDir "$SMPROGRAMS\${APP_NAME}"
   DeleteRegKey HKCU "${NSIS_UNINSTALL_KEY}"
   SetOutPath "$TEMP"
-  ; Remove the marker first so the generated list can remove _internal once
-  ; every file actually supplied by this build has been deleted.
-  Delete "$INSTDIR\_internal\${INSTALL_MARKER}"
-  !include "${UNINSTALL_INCLUDE}"
-  Delete "$INSTDIR\uninstall.exe"
-  RMDir "$INSTDIR"
+  RMDir /r "$INSTDIR"
 
   IfSilent keep_user_data
   MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONQUESTION "$(RemoveUserDataPrompt)" IDNO keep_user_data

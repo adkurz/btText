@@ -61,7 +61,6 @@ $TemporaryRoot = Join-Path (
 $WorkDirectory = Join-Path $TemporaryRoot "work"
 $DistributionDirectory = Join-Path $TemporaryRoot "dist"
 $DocumentationDirectory = Join-Path $TemporaryRoot "documentation"
-$UninstallInclude = Join-Path $TemporaryRoot "uninstall-payload.nsh"
 
 Push-Location $ProjectRoot
 try {
@@ -219,17 +218,6 @@ try {
 
     $Installer = $null
     if (-not $PortableOnly) {
-        Write-Host "Generating exact installer payload removal list..."
-        & $VirtualEnvironmentPython `
-            tools/build_nsis_uninstall_include.py `
-            $ApplicationDirectory `
-            $UninstallInclude
-        if ($LASTEXITCODE -ne 0) {
-            throw "Uninstall payload generation failed with exit code $LASTEXITCODE."
-        }
-        if (-not (Test-Path -LiteralPath $UninstallInclude -PathType Leaf)) {
-            throw "The uninstall payload include was not created."
-        }
         Write-Host "Creating per-user Windows installer..."
         & $ResolvedNsisCompiler `
             "/INPUTCHARSET" `
@@ -239,7 +227,6 @@ try {
             "/DSOURCE_DIR=$ApplicationDirectory" `
             "/DOUTPUT_DIR=$BuildDirectory" `
             "/DMARKER_FILE=$(Join-Path $ProjectRoot 'installer\bttext-install-mode.json')" `
-            "/DUNINSTALL_INCLUDE=$UninstallInclude" `
             (Join-Path $ProjectRoot "installer\btText.nsi")
         if ($LASTEXITCODE -ne 0) {
             throw "NSIS failed with exit code $LASTEXITCODE."

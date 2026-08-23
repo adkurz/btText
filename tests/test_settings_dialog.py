@@ -9,7 +9,7 @@ from core.shortcuts import DEFAULT_TOGGLE_HOTKEY
 from ui.settings_dialog import SettingsDialog
 
 
-class SettingsDialogDesignTestCase(unittest.TestCase):
+class SettingsDialogTestCase(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.app = wx.GetApp() or wx.App(False)
@@ -68,6 +68,33 @@ class SettingsDialogDesignTestCase(unittest.TestCase):
             self.assertTrue(dialog.apply_button.IsEnabled())
             self.assertTrue(dialog._apply())
             self.assertFalse(apply_settings.call_args.args[8])
+        finally:
+            dialog.Destroy()
+
+    def test_use_default_retries_unchanged_hotkey_on_apply(self):
+        apply_settings = Mock(return_value=False)
+        dialog = SettingsDialog(
+            None,
+            DEFAULT_TOGGLE_HOTKEY,
+            "system",
+            APPEARANCE_SYSTEM,
+            True,
+            True,
+            True,
+            True,
+            False,
+            True,
+            ("en",),
+            apply_settings,
+            Mock(),
+            Mock(),
+        )
+        try:
+            dialog._use_default(Mock())
+
+            self.assertTrue(dialog.apply_button.IsEnabled())
+            self.assertFalse(dialog._apply())
+            apply_settings.assert_called_once()
         finally:
             dialog.Destroy()
 

@@ -61,7 +61,7 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
         self.assertIn("kernel32::GetFullPathNameW", normalize)
         self.assertIn("StrCpy $0 $1", normalize)
 
-    def test_nonempty_directory_requires_a_complete_bttext_installation(self):
+    def test_nonempty_directory_requires_bttext_executable(self):
         leave = SCRIPT.split("Function LeaveDirectoryPage", 1)[1].split(
             "FunctionEnd", 1
         )[0]
@@ -79,12 +79,9 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
         self.assertIn("FindNext $1 $2", validation)
         self.assertIn("FindClose $1", validation)
         self.assertNotIn('IfFileExists "$INSTDIR\\*.*"', validation)
-        self.assertIn(
-            'IfFileExists "$INSTDIR\\_internal\\${INSTALL_MARKER}"',
-            validation,
-        )
         self.assertIn('IfFileExists "$INSTDIR\\${APP_EXE}"', validation)
-        self.assertIn('IfFileExists "$INSTDIR\\uninstall.exe"', validation)
+        self.assertNotIn("INSTALL_MARKER", validation)
+        self.assertNotIn("uninstall.exe", validation)
         self.assertIn("InstallLocationNotOwned", leave)
         self.assertIn("Abort", leave)
         self.assertIn("Call RequireSafeInstallDirectory", main)
@@ -155,17 +152,13 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
         self.assertIn("IfErrors 0 keep_user_data", uninstall)
         self.assertIn("RemoveUserDataFailed", uninstall)
 
-    def test_uninstaller_does_not_recursively_delete_shared_directories(self):
+    def test_uninstaller_recursively_deletes_install_directory(self):
         uninstall = SCRIPT.split('Section "Uninstall"', 1)[1]
-        self.assertNotIn('RMDir /r "$INSTDIR"', uninstall)
+        self.assertIn('RMDir /r "$INSTDIR"', uninstall)
         self.assertNotIn('RMDir /r "$SMPROGRAMS', uninstall)
         self.assertNotIn('RMDir /r "$INSTDIR\\_internal"', uninstall)
-        self.assertIn('!include "${UNINSTALL_INCLUDE}"', uninstall)
-        self.assertIn(
-            'Delete "$INSTDIR\\_internal\\${INSTALL_MARKER}"',
-            uninstall,
-        )
-        self.assertIn('RMDir "$INSTDIR"', uninstall)
+        self.assertNotIn("UNINSTALL_INCLUDE", uninstall)
+        self.assertNotIn('Delete "$INSTDIR\\', uninstall)
 
     def test_silent_failure_messages_have_defaults_and_error_codes(self):
         self.assertIn('"$(InnoUpgradeFailed)" /SD IDOK', SCRIPT)

@@ -48,6 +48,7 @@ class SettingsDialog(wx.Dialog):
         )
         self._current_hotkey = current_hotkey
         self._candidate_hotkey = current_hotkey
+        self._force_hotkey_apply = False
         self._current_language = current_language
         self._candidate_language = current_language
         self._current_appearance = current_appearance
@@ -416,7 +417,8 @@ class SettingsDialog(wx.Dialog):
     def _update_apply_button(self):
         """Enable Apply whenever either setting differs from its saved value."""
         self.apply_button.Enable(
-            self._candidate_hotkey != self._current_hotkey
+            self._force_hotkey_apply
+            or self._candidate_hotkey != self._current_hotkey
             or self._candidate_language != self._current_language
             or self._candidate_appearance != self._current_appearance
             or self._candidate_include_copied_text_in_clipboard_history
@@ -646,6 +648,7 @@ class SettingsDialog(wx.Dialog):
         """Reset the pending hotkey to the application default."""
         self._cancel_recording()
         self._candidate_hotkey = DEFAULT_TOGGLE_HOTKEY
+        self._force_hotkey_apply = True
         self.hotkey_display.SetValue(format_hotkey(self._candidate_hotkey))
         self._update_apply_button()
         self.recording_status.SetLabel(
@@ -658,7 +661,8 @@ class SettingsDialog(wx.Dialog):
         """Apply all pending settings through the main-frame callback."""
         self._cancel_recording()
         if (
-            self._candidate_hotkey == self._current_hotkey
+            not self._force_hotkey_apply
+            and self._candidate_hotkey == self._current_hotkey
             and self._candidate_language == self._current_language
             and self._candidate_appearance == self._current_appearance
             and self._candidate_include_copied_text_in_clipboard_history
@@ -687,6 +691,7 @@ class SettingsDialog(wx.Dialog):
         ):
             return False
         self._current_hotkey = self._candidate_hotkey
+        self._force_hotkey_apply = False
         self._current_language = self._candidate_language
         self._current_appearance = self._candidate_appearance
         self._current_include_copied_text_in_clipboard_history = (

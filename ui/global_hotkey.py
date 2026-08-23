@@ -18,6 +18,7 @@ class WxGlobalHotkeyBinding:
         self.hotkey_id = hotkey_id
         self.registered_hotkey: Hotkey | None = None
         self._suspended = False
+        self._restore_on_resume = False
         self._keyboard_layout = get_foreground_keyboard_layout()
 
     def register(self, hotkey: Hotkey) -> bool:
@@ -40,6 +41,7 @@ class WxGlobalHotkeyBinding:
 
     def suspend(self) -> None:
         """Release the hotkey until a later call to ``resume``."""
+        self._restore_on_resume = self.registered_hotkey is not None
         self._suspended = True
         self.unregister()
 
@@ -49,7 +51,11 @@ class WxGlobalHotkeyBinding:
             return True
         self._suspended = False
         if self.registered_hotkey is not None:
+            self._restore_on_resume = False
             return True
+        if not self._restore_on_resume:
+            return True
+        self._restore_on_resume = False
         return self.register(hotkey)
 
     def refresh_keyboard_layout(self) -> Hotkey | None:
