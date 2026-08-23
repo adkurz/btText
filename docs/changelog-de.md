@@ -4,9 +4,9 @@
 
 - Verbessert: Der Installer achtet nun darauf, das btText nicht in einen bereits vorhandenen Ordner installiert wird, welcher nicht btText selbst enthält. Neuinstallation und Aktualisierungen sind weiterhin problemlos möglich.
 
-- Verbessert: Hotstrings sind nun zuverlässiger im Zusammenhang mit dem Wechsel von Fenstern und Modifikatortasten (STRG, Alt, Umschalt).
+- Behoben: Hotstrings sind nun zuverlässiger bei verschiedenen Systemereignissen, beim Wechsel von Fenstern und im Zusammenhang mit Modifikatortasten (STRG, Alt, Umschalt).
 
-- Verbessert: Das Einfügen in andere Anwendungen prüft nun zuverlässig, ob das Fenster noch existiert.
+- Behoben: Das Einfügen in andere Anwendungen prüft nun zuverlässig, ob das Fenster noch existiert.
 
 ## [v1.2] 22.08.2026
 

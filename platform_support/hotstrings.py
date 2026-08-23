@@ -3,6 +3,7 @@
 import ctypes
 import logging
 import threading
+import time
 from collections.abc import Mapping
 from ctypes import wintypes
 from typing import Callable
@@ -16,8 +17,12 @@ WM_KEYDOWN = 0x0100
 WM_KEYUP = 0x0101
 WM_SYSKEYDOWN = 0x0104
 WM_SYSKEYUP = 0x0105
+WM_TIMER = 0x0113
 WM_QUIT = 0x0012
 HOOK_THREAD_SHUTDOWN_TIMEOUT_SECONDS = 2
+HOOK_HEALTH_CHECK_INTERVAL_MS = 500
+HOOK_REFRESH_INTERVAL_SECONDS = 60
+HOOK_REFRESH_IDLE_SECONDS = 1
 LLKHF_INJECTED = 0x10
 LLKHF_ALTDOWN = 0x20
 VK_BACK = 0x08
@@ -72,6 +77,15 @@ class GUITHREADINFO(ctypes.Structure):
         ("hwndMoveSize", wintypes.HWND),
         ("hwndCaret", wintypes.HWND),
         ("rcCaret", wintypes.RECT),
+    )
+
+
+class LASTINPUTINFO(ctypes.Structure):
+    """Timestamp of the most recent user input in the current session."""
+
+    _fields_ = (
+        ("cbSize", wintypes.UINT),
+        ("dwTime", wintypes.DWORD),
     )
 
 
@@ -138,6 +152,18 @@ user32.PostThreadMessageW.argtypes = (
     wintypes.LPARAM,
 )
 user32.PostThreadMessageW.restype = wintypes.BOOL
+user32.SetTimer.argtypes = (
+    wintypes.HWND,
+    ctypes.c_size_t,
+    wintypes.UINT,
+    wintypes.LPVOID,
+)
+user32.SetTimer.restype = ctypes.c_size_t
+user32.KillTimer.argtypes = (wintypes.HWND, ctypes.c_size_t)
+user32.KillTimer.restype = wintypes.BOOL
+user32.GetLastInputInfo.argtypes = (ctypes.POINTER(LASTINPUTINFO),)
+user32.GetLastInputInfo.restype = wintypes.BOOL
+kernel32.GetTickCount64.restype = ctypes.c_ulonglong
 
 
 logger = logging.getLogger("bttext.hotstrings")
@@ -157,6 +183,9 @@ class KeyboardHook:
         self._handle = None
         self._thread: threading.Thread | None = None
         self._thread_id: int | None = None
+        self._timer_id: int | None = None
+        self._hook_installed_at = 0.0
+        self._observed_foreground_window: int | None = None
         self._startup_complete = threading.Event()
         self._startup_error: OSError | None = None
         self._state_lock = threading.Lock()
@@ -208,13 +237,23 @@ class KeyboardHook:
         """Own the native hook and pump its thread message queue."""
         try:
             self._thread_id = int(kernel32.GetCurrentThreadId())
-            module = kernel32.GetModuleHandleW(None)
-            self._handle = user32.SetWindowsHookExW(
-                WH_KEYBOARD_LL, self._callback, module, 0
+            self._handle = self._install_native_hook()
+            self._hook_installed_at = time.monotonic()
+            self._observed_foreground_window = self._get_foreground_window()
+            self._timer_id = int(
+                user32.SetTimer(
+                    None,
+                    0,
+                    HOOK_HEALTH_CHECK_INTERVAL_MS,
+                    None,
+                )
             )
-            if not self._handle:
+            if not self._timer_id:
                 raise ctypes.WinError(ctypes.get_last_error())
         except Exception as error:
+            if self._handle:
+                user32.UnhookWindowsHookEx(self._handle)
+                self._handle = None
             self._startup_error = (
                 error if isinstance(error, OSError) else OSError(str(error))
             )
@@ -237,12 +276,71 @@ class KeyboardHook:
                 if result == -1:
                     logger.error("Hotstring hook message loop failed")
                     break
+                if message.message == WM_TIMER and message.wParam == self._timer_id:
+                    self._monitor_hook()
         finally:
+            if self._timer_id and not user32.KillTimer(None, self._timer_id):
+                logger.warning("Could not remove hotstring hook health timer")
+            self._timer_id = None
             if self._handle and not user32.UnhookWindowsHookEx(self._handle):
                 logger.warning("Could not remove hotstring keyboard hook")
             self._handle = None
             self._thread_id = None
             logger.info("Hotstring keyboard hook stopped")
+
+    def _install_native_hook(self):
+        """Install one native hook or raise the corresponding Windows error."""
+        module = kernel32.GetModuleHandleW(None)
+        handle = user32.SetWindowsHookExW(
+            WH_KEYBOARD_LL, self._callback, module, 0
+        )
+        if not handle:
+            raise ctypes.WinError(ctypes.get_last_error())
+        return handle
+
+    def _monitor_hook(self) -> None:
+        """Renew the hook after window changes or when it has aged."""
+        foreground = self._get_foreground_window()
+        foreground_changed = foreground != self._observed_foreground_window
+        self._observed_foreground_window = foreground
+        age = time.monotonic() - self._hook_installed_at
+        periodic_refresh_due = (
+            age >= HOOK_REFRESH_INTERVAL_SECONDS
+            and self._is_user_input_idle()
+        )
+        if not foreground_changed and not periodic_refresh_due:
+            return
+        reason = "foreground window changed" if foreground_changed else "scheduled"
+        try:
+            replacement = self._install_native_hook()
+        except OSError:
+            logger.exception(
+                "Could not refresh hotstring keyboard hook (%s)", reason
+            )
+            return
+        previous = self._handle
+        self._handle = replacement
+        self._hook_installed_at = time.monotonic()
+        if previous and not user32.UnhookWindowsHookEx(previous):
+            logger.warning("Could not remove replaced hotstring keyboard hook")
+        logger.info("Hotstring keyboard hook refreshed (%s)", reason)
+
+    @staticmethod
+    def _get_foreground_window() -> int | None:
+        """Return the current foreground handle for health monitoring."""
+        foreground = user32.GetForegroundWindow()
+        return int(foreground) if foreground else None
+
+    @staticmethod
+    def _is_user_input_idle() -> bool:
+        """Return whether recent input has settled enough for hook renewal."""
+        info = LASTINPUTINFO()
+        info.cbSize = ctypes.sizeof(info)
+        if not user32.GetLastInputInfo(ctypes.byref(info)):
+            logger.warning("Could not query user input idle time")
+            return False
+        elapsed_ms = int(kernel32.GetTickCount64()) - int(info.dwTime)
+        return elapsed_ms >= HOOK_REFRESH_IDLE_SECONDS * 1_000
 
     def _hook_callback(self, code, message, data):
         """Contain callback failures so ctypes never unwinds into Windows."""

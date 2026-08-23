@@ -30,6 +30,114 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
         self.assertIsNot(hook._thread, first_thread)
         self.assertTrue(hook._thread.is_alive())
 
+    def test_aging_hook_is_replaced_after_user_input_settles(self):
+        hook = KeyboardHook(lambda snippet, key: False)
+        hook._handle = 123
+        hook._hook_installed_at = 10
+        hook._observed_foreground_window = 100
+
+        with (
+            patch.object(hotstrings.time, "monotonic", side_effect=(71, 72)),
+            patch.object(hook, "_get_foreground_window", return_value=100),
+            patch.object(hook, "_is_user_input_idle", return_value=True),
+            patch.object(hook, "_install_native_hook", return_value=456),
+            patch.object(
+                hotstrings.user32,
+                "UnhookWindowsHookEx",
+                return_value=True,
+            ) as unhook,
+            self.assertLogs("bttext.hotstrings", level="INFO") as logs,
+        ):
+            hook._monitor_hook()
+
+        self.assertEqual(hook._handle, 456)
+        self.assertEqual(hook._hook_installed_at, 72)
+        unhook.assert_called_once_with(123)
+        self.assertIn("refreshed (scheduled)", logs.output[0])
+
+    def test_foreground_change_immediately_replaces_hook(self):
+        hook = KeyboardHook(lambda snippet, key: False)
+        hook._handle = 123
+        hook._hook_installed_at = 10
+        hook._observed_foreground_window = 100
+
+        with (
+            patch.object(hotstrings.time, "monotonic", side_effect=(11, 12)),
+            patch.object(hook, "_get_foreground_window", return_value=200),
+            patch.object(hook, "_is_user_input_idle") as idle,
+            patch.object(hook, "_install_native_hook", return_value=456),
+            patch.object(
+                hotstrings.user32,
+                "UnhookWindowsHookEx",
+                return_value=True,
+            ),
+            self.assertLogs("bttext.hotstrings", level="INFO") as logs,
+        ):
+            hook._monitor_hook()
+
+        self.assertEqual(hook._handle, 456)
+        self.assertEqual(hook._observed_foreground_window, 200)
+        idle.assert_not_called()
+        self.assertIn("refreshed (foreground window changed)", logs.output[0])
+
+    def test_active_input_defers_hook_replacement(self):
+        hook = KeyboardHook(lambda snippet, key: False)
+        hook._handle = 123
+        hook._hook_installed_at = 10
+        hook._observed_foreground_window = 100
+
+        with (
+            patch.object(hotstrings.time, "monotonic", return_value=71),
+            patch.object(hook, "_get_foreground_window", return_value=100),
+            patch.object(hook, "_is_user_input_idle", return_value=False),
+            patch.object(hook, "_install_native_hook") as install,
+        ):
+            hook._monitor_hook()
+
+        self.assertEqual(hook._handle, 123)
+        install.assert_not_called()
+
+    def test_failed_replacement_keeps_existing_hook_for_retry(self):
+        hook = KeyboardHook(lambda snippet, key: False)
+        hook._handle = 123
+        hook._hook_installed_at = 10
+        hook._observed_foreground_window = 100
+
+        with (
+            patch.object(hotstrings.time, "monotonic", return_value=71),
+            patch.object(hook, "_get_foreground_window", return_value=100),
+            patch.object(hook, "_is_user_input_idle", return_value=True),
+            patch.object(
+                hook,
+                "_install_native_hook",
+                side_effect=OSError("installation failed"),
+            ),
+            self.assertLogs("bttext.hotstrings", level="ERROR"),
+        ):
+            hook._monitor_hook()
+
+        self.assertEqual(hook._handle, 123)
+        self.assertEqual(hook._hook_installed_at, 10)
+
+    def test_idle_time_uses_session_last_input_tick(self):
+        def populate_last_input(info_pointer):
+            info_pointer._obj.dwTime = 8_000
+            return True
+
+        with (
+            patch.object(
+                hotstrings.user32,
+                "GetLastInputInfo",
+                side_effect=populate_last_input,
+            ),
+            patch.object(
+                hotstrings.kernel32,
+                "GetTickCount64",
+                return_value=9_000,
+            ),
+        ):
+            self.assertTrue(KeyboardHook._is_user_input_idle())
+
     def test_focused_child_change_discards_partial_hotstring(self):
         hook = KeyboardHook(lambda snippet, key: False)
         hook.update({"hello": object()})

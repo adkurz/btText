@@ -4,9 +4,9 @@
 
 - Improved: The installer now ensures that btText is not installed into an existing folder that does not contain btText itself. New installations and updates are still possible without any problems.
 
-- Improved: Hotstrings now work more reliably when switching windows and using modifier keys (CTRL, Alt, Shift).
+- Fixed: Hotstrings now work more reliably during various system events, when switching between windows, and in conjunction with modifier keys (Ctrl, Alt, Shift).
 
-- Improved: Pasting into other applications now reliably checks whether the window still exists.
+- Fixed: Pasting into other applications now reliably checks whether the window still exists.
 
 ## [v1.2] 2026-08-22
 
