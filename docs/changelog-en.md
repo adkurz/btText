@@ -1,6 +1,6 @@
 # Changelog for btText
 
-## [Unreleased] 
+## [v1.2.1] 2026-08-23
 
 - Improved: The installer now ensures that btText is not installed into an existing folder that does not contain btText itself. New installations and updates are still possible without any problems.
 
