@@ -6,6 +6,7 @@ from collections.abc import Callable
 import ctypes
 import uuid
 
+from core.user_errors import UserFacingError
 from platform_support import keyboard_input, windows
 from platform_support.clipboard import (
     ClipboardError,
@@ -21,6 +22,10 @@ from platform_support.clipboard_snapshot import ClipboardSnapshot
 
 
 PasteError = ClipboardError
+
+
+class PasteTargetError(UserFacingError, ClipboardError):
+    """Describe a changed or unavailable paste target for UI localization."""
 
 
 class ClipboardRestoreError(ClipboardError):
@@ -147,15 +152,19 @@ class PendingPaste:
         self._snapshot.close()
 
 
-def paste_text(target_window: int, text: str) -> PendingPaste:
-    """Activate target_window, put text on the clipboard and send Ctrl+V."""
-    if not windows.is_valid_window(target_window):
-        raise PasteError("The previously active window no longer exists.")
+def paste_text(target: windows.WindowIdentity, text: str) -> PendingPaste:
+    """Activate an unchanged target, put text on the clipboard, and paste."""
+    if not windows.matches_window_identity(target):
+        raise PasteTargetError(
+            "paste_target_window_missing",
+            "The previously active window no longer exists.",
+        )
 
     pending = PendingPaste.prepare(text)
-    if not windows.activate_window(target_window):
-        operation_error = PasteError(
-            "The previously active window could not be activated."
+    if not windows.activate_window_identity(target):
+        operation_error = PasteTargetError(
+            "paste_target_window_activation_failed",
+            "The previously active window could not be activated.",
         )
         restore_after_failure(pending.restore_clipboard, operation_error)
         raise operation_error

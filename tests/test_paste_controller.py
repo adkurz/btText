@@ -7,7 +7,8 @@ from core.variables import (
     UnknownVariableError,
     VariableRenderingCancelled,
 )
-from platform_support import clipboard_paste
+from i18n import _
+from platform_support import clipboard_paste, windows
 from ui.paste_controller import PasteController
 
 
@@ -15,13 +16,18 @@ def render_unchanged(text, target_window=None):
     return RenderedSnippet(text)
 
 
+TARGET = windows.WindowIdentity(handle=42, thread_id=7, process_id=9)
+
+
 class PasteControllerTestCase(unittest.TestCase):
+    @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
     @patch("ui.paste_controller.windows.is_external_window")
     @patch("ui.paste_controller.windows.get_foreground_window")
     def test_initial_external_window_becomes_paste_target(
         self,
         get_foreground_window,
         is_external_window,
+        get_window_identity,
     ):
         get_foreground_window.return_value = 42
         is_external_window.return_value = True
@@ -30,9 +36,10 @@ class PasteControllerTestCase(unittest.TestCase):
             Mock(), Mock(), Mock(), Mock(), render_unchanged
         )
 
-        self.assertEqual(controller._target_window, 42)
+        self.assertEqual(controller._target_window, TARGET)
         self.assertEqual(controller.target_window, 42)
 
+    @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
     @patch("ui.paste_controller.wx.CallLater")
     @patch("ui.paste_controller.windows.is_external_window")
     @patch("ui.paste_controller.windows.get_foreground_window")
@@ -41,6 +48,7 @@ class PasteControllerTestCase(unittest.TestCase):
         get_foreground_window,
         is_external_window,
         call_later,
+        get_window_identity,
     ):
         get_foreground_window.return_value = 42
         is_external_window.return_value = True
@@ -62,10 +70,12 @@ class PasteControllerTestCase(unittest.TestCase):
         call_later.assert_called_once_with(
             50,
             controller._paste_after_hide,
+            TARGET,
             "Example",
             None,
         )
 
+    @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
     @patch("ui.paste_controller.wx.CallLater")
     @patch("ui.paste_controller.windows.is_external_window")
     @patch("ui.paste_controller.windows.get_foreground_window")
@@ -74,6 +84,7 @@ class PasteControllerTestCase(unittest.TestCase):
         get_foreground_window,
         is_external_window,
         call_later,
+        get_window_identity,
     ):
         get_foreground_window.return_value = 42
         is_external_window.return_value = True
@@ -100,10 +111,12 @@ class PasteControllerTestCase(unittest.TestCase):
         call_later.assert_called_once_with(
             50,
             controller._paste_after_hide,
+            TARGET,
             "Today is 6. August 2026.",
             None,
         )
 
+    @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
     @patch("ui.paste_controller.wx.CallLater")
     @patch("ui.paste_controller.windows.is_external_window", return_value=True)
     @patch("ui.paste_controller.windows.get_foreground_window", return_value=42)
@@ -112,6 +125,7 @@ class PasteControllerTestCase(unittest.TestCase):
         get_foreground_window,
         is_external_window,
         call_later,
+        get_window_identity,
     ):
         model = Mock()
         model.get_snippet.return_value = SimpleNamespace(content="A{{cursor}}BC")
@@ -128,10 +142,12 @@ class PasteControllerTestCase(unittest.TestCase):
         call_later.assert_called_once_with(
             50,
             controller._paste_after_hide,
+            TARGET,
             "ABC",
             2,
         )
 
+    @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
     @patch("ui.paste_controller.show_variable_error")
     @patch("ui.paste_controller.wx.CallLater")
     @patch("ui.paste_controller.windows.is_external_window")
@@ -142,6 +158,7 @@ class PasteControllerTestCase(unittest.TestCase):
         is_external_window,
         call_later,
         show_error,
+        get_window_identity,
     ):
         get_foreground_window.return_value = 42
         is_external_window.return_value = True
@@ -166,6 +183,7 @@ class PasteControllerTestCase(unittest.TestCase):
         call_later.assert_not_called()
         show_error.assert_called_once()
 
+    @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
     @patch("ui.paste_controller.show_variable_error")
     @patch("ui.paste_controller.wx.CallLater")
     @patch("ui.paste_controller.windows.is_external_window", return_value=True)
@@ -176,6 +194,7 @@ class PasteControllerTestCase(unittest.TestCase):
         is_external_window,
         call_later,
         show_error,
+        get_window_identity,
     ):
         model = Mock()
         model.get_snippet.return_value = SimpleNamespace(
@@ -201,12 +220,11 @@ class PasteControllerTestCase(unittest.TestCase):
         pending = Mock()
         paste_text.return_value = pending
         controller = PasteController.__new__(PasteController)
-        controller._target_window = 42
         controller.schedule_restore = Mock()
 
-        controller._paste_after_hide("Example")
+        controller._paste_after_hide(TARGET, "Example")
 
-        paste_text.assert_called_once_with(42, "Example")
+        paste_text.assert_called_once_with(TARGET, "Example")
         controller.schedule_restore.assert_called_once_with(pending)
 
     @patch("ui.paste_controller.keyboard_input.move_cursor_left")
@@ -219,31 +237,29 @@ class PasteControllerTestCase(unittest.TestCase):
         pending = Mock()
         paste_text.return_value = pending
         controller = PasteController.__new__(PasteController)
-        controller._target_window = 42
         controller.schedule_restore = Mock()
 
-        controller._paste_after_hide("ABC", 2)
+        controller._paste_after_hide(TARGET, "ABC", 2)
 
         move_cursor_left.assert_called_once_with(2)
         controller.schedule_restore.assert_called_once_with(pending)
 
-    @patch("ui.paste_controller.wx.MessageBox")
     @patch("ui.paste_controller.clipboard_paste.paste_text")
     def test_paste_failure_reveals_frame_and_reports_error(
         self,
         paste_text,
-        message_box,
     ):
         paste_text.side_effect = clipboard_paste.PasteError("paste failed")
         controller = PasteController.__new__(PasteController)
-        controller._target_window = 42
         controller._parent = Mock()
         controller._reveal_after_error = Mock()
 
-        controller._paste_after_hide("Example")
+        controller._paste_after_hide(TARGET, "Example")
 
-        controller._reveal_after_error.assert_called_once_with()
-        message_box.assert_called_once()
+        controller._reveal_after_error.assert_called_once_with(
+            "paste failed",
+            _("Paste error"),
+        )
 
     @patch("ui.paste_controller.wx.CallLater")
     def test_transient_restore_failure_is_retried(self, call_later):
@@ -263,19 +279,25 @@ class PasteControllerTestCase(unittest.TestCase):
         )
         pending.discard_snapshot.assert_not_called()
 
-    @patch("ui.paste_controller.wx.MessageBox")
-    def test_final_restore_failure_discards_snapshot(self, message_box):
+    def test_final_restore_failure_discards_snapshot_and_reveals_error(self):
         pending = Mock()
         pending.restore_clipboard.side_effect = clipboard_paste.PasteError(
             "clipboard busy"
         )
         controller = PasteController.__new__(PasteController)
-        controller._parent = Mock()
+        controller._reveal_after_error = Mock()
 
         controller._restore_clipboard(pending, 1)
 
         pending.discard_snapshot.assert_called_once_with()
-        message_box.assert_called_once()
+        controller._reveal_after_error.assert_called_once_with(
+            _(
+                "The previous clipboard contents could not be restored "
+                "after multiple attempts. The clipboard may still contain "
+                "the inserted snippet.\n\n{}"
+            ).format("clipboard busy"),
+            _("Clipboard restore error"),
+        )
 
 
 if __name__ == "__main__":

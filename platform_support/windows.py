@@ -134,6 +134,11 @@ def matches_window_identity(identity: WindowIdentity) -> bool:
     return get_window_identity(identity.handle) == identity
 
 
+def activate_window_identity(identity: WindowIdentity) -> bool:
+    """Activate a window only while its handle still has the captured owner."""
+    return matches_window_identity(identity) and activate_window(identity.handle)
+
+
 def is_external_window(handle: int | None) -> bool:
     """Return whether handle belongs to another process and is still valid."""
     if not is_valid_window(handle):

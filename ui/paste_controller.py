@@ -5,6 +5,7 @@ from collections.abc import Callable
 import wx
 
 from core import datamodel
+from core.error_messages import format_user_error
 from core.variables import (
     RenderedSnippet,
     VariableError,
@@ -28,7 +29,7 @@ class PasteController:
         parent: wx.Window,
         model: datamodel.DataModel,
         before_paste: Callable[[], None],
-        reveal_after_error: Callable[[], None],
+        reveal_after_error: Callable[[str, str], None],
         render_snippet: Callable[[str, int | None], RenderedSnippet],
     ):
         """Initialize paste coordination with explicit frame callbacks."""
@@ -37,19 +38,19 @@ class PasteController:
         self._before_paste = before_paste
         self._reveal_after_error = reveal_after_error
         self._render_snippet = render_snippet
-        self._target_window: int | None = None
+        self._target_window: windows.WindowIdentity | None = None
         self.remember_foreground_window()
 
     def remember_foreground_window(self) -> None:
         """Remember a valid external foreground window as the paste target."""
         foreground_window = windows.get_foreground_window()
         if windows.is_external_window(foreground_window):
-            self._target_window = foreground_window
+            self._target_window = windows.get_window_identity(foreground_window)
 
     @property
     def target_window(self) -> int | None:
         """Return the currently remembered external paste target."""
-        return self._target_window
+        return self._target_window.handle if self._target_window is not None else None
 
     def insert_snippet(self, snippet_id: int) -> None:
         """Hide the frame and schedule insertion into the previous window."""
@@ -77,7 +78,10 @@ class PasteController:
             return
 
         try:
-            rendered = self._render_snippet(snippet.content, self._target_window)
+            rendered = self._render_snippet(
+                snippet.content,
+                self._target_window.handle,
+            )
         except VariableRenderingCancelled:
             return
         except VariableError as error:
@@ -85,29 +89,29 @@ class PasteController:
             return
 
         self._before_paste()
+        target = self._target_window
         wx.CallLater(
             PASTE_AFTER_HIDE_DELAY_MS,
             self._paste_after_hide,
+            target,
             rendered.text,
             rendered.cursor_offset_from_end,
         )
 
     def _paste_after_hide(
         self,
+        target: windows.WindowIdentity,
         text: str,
         cursor_offset_from_end: int | None = None,
     ) -> None:
         """Paste after native window activation has settled."""
         try:
-            pending = clipboard_paste.paste_text(self._target_window, text)
+            pending = clipboard_paste.paste_text(target, text)
         except clipboard_paste.PasteError as error:
-            self._reveal_after_error()
-            wx.MessageBox(
-                str(error),
+            self._reveal_after_error(
+                format_user_error(error),
                 # Translators: Title of an error inserting a snippet externally.
                 _("Paste error"),
-                wx.OK | wx.ICON_ERROR,
-                self._parent,
             )
             return
         try:
@@ -115,13 +119,10 @@ class PasteController:
                 keyboard_input.move_cursor_left(cursor_offset_from_end)
         except clipboard_paste.PasteError as error:
             self.schedule_restore(pending)
-            self._reveal_after_error()
-            wx.MessageBox(
-                str(error),
+            self._reveal_after_error(
+                format_user_error(error),
                 # Translators: Title for a failed cursor instruction after paste.
                 _("Cursor movement error"),
-                wx.OK | wx.ICON_ERROR,
-                self._parent,
             )
             return
         self.schedule_restore(pending)
@@ -156,7 +157,7 @@ class PasteController:
                 )
                 return
             pending.discard_snapshot()
-            wx.MessageBox(
+            self._reveal_after_error(
                 # Translators: Error after inserting a snippet when restoring the
                 # user's old clipboard repeatedly failed. {} is a technical error.
                 _(
@@ -167,6 +168,4 @@ class PasteController:
                 # Translators: Title of an error restoring the user's clipboard
                 # after a snippet was inserted.
                 _("Clipboard restore error"),
-                wx.OK | wx.ICON_ERROR,
-                self._parent,
             )

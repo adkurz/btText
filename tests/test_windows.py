@@ -101,6 +101,37 @@ class NativeWindowTestCase(unittest.TestCase):
         ):
             self.assertFalse(windows.matches_window_identity(original))
 
+    def test_window_identity_is_rechecked_immediately_before_activation(self):
+        identity = windows.WindowIdentity(123, 789, 456)
+
+        with (
+            patch.object(
+                windows,
+                "matches_window_identity",
+                return_value=True,
+            ) as matches_identity,
+            patch.object(windows, "activate_window", return_value=True) as activate,
+        ):
+            self.assertTrue(windows.activate_window_identity(identity))
+
+        matches_identity.assert_called_once_with(identity)
+        activate.assert_called_once_with(identity.handle)
+
+    def test_reused_window_handle_is_not_activated(self):
+        identity = windows.WindowIdentity(123, 789, 456)
+
+        with (
+            patch.object(
+                windows,
+                "matches_window_identity",
+                return_value=False,
+            ),
+            patch.object(windows, "activate_window") as activate,
+        ):
+            self.assertFalse(windows.activate_window_identity(identity))
+
+        activate.assert_not_called()
+
     def test_own_process_window_is_not_external(self):
         def set_process_id(_handle, process_id_pointer):
             process_id = ctypes.cast(

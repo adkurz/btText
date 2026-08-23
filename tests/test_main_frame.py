@@ -423,6 +423,89 @@ class HotkeyLayoutChangeTestCase(unittest.TestCase):
         target.SetFocus.assert_not_called()
         call_after.assert_called_once_with(focus_restored_control, target)
 
+    @patch("ui.main_frame.wx.CallAfter")
+    def test_paste_error_reveal_defers_dialog_until_activation(self, call_after):
+        show_error = Mock()
+        frame = SimpleNamespace(
+            Show=Mock(),
+            Iconize=Mock(),
+            _show_paste_error_after_activation=show_error,
+        )
+
+        MainFrame._reveal_after_paste_error(frame, "paste failed", "Paste error")
+
+        frame.Show.assert_called_once_with()
+        frame.Iconize.assert_called_once_with(False)
+        call_after.assert_called_once_with(
+            show_error,
+            "paste failed",
+            "Paste error",
+            5,
+        )
+
+    @patch("ui.main_frame.wx.MessageBox")
+    @patch("ui.main_frame.windows.activate_window", return_value=True)
+    def test_paste_error_dialog_opens_after_frame_activation(
+        self,
+        activate_window,
+        message_box,
+    ):
+        frame = SimpleNamespace(
+            IsShown=Mock(return_value=True),
+            GetHandle=Mock(return_value=123),
+            Raise=Mock(),
+            SetFocus=Mock(),
+        )
+
+        MainFrame._show_paste_error_after_activation(
+            frame,
+            "paste failed",
+            "Paste error",
+            5,
+        )
+
+        activate_window.assert_called_once_with(123)
+        frame.Raise.assert_called_once_with()
+        frame.SetFocus.assert_called_once_with()
+        message_box.assert_called_once_with(
+            "paste failed",
+            "Paste error",
+            wx.OK | wx.ICON_ERROR,
+            frame,
+        )
+
+    @patch("ui.main_frame.wx.MessageBox")
+    @patch("ui.main_frame.wx.CallLater")
+    @patch("ui.main_frame.windows.activate_window", return_value=False)
+    def test_paste_error_dialog_retries_failed_frame_activation(
+        self,
+        activate_window,
+        call_later,
+        message_box,
+    ):
+        retry = Mock()
+        frame = SimpleNamespace(
+            IsShown=Mock(return_value=True),
+            GetHandle=Mock(return_value=123),
+            _show_paste_error_after_activation=retry,
+        )
+
+        MainFrame._show_paste_error_after_activation(
+            frame,
+            "paste failed",
+            "Paste error",
+            5,
+        )
+
+        call_later.assert_called_once_with(
+            50,
+            retry,
+            "paste failed",
+            "Paste error",
+            4,
+        )
+        message_box.assert_not_called()
+
     def test_restored_child_is_focused_in_following_event_cycle(self):
         target = Mock()
         frame = SimpleNamespace(IsShown=Mock(return_value=True))

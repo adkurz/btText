@@ -20,7 +20,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ),
             patch.object(
                 hotstring_expansion.windows,
-                "activate_window",
+                "activate_window_identity",
                 return_value=True,
             ) as activate_window,
             patch.object(
@@ -30,7 +30,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
         ):
             hotstring_expansion.replay_suppressed_boundary(TARGET, 0x20)
 
-        activate_window.assert_called_once_with(123)
+        activate_window.assert_called_once_with(TARGET)
         send_virtual_key.assert_called_once_with(0x20)
 
     def test_suppressed_boundary_rejects_invalid_target(self):
@@ -60,7 +60,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ),
             patch.object(
                 hotstring_expansion.windows,
-                "activate_window",
+                "activate_window_identity",
                 return_value=False,
             ),
             patch.object(
@@ -92,7 +92,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ) as prepare,
             patch.object(
                 hotstring_expansion.windows,
-                "activate_window",
+                "activate_window_identity",
                 return_value=True,
             ),
             patch.object(
@@ -156,7 +156,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             patch.object(PendingPaste, "prepare", return_value=pending),
             patch.object(
                 hotstring_expansion.windows,
-                "activate_window",
+                "activate_window_identity",
                 return_value=False,
             ),
         ):
@@ -180,7 +180,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             patch.object(PendingPaste, "prepare", return_value=pending),
             patch.object(
                 hotstring_expansion.windows,
-                "activate_window",
+                "activate_window_identity",
                 return_value=True,
             ),
             patch.object(
@@ -211,7 +211,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             patch.object(PendingPaste, "prepare", return_value=pending),
             patch.object(
                 hotstring_expansion.windows,
-                "activate_window",
+                "activate_window_identity",
                 return_value=True,
             ),
             patch.object(

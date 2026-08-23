@@ -109,6 +109,16 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "hotstring_target_window_activation_failed": lambda parameters: _(
         "The active window could not be activated."
     ),
+    # Translators: Manual snippet insertion failed because the previously active
+    # target window was closed before btText could paste into it.
+    "paste_target_window_missing": lambda parameters: _(
+        "The previously active window no longer exists."
+    ),
+    # Translators: Manual snippet insertion failed because Windows did not allow
+    # btText to return focus to the previously active target window.
+    "paste_target_window_activation_failed": lambda parameters: _(
+        "The previously active window could not be activated."
+    ),
     "database_open_failed": _format_database_open_failed,
     "database_operation_failed": _format_database_operation_failed,
     # Translators: Database-opening error shown when a configured or selected

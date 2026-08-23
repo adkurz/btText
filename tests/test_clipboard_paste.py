@@ -1,8 +1,11 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from platform_support import clipboard, clipboard_paste
+from platform_support import clipboard, clipboard_paste, windows
 from platform_support.clipboard_paste import ClipboardRestoreError, PendingPaste
+
+
+TARGET = windows.WindowIdentity(handle=123, thread_id=7, process_id=9)
 
 
 class RecordingClipboardSnapshot:
@@ -151,7 +154,7 @@ class PasteTextTestCase(unittest.TestCase):
         with (
             patch.object(
                 clipboard_paste.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=False,
             ),
             patch.object(
@@ -159,9 +162,10 @@ class PasteTextTestCase(unittest.TestCase):
                 "_replace_clipboard",
             ) as replace_clipboard,
         ):
-            with self.assertRaises(clipboard.ClipboardError):
-                clipboard_paste.paste_text(123, "Text")
+            with self.assertRaises(clipboard_paste.PasteTargetError) as raised:
+                clipboard_paste.paste_text(TARGET, "Text")
 
+        self.assertEqual(raised.exception.code, "paste_target_window_missing")
         replace_clipboard.assert_not_called()
 
     def test_activation_failure_restores_replaced_clipboard(self):
@@ -169,7 +173,7 @@ class PasteTextTestCase(unittest.TestCase):
         with (
             patch.object(
                 clipboard_paste.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=True,
             ),
             patch.object(
@@ -179,7 +183,7 @@ class PasteTextTestCase(unittest.TestCase):
             ),
             patch.object(
                 clipboard_paste.windows,
-                "activate_window",
+                "activate_window_identity",
                 return_value=False,
             ),
             patch.object(
@@ -188,7 +192,7 @@ class PasteTextTestCase(unittest.TestCase):
             ) as restore_clipboard,
         ):
             with self.assertRaises(clipboard.ClipboardError):
-                clipboard_paste.paste_text(123, "Text")
+                clipboard_paste.paste_text(TARGET, "Text")
 
         restore_clipboard.assert_called_once_with()
 
@@ -197,7 +201,7 @@ class PasteTextTestCase(unittest.TestCase):
         with (
             patch.object(
                 clipboard_paste.windows,
-                "is_valid_window",
+                "matches_window_identity",
                 return_value=True,
             ),
             patch.object(
@@ -207,7 +211,7 @@ class PasteTextTestCase(unittest.TestCase):
             ),
             patch.object(
                 clipboard_paste.windows,
-                "activate_window",
+                "activate_window_identity",
                 return_value=False,
             ),
             patch.object(
@@ -217,7 +221,7 @@ class PasteTextTestCase(unittest.TestCase):
             ),
         ):
             with self.assertRaises(ClipboardRestoreError) as raised:
-                clipboard_paste.paste_text(123, "Text")
+                clipboard_paste.paste_text(TARGET, "Text")
 
         self.assertRegex(str(raised.exception), "could not be activated")
         self.assertRegex(str(raised.exception), "restore failed")

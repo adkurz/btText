@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import Mock, call, patch
 
 from platform_support import clipboard, clipboard_snapshot
 from platform_support.clipboard_snapshot import (
@@ -116,6 +116,11 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
             patch.object(clipboard_snapshot, "_open_clipboard"),
             patch.object(
                 clipboard_snapshot.user32,
+                "CopyImage",
+                return_value=456,
+            ),
+            patch.object(
+                clipboard_snapshot.user32,
                 "EmptyClipboard",
                 return_value=True,
             ),
@@ -130,7 +135,7 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
             clipboard_snapshot._restore_copied_formats([copied_format])
             copied_format.release()
 
-        delete.assert_not_called()
+        delete.assert_called_once_with(123)
 
     def test_failed_restore_keeps_bitmap_ownership_for_release(self):
         copied_format = _ClipboardFormatCopy(
@@ -141,6 +146,11 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
 
         with (
             patch.object(clipboard_snapshot, "_open_clipboard"),
+            patch.object(
+                clipboard_snapshot.user32,
+                "CopyImage",
+                return_value=456,
+            ),
             patch.object(
                 clipboard_snapshot.user32,
                 "EmptyClipboard",
@@ -158,7 +168,55 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
                 clipboard_snapshot._restore_copied_formats([copied_format])
             copied_format.release()
 
-        delete.assert_called_once_with(123)
+        self.assertEqual(
+            delete.call_args_list,
+            [call(456), call(123)],
+        )
+
+    def test_partial_restore_failure_can_be_retried_with_fresh_native_copies(self):
+        copied_formats = [
+            _ClipboardFormatCopy(clipboard_snapshot.CF_BITMAP, "bitmap", 101),
+            _ClipboardFormatCopy(clipboard_snapshot.CF_DSPBITMAP, "bitmap", 102),
+        ]
+
+        with (
+            patch.object(clipboard_snapshot, "_open_clipboard"),
+            patch.object(
+                clipboard_snapshot.user32,
+                "CopyImage",
+                side_effect=(201, 202, 301, 302),
+            ),
+            patch.object(
+                clipboard_snapshot.user32,
+                "EmptyClipboard",
+                return_value=True,
+            ) as empty_clipboard,
+            patch.object(
+                clipboard_snapshot.user32,
+                "SetClipboardData",
+                side_effect=(201, None, 301, 302),
+            ) as set_clipboard_data,
+            patch.object(clipboard_snapshot.user32, "CloseClipboard"),
+            patch.object(clipboard_snapshot.gdi32, "DeleteObject") as delete,
+        ):
+            with self.assertRaises(clipboard.ClipboardError):
+                clipboard_snapshot._restore_copied_formats(copied_formats)
+
+            self.assertEqual([item.value for item in copied_formats], [101, 102])
+            clipboard_snapshot._restore_copied_formats(copied_formats)
+            for copied_format in copied_formats:
+                copied_format.release()
+
+        self.assertEqual(empty_clipboard.call_count, 2)
+        self.assertEqual(set_clipboard_data.call_count, 4)
+        self.assertEqual(
+            delete.call_args_list,
+            [
+                call(202),
+                call(101),
+                call(102),
+            ],
+        )
 
     def test_capture_error_releases_formats_copied_so_far(self):
         copied_format = Mock()

@@ -10,6 +10,7 @@ from core.datamodel import CategoryValidationError, EntityNotFoundError
 from core.error_messages import _FORMATTERS, format_user_error
 from core.hotstrings import HotstringExpansionError
 from core.user_errors import UserFacingError
+from platform_support.clipboard_paste import PasteTargetError
 
 
 class MappingTranslations(gettext.NullTranslations):
@@ -107,6 +108,22 @@ class ErrorMessagesTestCase(unittest.TestCase):
         self.assertEqual(
             format_user_error(error),
             "Das aktive Fenster ist nicht mehr vorhanden.",
+        )
+
+    def test_paste_target_error_is_translated_at_ui_boundary(self):
+        source = "The previously active window no longer exists."
+        i18n._translation = MappingTranslations(
+            {source: "Das zuvor aktive Fenster ist nicht mehr vorhanden."}
+        )
+        error = PasteTargetError(
+            "paste_target_window_missing",
+            source,
+        )
+
+        self.assertEqual(str(error), source)
+        self.assertEqual(
+            format_user_error(error),
+            "Das zuvor aktive Fenster ist nicht mehr vorhanden.",
         )
 
     def test_catalog_load_error_explains_english_fallback(self):

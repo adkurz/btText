@@ -16,7 +16,7 @@ def replay_suppressed_boundary(
             "hotstring_target_window_missing",
             "The active window no longer exists.",
         )
-    if not windows.activate_window(target.handle):
+    if not windows.activate_window_identity(target):
         raise HotstringExpansionError(
             "hotstring_target_window_activation_failed",
             "The active window could not be activated.",
@@ -37,7 +37,7 @@ def expand_hotstring(
             "The active window no longer exists.",
         )
     pending = PendingPaste.prepare(text)
-    if not windows.activate_window(target.handle):
+    if not windows.activate_window_identity(target):
         operation_error = HotstringExpansionError(
             "hotstring_target_window_activation_failed",
             "The active window could not be activated.",

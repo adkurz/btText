@@ -374,7 +374,7 @@ class MainFrame(sc.SizedFrame):
         """Activate the visible frame before focusing its remembered child."""
         if not self.IsShown():
             return
-        if not windows.activate_window(self.GetHandle()):
+        if not MainFrame._activate_frame(self):
             if attempts_remaining > 1:
                 wx.CallLater(
                     FOREGROUND_RETRY_INTERVAL_MS,
@@ -383,9 +383,15 @@ class MainFrame(sc.SizedFrame):
                     attempts_remaining - 1,
                 )
             return
+        wx.CallAfter(self._focus_restored_control, target)
+
+    def _activate_frame(self) -> bool:
+        """Bring the visible frame to the foreground without scheduling child focus."""
+        if not self.IsShown() or not windows.activate_window(self.GetHandle()):
+            return False
         self.Raise()
         self.SetFocus()
-        wx.CallAfter(self._focus_restored_control, target)
+        return True
 
     def _focus_restored_control(self, target: wx.Window) -> None:
         """Move focus to a child after accessibility sees frame activation."""
@@ -411,10 +417,41 @@ class MainFrame(sc.SizedFrame):
         self._remember_focused_control()
         self.Hide()
 
-    def _reveal_after_paste_error(self) -> None:
-        """Reveal the frame again when external paste preparation fails."""
+    def _reveal_after_paste_error(self, message: str, title: str) -> None:
+        """Reveal the frame and defer a paste error until it owns foreground."""
         self.Show()
         self.Iconize(False)
+        wx.CallAfter(
+            self._show_paste_error_after_activation,
+            message,
+            title,
+            FOREGROUND_ACTIVATION_ATTEMPTS,
+        )
+
+    def _show_paste_error_after_activation(
+        self,
+        message: str,
+        title: str,
+        attempts_remaining: int,
+    ) -> None:
+        """Activate the frame, then show its modal paste-error dialog."""
+        if not self.IsShown():
+            return
+        if not MainFrame._activate_frame(self) and attempts_remaining > 1:
+            wx.CallLater(
+                FOREGROUND_RETRY_INTERVAL_MS,
+                self._show_paste_error_after_activation,
+                message,
+                title,
+                attempts_remaining - 1,
+            )
+            return
+        wx.MessageBox(
+            message,
+            title,
+            wx.OK | wx.ICON_ERROR,
+            self,
+        )
 
     def _create_menubar(self):
         """Create application menus and bind their commands."""

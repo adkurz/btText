@@ -149,6 +149,34 @@ class _ClipboardFormatCopy:
         elif self.kind == "enhmetafile":
             gdi32.DeleteEnhMetaFile(self.value)
 
+    def duplicate(self) -> _ClipboardFormatCopy:
+        """Create an independent copy for one clipboard-restore attempt."""
+        if self.kind == "hglobal":
+            assert isinstance(self.value, bytes)
+            return _ClipboardFormatCopy(self.format_id, self.kind, self.value)
+        if self.kind == "metafile":
+            assert isinstance(self.value, tuple)
+            metafile = gdi32.CopyMetaFileW(self.value[3], None)
+            if not metafile:
+                raise ClipboardError("A metafile could not be prepared for restore.")
+            return _ClipboardFormatCopy(
+                self.format_id,
+                self.kind,
+                (*self.value[:3], int(metafile)),
+            )
+        assert isinstance(self.value, int)
+        if self.kind == "bitmap":
+            value = user32.CopyImage(self.value, IMAGE_BITMAP, 0, 0, 0)
+        elif self.kind == "palette":
+            value = _copy_palette(self.value)
+        elif self.kind == "enhmetafile":
+            value = gdi32.CopyEnhMetaFileW(self.value, None)
+        else:
+            raise ClipboardError("An unsupported clipboard format cannot be restored.")
+        if not value:
+            raise ClipboardError("A clipboard object could not be prepared for restore.")
+        return _ClipboardFormatCopy(self.format_id, self.kind, int(value))
+
 
 class ClipboardSnapshot:
     """Independent copies of all materialized Windows clipboard formats."""
@@ -344,12 +372,17 @@ def _set_metafile_picture(value: tuple[int, int, int, int]) -> wintypes.HGLOBAL:
 def _restore_copied_formats(
     copied_formats: list[_ClipboardFormatCopy],
 ) -> None:
-    """Restore format copies and transfer their native handles to Windows."""
-    _open_clipboard()
+    """Restore formats through disposable copies so a failed attempt is retryable."""
+    attempt_formats: list[_ClipboardFormatCopy] = []
+    clipboard_open = False
     try:
+        for copied_format in copied_formats:
+            attempt_formats.append(copied_format.duplicate())
+        _open_clipboard()
+        clipboard_open = True
         if not user32.EmptyClipboard():
             raise ClipboardError("The clipboard could not be restored.")
-        for copied_format in copied_formats:
+        for copied_format in attempt_formats:
             if copied_format.kind == "hglobal":
                 assert isinstance(copied_format.value, bytes)
                 _set_clipboard_data(copied_format.format_id, copied_format.value)
@@ -365,7 +398,10 @@ def _restore_copied_formats(
                 if copied_format.kind == "metafile":
                     kernel32.GlobalFree(handle)
                 raise ClipboardError("A clipboard object could not be restored.")
-            # Windows owns both the outer handle and any contained GDI object now.
+            # Windows owns both the outer handle and contained object now.
             copied_format.value = b""
     finally:
-        user32.CloseClipboard()
+        for copied_format in attempt_formats:
+            copied_format.release()
+        if clipboard_open:
+            user32.CloseClipboard()

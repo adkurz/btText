@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.2\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-08-22 18:02+0200\n"
+"POT-Creation-Date: 2026-08-23 14:06+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -20,7 +20,7 @@ msgstr ""
 #. Translators: Title for an error opening a selected snippet
 #. database.
 #. Translators: Title for a failed database selection or creation.
-#: btText.py:61 ui/database_selection.py:100 ui/main_frame.py:513
+#: btText.py:61 ui/database_selection.py:100 ui/main_frame.py:550
 msgid "Database error"
 msgstr ""
 
@@ -44,7 +44,7 @@ msgstr ""
 
 #. Translators: Title of the startup warning for log setup.
 #. Translators: Title of an error opening the log directory.
-#: btText.py:139 ui/main_frame.py:639
+#: btText.py:139 ui/main_frame.py:676
 msgid "Logging error"
 msgstr ""
 
@@ -142,278 +142,290 @@ msgstr ""
 msgid "The active window could not be activated."
 msgstr ""
 
+#. Translators: Manual snippet insertion failed because the previously active
+#. target window was closed before btText could paste into it.
+#: core/error_messages.py:115
+msgid "The previously active window no longer exists."
+msgstr ""
+
+#. Translators: Manual snippet insertion failed because Windows did not allow
+#. btText to return focus to the previously active target window.
+#: core/error_messages.py:120
+msgid "The previously active window could not be activated."
+msgstr ""
+
 #. Translators: Database-opening error shown when a configured or selected
 #. file was removed or is no longer reachable.
-#: core/error_messages.py:117
+#: core/error_messages.py:127
 msgid "The selected database file does not exist."
 msgstr ""
 
 #. Translators: Fatal startup error when SQLite cannot enforce relationships
 #. between categories and snippets.
-#: core/error_messages.py:122
+#: core/error_messages.py:132
 msgid "SQLite foreign-key support could not be enabled."
 msgstr ""
 
 #. Translators: Fatal startup error when stored records refer to missing
 #. categories or otherwise violate a database foreign-key relationship.
-#: core/error_messages.py:127
+#: core/error_messages.py:137
 msgid "The database contains records with invalid relationships."
 msgstr ""
 
 #. Translators: Fatal startup error when category parent relationships form
 #. a loop instead of a valid tree.
-#: core/error_messages.py:132
+#: core/error_messages.py:142
 msgid "The database contains a cycle in the category hierarchy."
 msgstr ""
 
 #. Translators: Fatal startup error describing category records without names.
-#: core/error_messages.py:140
+#: core/error_messages.py:150
 msgid "The database contains categories without a name."
 msgstr ""
 
 #. Translators: Fatal migration error for category names that are empty or
 #. consist only of spaces.
-#: core/error_messages.py:145
+#: core/error_messages.py:155
 msgid "The database contains categories with an empty name."
 msgstr ""
 
 #. Translators: Fatal migration error when a category refers to itself as
 #. its parent.
-#: core/error_messages.py:150
+#: core/error_messages.py:160
 msgid "The database contains a category that is its own parent."
 msgstr ""
 
 #. Translators: Fatal migration error for snippet names that are empty or
 #. consist only of spaces.
-#: core/error_messages.py:155
+#: core/error_messages.py:165
 msgid "The database contains snippets with an empty name."
 msgstr ""
 
 #. Translators: Fatal migration error for snippets whose reusable text is
 #. empty.
-#: core/error_messages.py:160
+#: core/error_messages.py:170
 msgid "The database contains snippets with empty content."
 msgstr ""
 
 #. Translators: Fatal startup error for snippet records whose numeric
 #. search-ranking weight is outside the supported range.
-#: core/error_messages.py:165
+#: core/error_messages.py:175
 msgid "The database contains snippets with an invalid weight."
 msgstr ""
 
 #. Translators: Fatal startup error for duplicate snippet names in one
 #. category.
-#: core/error_messages.py:169
+#: core/error_messages.py:179
 msgid "The database contains duplicate snippet names in a category."
 msgstr ""
 
 #. Translators: Fatal migration error when two snippets in one category have
 #. names that differ only in uppercase or lowercase letters.
-#: core/error_messages.py:174
+#: core/error_messages.py:184
 msgid "The database contains snippet names that differ only in letter case within the same category."
 msgstr ""
 
 #. Translators: Fatal startup error for snippets without an existing category.
-#: core/error_messages.py:179
+#: core/error_messages.py:189
 msgid "The database contains snippets without a category."
 msgstr ""
 
 #. Translators: Validation error when a sibling category already uses this
 #. name.
-#: core/error_messages.py:185
+#: core/error_messages.py:195
 msgid "A category with this name already exists at this level."
 msgstr ""
 
 #. Translators: Internal error for an unsaved category without a database ID.
-#: core/error_messages.py:189
+#: core/error_messages.py:199
 msgid "The category has no ID."
 msgstr ""
 
 #. Translators: Error when the intended parent category was deleted meanwhile.
-#: core/error_messages.py:193
+#: core/error_messages.py:203
 msgid "The parent category no longer exists."
 msgstr ""
 
 #. Translators: Validation error preventing a category being its own parent.
-#: core/error_messages.py:197
+#: core/error_messages.py:207
 msgid "A category cannot be its own parent."
 msgstr ""
 
 #. Translators: Validation error preventing a move into the category's subtree.
-#: core/error_messages.py:201
+#: core/error_messages.py:211
 msgid "A category cannot be moved below one of its descendants."
 msgstr ""
 
 #. Translators: Validation error preventing recursive copying into the same
 #. category subtree.
-#: core/error_messages.py:206
+#: core/error_messages.py:216
 msgid "A category cannot be copied into itself or one of its descendants."
 msgstr ""
 
 #. Translators: Validation error for an empty category or snippet name.
-#: core/error_messages.py:210
+#: core/error_messages.py:220
 msgid "The name must not be empty."
 msgstr ""
 
 #. Translators: Validation error when a snippet has no insertion text.
-#: core/error_messages.py:214
+#: core/error_messages.py:224
 msgid "The content must not be empty."
 msgstr ""
 
 #. Translators: Error when the snippet's selected category was deleted
 #. meanwhile.
-#: core/error_messages.py:218
+#: core/error_messages.py:228
 msgid "The selected category no longer exists."
 msgstr ""
 
 #. Translators: Validation error when a snippet name is already used in the
 #. same category.
-#: core/error_messages.py:223
+#: core/error_messages.py:233
 msgid "A snippet with this name already exists in this category."
 msgstr ""
 
 #. Translators: Validation error for a snippet search-ranking weight outside
 #. the allowed choices.
-#: core/error_messages.py:228
+#: core/error_messages.py:238
 msgid "The selected weight is not allowed."
 msgstr ""
 
 #. Translators: Validation error when a hotstring contains a space, tab, or
 #. another whitespace character.
-#: core/error_messages.py:233
+#: core/error_messages.py:243
 msgid "The hotstring must not contain whitespace."
 msgstr ""
 
 #. Translators: Validation error when another snippet already uses the same
 #. global hotstring.
-#: core/error_messages.py:238
+#: core/error_messages.py:248
 msgid "This hotstring is already assigned to another snippet."
 msgstr ""
 
 #. Translators: Internal error for an unsaved snippet without a database ID.
-#: core/error_messages.py:242
+#: core/error_messages.py:252
 msgid "The snippet has no ID."
 msgstr ""
 
 #. Translators: Error when braces or another part of a snippet variable are
 #. malformed. {position} is a zero-based character position in the snippet.
-#: core/error_messages.py:247
+#: core/error_messages.py:257
 #, python-brace-format
 msgid "The snippet contains invalid variable syntax at position {position}."
 msgstr ""
 
 #. Translators: Error when a snippet variable has an invalid technical name.
 #. {position} is a zero-based character position in the snippet.
-#: core/error_messages.py:252
+#: core/error_messages.py:262
 #, python-brace-format
 msgid "The snippet contains an invalid variable name at position {position}."
 msgstr ""
 
 #. Translators: Error when a snippet refers to a variable that btText does not
 #. provide. {name} is the language-independent technical variable name.
-#: core/error_messages.py:257
+#: core/error_messages.py:267
 #, python-brace-format
 msgid "The variable '{name}' is not available."
 msgstr ""
 
 #. Translators: Error when a known snippet variable fails while resolving.
 #. {name} is the language-independent technical variable name.
-#: core/error_messages.py:262
+#: core/error_messages.py:272
 #, python-brace-format
 msgid "The variable '{name}' could not be resolved."
 msgstr ""
 
 #. Translators: Error when a variable receives more format arguments than it
 #. supports. {name} is the language-independent technical variable name.
-#: core/error_messages.py:267
+#: core/error_messages.py:277
 #, python-brace-format
 msgid "The variable '{name}' accepts at most one format."
 msgstr ""
 
 #. Translators: Error when a context variable receives an argument although
 #. it supports only its parameterless form. {name} is its technical name.
-#: core/error_messages.py:272
+#: core/error_messages.py:282
 #, python-brace-format
 msgid "The variable '{name}' does not accept arguments."
 msgstr ""
 
 #. Translators: Error for an unsupported date or time variable format.
 #. {format} and {name} are language-independent technical identifiers.
-#: core/error_messages.py:277
+#: core/error_messages.py:287
 #, python-brace-format
 msgid "The format '{format}' is not supported for the variable '{name}'."
 msgstr ""
 
 #. Translators: Error when a contextual variable is previewed or resolved
 #. where its source is unavailable. {name} is its technical name.
-#: core/error_messages.py:282
+#: core/error_messages.py:292
 #, python-brace-format
 msgid "The context required by the variable '{name}' is not available."
 msgstr ""
 
 #. Translators: Error when {{app}} cannot identify the target executable.
-#: core/error_messages.py:286
+#: core/error_messages.py:296
 msgid "The target application could not be identified."
 msgstr ""
 
 #. Translators: Validation error for {{input:Label}}. The technical variable
 #. name remains English in every user-interface language.
-#: core/error_messages.py:291
+#: core/error_messages.py:301
 msgid "The variable 'input' requires exactly one non-empty label."
 msgstr ""
 
 #. Translators: Validation error when a snippet contains {{cursor}} more
 #. than once. The technical variable name remains English.
-#: core/error_messages.py:296
+#: core/error_messages.py:306
 #, python-brace-format
 msgid "The variable '{name}' may occur only once in a snippet."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut contains an
 #. unsupported keyboard key.
-#: core/error_messages.py:301
+#: core/error_messages.py:311
 msgid "The shortcut contains an unsupported key."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut has no Ctrl, Shift,
 #. Alt, or Windows modifier.
-#: core/error_messages.py:306
+#: core/error_messages.py:316
 msgid "The shortcut requires at least one modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut from settings cannot be
 #. parsed.
-#: core/error_messages.py:310
+#: core/error_messages.py:320
 msgid "The shortcut has an invalid format."
 msgstr ""
 
 #. Translators: Validation error when a shortcut repeats the same modifier.
-#: core/error_messages.py:314
+#: core/error_messages.py:324
 msgid "The shortcut contains a duplicate modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut has zero or multiple main
 #. keys.
-#: core/error_messages.py:318
+#: core/error_messages.py:328
 msgid "The shortcut must contain exactly one key."
 msgstr ""
 
 #. Translators: Validation error when a key cannot be used for a global
 #. shortcut.
-#: core/error_messages.py:322
+#: core/error_messages.py:332
 msgid "This key cannot be used as a shortcut."
 msgstr ""
 
 #. Translators: Settings error when the selected UI language has no installed
 #. gettext catalog.
-#: core/error_messages.py:327
+#: core/error_messages.py:337
 msgid "No translation catalog is available for the selected language."
 msgstr ""
 
 #. Translators: Startup warning after a damaged translation catalog forced
 #. btText to continue in English. {language} is a locale code such as de;
 #. {reason} is a technical catalog-loading error.
-#: core/error_messages.py:333
+#: core/error_messages.py:343
 #, python-brace-format
 msgid ""
 "The translation catalog for {language} could not be loaded. btText will continue in English.\n"
@@ -422,13 +434,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Settings error when the saved UI language code is malformed.
-#: core/error_messages.py:341
+#: core/error_messages.py:351
 msgid "The language setting has an invalid format."
 msgstr ""
 
 #. Translators: Safe fallback when no specific localized application-error
 #. message is available.
-#: core/error_messages.py:356
+#: core/error_messages.py:366
 msgid "An unexpected application error occurred."
 msgstr ""
 
@@ -644,7 +656,7 @@ msgstr ""
 
 #. Translators: File-menu command that hides the main window while
 #. keeping btText available in the notification area.
-#: ui/database_location_dialog.py:47 ui/main_frame.py:438
+#: ui/database_location_dialog.py:47 ui/main_frame.py:475
 msgid "&Close"
 msgstr ""
 
@@ -744,7 +756,7 @@ msgstr ""
 
 #. Translators: Title for a failure to monitor or expand a
 #. globally typed snippet hotstring.
-#: ui/hotstring_controller.py:70 ui/hotstring_controller.py:169
+#: ui/hotstring_controller.py:70 ui/hotstring_controller.py:172
 msgid "Hotstring error"
 msgstr ""
 
@@ -771,7 +783,7 @@ msgstr ""
 #. Translators: Generic title for a failed snippet-list operation.
 #. Translators: Generic title for a failed snippet deletion.
 #: ui/main_frame.py:295 ui/main_frame.py:314 ui/main_frame.py:326
-#: ui/paste_controller.py:73 ui/snippet_list.py:488 ui/snippet_list.py:520
+#: ui/paste_controller.py:74 ui/snippet_list.py:488 ui/snippet_list.py:520
 #: ui/snippet_list.py:552
 msgid "Error"
 msgstr ""
@@ -790,95 +802,95 @@ msgstr ""
 
 #. Translators: File-menu command for selecting another snippet
 #. database. The selection is used after restarting btText.
-#: ui/main_frame.py:427
+#: ui/main_frame.py:464
 msgid "Change &database..."
 msgstr ""
 
 #. Translators: File-menu command that displays the full path of the
 #. database currently used by btText.
-#: ui/main_frame.py:433
+#: ui/main_frame.py:470
 msgid "Show database &location..."
 msgstr ""
 
 #. Translators: File-menu command that exits btText completely,
 #. including its notification-area icon. Keep Ctrl+Q after "\t".
-#: ui/main_frame.py:443
+#: ui/main_frame.py:480
 msgid "E&xit\tCtrl+Q"
 msgstr ""
 
 #. Translators: Main-window menu containing window-close and full-exit
 #. commands. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:447
+#: ui/main_frame.py:484
 msgid "&File"
 msgstr ""
 
 #. Translators: Edit-menu command that opens the snippet search
 #. dialog. "&" marks the mnemonic; keep F3 after "\t".
-#: ui/main_frame.py:453
+#: ui/main_frame.py:490
 msgid "&Search...\tF3"
 msgstr ""
 
 #. Translators: Edit-menu command that opens the settings dialog.
 #. "&" marks the mnemonic; keep Ctrl+, after "\t".
-#: ui/main_frame.py:460
+#: ui/main_frame.py:497
 msgid "&Settings...\tCtrl+,"
 msgstr ""
 
 #. Translators: Main-window menu containing search and settings commands.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:464
+#: ui/main_frame.py:501
 msgid "&Edit"
 msgstr ""
 
 #. Translators: Help-menu command that opens the user manual. Keep F1
 #. after "\t" so wxPython registers the standard help shortcut.
-#: ui/main_frame.py:468
+#: ui/main_frame.py:505
 msgid "View user &manual\tF1"
 msgstr ""
 
 #. Translators: Help-menu command that opens the version history.
 #. "&" marks the mnemonic.
-#: ui/main_frame.py:472
+#: ui/main_frame.py:509
 msgid "View &changelog"
 msgstr ""
 
 #. Translators: Help-menu command that opens the local diagnostic-log
 #. directory in Windows Explorer. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:476
+#: ui/main_frame.py:513
 msgid "Open &log folder"
 msgstr ""
 
 #. Translators: Help-menu command that opens application information.
-#: ui/main_frame.py:480
+#: ui/main_frame.py:517
 msgid "About"
 msgstr ""
 
 #. Translators: Main-window menu containing application information.
 #. "&" marks the keyboard mnemonic.
-#: ui/main_frame.py:484
+#: ui/main_frame.py:521
 msgid "&Help"
 msgstr ""
 
 #. Translators: Confirmation after choosing the database that btText
 #. should open following its next restart.
-#: ui/main_frame.py:527
+#: ui/main_frame.py:564
 msgid "The selected database will be used the next time btText starts."
 msgstr ""
 
 #. Translators: Title confirming that another database was selected.
-#: ui/main_frame.py:529
+#: ui/main_frame.py:566
 msgid "Database selected"
 msgstr ""
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:576
+#: ui/main_frame.py:613
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr ""
 
 #. Translators: Error shown when the HTML user manual cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:601
+#: ui/main_frame.py:638
 #, python-brace-format
 msgid ""
 "The user manual could not be opened.\n"
@@ -887,13 +899,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Title of the user-manual opening error.
-#: ui/main_frame.py:605
+#: ui/main_frame.py:642
 msgid "User manual error"
 msgstr ""
 
 #. Translators: Error shown when the HTML changelog cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:618
+#: ui/main_frame.py:655
 #, python-brace-format
 msgid ""
 "The changelog could not be opened.\n"
@@ -902,13 +914,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Title of the changelog opening error.
-#: ui/main_frame.py:622
+#: ui/main_frame.py:659
 msgid "Changelog error"
 msgstr ""
 
 #. Translators: Error shown when the local log directory cannot
 #. be created or opened. {reason} is a technical system message.
-#: ui/main_frame.py:635
+#: ui/main_frame.py:672
 #, python-brace-format
 msgid ""
 "The log folder could not be opened.\n"
@@ -918,24 +930,24 @@ msgstr ""
 
 #. Translators: Error when no previously active external window is
 #. available as the destination for inserting a snippet.
-#: ui/paste_controller.py:60
+#: ui/paste_controller.py:61
 msgid "There is no previous window to insert the snippet into."
 msgstr ""
 
 #. Translators: Title of an error inserting a snippet externally.
 #. Translators: Title of an error while pasting copied or cut items.
-#: ui/paste_controller.py:62 ui/paste_controller.py:108 ui/snippet_list.py:422
+#: ui/paste_controller.py:63 ui/paste_controller.py:114 ui/snippet_list.py:422
 msgid "Paste error"
 msgstr ""
 
 #. Translators: Title for a failed cursor instruction after paste.
-#: ui/paste_controller.py:122
+#: ui/paste_controller.py:125
 msgid "Cursor movement error"
 msgstr ""
 
 #. Translators: Error after inserting a snippet when restoring the
 #. user's old clipboard repeatedly failed. {} is a technical error.
-#: ui/paste_controller.py:163
+#: ui/paste_controller.py:164
 #, python-brace-format
 msgid ""
 "The previous clipboard contents could not be restored after multiple attempts. The clipboard may still contain the inserted snippet.\n"
@@ -945,7 +957,7 @@ msgstr ""
 
 #. Translators: Title of an error restoring the user's clipboard
 #. after a snippet was inserted.
-#: ui/paste_controller.py:169
+#: ui/paste_controller.py:170
 msgid "Clipboard restore error"
 msgstr ""
 
