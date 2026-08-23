@@ -8,6 +8,8 @@
 
 - Fixed: Pasting into other applications now reliably checks whether the window still exists.
 
+- Fixed: Changing the global keyboard shortcut might have caused a misleading error message to appear.
+
 ## [v1.2] 2026-08-22
 
 - Added: The **Insert Variable** dialog now shows a preview of the currently selected variable, if possible.

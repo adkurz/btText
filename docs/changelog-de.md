@@ -8,6 +8,8 @@
 
 - Behoben: Das Einfügen in andere Anwendungen prüft nun zuverlässig, ob das Fenster noch existiert.
 
+- Behoben: Beim Ändern der globalen Tastenkombination wurde unter Umständen ein irreführender Fehler angezeigt.
+
 ## [v1.2] 22.08.2026
 
 - Hinzugefügt: Der Dialog **Variable einfügen** zeigt jetzt, sofern möglich, eine Vorschau der aktuell ausgewählten Variable an.
