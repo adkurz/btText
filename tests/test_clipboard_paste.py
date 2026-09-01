@@ -20,11 +20,6 @@ class RecordingClipboardSnapshot:
         self.restore_calls += 1
 
 
-class ClipboardPasteCompatibilityTestCase(unittest.TestCase):
-    def test_paste_error_remains_compatible_with_clipboard_error(self):
-        self.assertIs(clipboard_paste.PasteError, clipboard.ClipboardError)
-
-
 class PendingPasteTestCase(unittest.TestCase):
     def test_prepare_excludes_temporary_text_from_history_and_cloud(self):
         snapshot = RecordingClipboardSnapshot()

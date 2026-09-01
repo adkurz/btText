@@ -20,9 +20,6 @@ from platform_support.clipboard import (
 from platform_support.clipboard_snapshot import ClipboardSnapshot
 
 
-PasteError = ClipboardError
-
-
 class PasteTargetError(UserFacingError, ClipboardError):
     """Describe a changed or unavailable paste target for UI localization."""
 
@@ -89,7 +86,7 @@ def _replace_clipboard(text: str, marker: bytes) -> ClipboardSnapshot:
         _open_clipboard()
         try:
             if not user32.EmptyClipboard():
-                raise PasteError("The clipboard could not be cleared.")
+                raise ClipboardError("The clipboard could not be cleared.")
             _set_clipboard_text(text)
             _set_clipboard_data(_MARKER_FORMAT, marker)
             _exclude_current_item_from_history_and_cloud()

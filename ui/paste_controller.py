@@ -12,7 +12,7 @@ from core.variables import (
     VariableRenderingCancelled,
 )
 from i18n import _
-from platform_support import clipboard_paste, keyboard_input, windows
+from platform_support import clipboard, clipboard_paste, keyboard_input, windows
 from ui.variable_resolver import show_variable_error
 
 CLIPBOARD_RESTORE_DELAY_MS = 500
@@ -107,7 +107,7 @@ class PasteController:
         """Paste after native window activation has settled."""
         try:
             pending = clipboard_paste.paste_text(target, text)
-        except clipboard_paste.PasteError as error:
+        except clipboard.ClipboardError as error:
             self._reveal_after_error(
                 format_user_error(error),
                 # Translators: Title of an error inserting a snippet externally.
@@ -117,7 +117,7 @@ class PasteController:
         try:
             if cursor_offset_from_end is not None:
                 keyboard_input.move_cursor_left(cursor_offset_from_end)
-        except clipboard_paste.PasteError as error:
+        except clipboard.ClipboardError as error:
             self.schedule_restore(pending)
             self._reveal_after_error(
                 format_user_error(error),
@@ -147,7 +147,7 @@ class PasteController:
         """Restore the saved clipboard, retrying transient access failures."""
         try:
             pending.restore_clipboard()
-        except clipboard_paste.PasteError as error:
+        except clipboard.ClipboardError as error:
             if attempts_remaining > 1:
                 wx.CallLater(
                     CLIPBOARD_RESTORE_RETRY_DELAY_MS,

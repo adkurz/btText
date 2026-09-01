@@ -8,7 +8,7 @@ from core.variables import (
     VariableRenderingCancelled,
 )
 from i18n import _
-from platform_support import clipboard_paste, windows
+from platform_support import clipboard, clipboard_paste, windows
 from ui.paste_controller import PasteController
 
 
@@ -249,7 +249,7 @@ class PasteControllerTestCase(unittest.TestCase):
         self,
         paste_text,
     ):
-        paste_text.side_effect = clipboard_paste.PasteError("paste failed")
+        paste_text.side_effect = clipboard.ClipboardError("paste failed")
         controller = PasteController.__new__(PasteController)
         controller._parent = Mock()
         controller._reveal_after_error = Mock()
@@ -264,7 +264,7 @@ class PasteControllerTestCase(unittest.TestCase):
     @patch("ui.paste_controller.wx.CallLater")
     def test_transient_restore_failure_is_retried(self, call_later):
         pending = Mock()
-        pending.restore_clipboard.side_effect = clipboard_paste.PasteError(
+        pending.restore_clipboard.side_effect = clipboard.ClipboardError(
             "clipboard busy"
         )
         controller = PasteController.__new__(PasteController)
@@ -281,7 +281,7 @@ class PasteControllerTestCase(unittest.TestCase):
 
     def test_final_restore_failure_discards_snapshot_and_reveals_error(self):
         pending = Mock()
-        pending.restore_clipboard.side_effect = clipboard_paste.PasteError(
+        pending.restore_clipboard.side_effect = clipboard.ClipboardError(
             "clipboard busy"
         )
         controller = PasteController.__new__(PasteController)
