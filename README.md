@@ -119,19 +119,17 @@ To create only the portable release:
 It is recommended to build the installer with this [unofficial version of NSIS](https://github.com/negrutiu/nsis) to get X64 installers.
 ## Project structure
 
-```text
-btText.py             Application entry point
-core/                 Application data and domain logic
-platform_support/     Windows-specific functionality
-ui/                   wxPython user interface
-tests/                Automated tests
-locale/               Translations
-tools/                Development tools
-docs/                 Project documentation
-assets/               Application assets
-installer/            Windows installer definition
-build.ps1             Windows release build script
-```
+- btText.py: Application entry point
+- core/: Application data and domain logic
+- platform_support/: Windows-specific functionality
+- ui/: wxPython user interface
+- tests/: Automated tests
+- locale/: Translations
+- tools/: Development tools
+- docs/: Project documentation
+- assets/: Application assets
+- installer/: Windows installer definition
+- build.ps1: Windows release build script
 
 ## Author
 
