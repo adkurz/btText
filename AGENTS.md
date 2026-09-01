@@ -37,4 +37,4 @@ History favors short, imperative subjects such as `Update README` or `Validate t
 
 ## Configuration & Safety
 
-Do not commit `settings.ini`, databases, logs, build output, or other user data. New settings pages should use a matching `settings.ini` section; do not add migration behavior unless explicitly required. Preserve localized errors, keyboard navigation, screen-reader accessibility, focus behavior, drag-and-drop semantics, and clipboard data owned by other applications.
+Do not make any commits on your own unless you are specifically asked to do so. Do not commit `settings.ini`, databases, logs, build output, or other user data. New settings pages should use a matching `settings.ini` section; do not add migration behavior unless explicitly required. Preserve localized errors, keyboard navigation, screen-reader accessibility, focus behavior, drag-and-drop semantics, and clipboard data owned by other applications.
