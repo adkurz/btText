@@ -74,6 +74,28 @@ class TransferServiceTestCase(unittest.TestCase):
         self.assertIsNone(self.service.apply_pending(4))
         self.model.assert_not_called()
 
+    def test_invalid_staged_kind_is_rejected_without_replacing_pending_transfer(self):
+        pending = self.service.stage("snippet", 2, copy=True)
+
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unsupported transfer kind: 'unknown'",
+        ):
+            self.service.stage("unknown", 7, copy=False)
+
+        self.assertIs(self.service.pending, pending)
+        self.model.assert_not_called()
+
+    def test_invalid_unstaged_kind_is_rejected(self):
+        with self.assertRaisesRegex(
+            ValueError,
+            "Unsupported transfer kind: 'unknown'",
+        ):
+            self.service.execute("unknown", 7, 4, copy=False)
+
+        self.assertIsNone(self.service.pending)
+        self.model.assert_not_called()
+
     def test_unstaged_drag_move_does_not_replace_pending_transfer(self):
         category = datamodel.Category("Moved", id=7, parent_id=4)
         self.model.move_category.return_value = category

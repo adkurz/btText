@@ -1,8 +1,13 @@
 """Application-local category and snippet transfer orchestration."""
 
 from dataclasses import dataclass
+from typing import Literal, assert_never
 
 from core import datamodel
+
+
+TransferKind = Literal["category", "snippet"]
+_TRANSFER_KINDS = frozenset(("category", "snippet"))
 
 
 def _normalize_entity_ids(
@@ -19,9 +24,14 @@ def _normalize_entity_ids(
 class Transfer:
     """Description of an application-local category or snippet transfer."""
 
-    kind: str
+    kind: TransferKind
     entity_ids: tuple[int, ...]
     copy: bool
+
+    def __post_init__(self) -> None:
+        """Reject unsupported transfer kinds at the construction boundary."""
+        if self.kind not in _TRANSFER_KINDS:
+            raise ValueError(f"Unsupported transfer kind: {self.kind!r}")
 
     @property
     def entity_id(self) -> int:
@@ -40,7 +50,7 @@ class TransferBuffer:
 
     def set(
         self,
-        kind: str,
+        kind: TransferKind,
         entity_ids: int | list[int] | tuple[int, ...],
         copy: bool,
     ) -> None:
@@ -80,7 +90,7 @@ class TransferService:
 
     def stage(
         self,
-        kind: str,
+        kind: TransferKind,
         entity_ids: int | list[int] | tuple[int, ...],
         copy: bool,
     ) -> Transfer:
@@ -102,7 +112,7 @@ class TransferService:
 
     def execute(
         self,
-        kind: str,
+        kind: TransferKind,
         entity_ids: int | list[int] | tuple[int, ...],
         destination_id: int | None,
         copy: bool,
@@ -143,5 +153,5 @@ class TransferService:
                 )
             result = TransferResult(transfer, snippets=tuple(snippets))
         else:
-            return None
+            assert_never(transfer.kind)
         return result
