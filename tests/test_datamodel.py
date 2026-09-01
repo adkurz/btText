@@ -74,7 +74,7 @@ class DataModelTestCase(unittest.TestCase):
         self.assertEqual(loaded_snippet.content, "Edited content")
         self.assertEqual(loaded_snippet.weight, 3)
 
-        self.model.delete_snippet(snippet.id)
+        self.model.delete_snippets((snippet.id,))
         with self.assertRaises(EntityNotFoundError):
             self.model.get_snippet(snippet.id)
         self.model.delete_category(category.id)
@@ -306,7 +306,10 @@ class DataModelTestCase(unittest.TestCase):
             )
         )
 
-        copied = self.model.copy_snippet(source.id, target_category.id)
+        copied = self.model.copy_snippets(
+            (source.id,),
+            target_category.id,
+        )[0]
 
         self.assertIsNone(copied.hotstring)
         self.assertEqual(self.model.get_snippet(source.id).hotstring, "greet")
@@ -444,22 +447,6 @@ class DataModelTestCase(unittest.TestCase):
             self.model.copy_category(source.id, source.id)
         with self.assertRaises(CategoryValidationError):
             self.model.copy_category(source.id, child.id)
-
-    def test_snippet_can_be_moved_and_copied_by_id(self):
-        source = self.model.add_category(Category("Source"))
-        destination = self.model.add_category(Category("Destination"))
-        snippet = self.model.add_snippet(
-            Snippet("Snippet", "Content", source.id, 3)
-        )
-
-        self.model.move_snippet(snippet.id, destination.id)
-        self.assertEqual(
-            self.model.get_snippet(snippet.id).category_id,
-            destination.id,
-        )
-        copied = self.model.copy_snippet(snippet.id, source.id)
-        self.assertEqual(copied.category_id, source.id)
-        self.assertEqual(copied.weight, 3)
 
     def test_multiple_snippets_can_be_moved_and_copied_atomically(self):
         source = self.model.add_category(Category("Source"))

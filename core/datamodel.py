@@ -591,16 +591,6 @@ class DataModel:
         return category
 
     @_translate_sqlite_errors
-    def move_snippet(self, id: int, category_id: int) -> Snippet:
-        """Move a snippet into another category."""
-        return self.move_snippets((id,), category_id)[0]
-
-    @_translate_sqlite_errors
-    def copy_snippet(self, id: int, category_id: int) -> Snippet:
-        """Copy a snippet without its globally unique hotstring."""
-        return self.copy_snippets((id,), category_id)[0]
-
-    @_translate_sqlite_errors
     def move_snippets(
         self,
         ids: tuple[int, ...] | list[int],
@@ -763,11 +753,6 @@ class DataModel:
             self._raise_snippet_integrity_error(error)
         self.ee.emit("snippet.edited", snippet)
         return snippet
-
-    @_translate_sqlite_errors
-    def delete_snippet(self, id: int) -> Snippet:
-        """Delete and return an existing snippet."""
-        return self.delete_snippets((id,))[0]
 
     @_translate_sqlite_errors
     def hotstring_exist(self, hotstring: str) -> int | None:
