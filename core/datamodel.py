@@ -288,15 +288,6 @@ class DataModel:
         )
 
     @_translate_sqlite_errors
-    def get_category_child_summaries(self, parent_id: int | None):
-        """Yield direct child projections ordered by category name."""
-        return self.get_category_summaries(
-            order=True,
-            parent_id=parent_id,
-            all_categories=False,
-        )
-
-    @_translate_sqlite_errors
     def get_category_path(self, id: int) -> str:
         """Return a display path ordered from the root to the category."""
         self.get_category(id)
