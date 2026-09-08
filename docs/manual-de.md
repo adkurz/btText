@@ -107,7 +107,7 @@ Wählen Sie im Kategorienbaum eine Kategorie und öffnen Sie im Kontextmenü der
 
 - **Name**: Bezeichnung des Textbausteins; innerhalb einer Kategorie muss sie eindeutig sein.
 - **Kategorie**: Zielkategorie des Textbausteins. Hier ist bereits die aktuell gewählte Kategorie vorbelegt.
-- **Markdown-Formatierung aktivieren**: Interpretiert den Inhalt beim Kopieren, Einfügen oder Erweitern als Hotstring als Markdown. btText bietet der Zielanwendung formatiertes HTML, Rich Text Format (RTF) und eine gerenderte Reintext-Ausweichdarstellung an. Eingebettetes rohes HTML wird als Text behandelt.
+- **Markdown-Formatierung aktivieren**: Aktiviert einfache Formatierungen für diesen Textbaustein. Schreibweisen, unterstützte Inhalte und das Verhalten verschiedener Zielprogramme beschreibt das Kapitel [Markdown-Formatierung](#markdown-formatierung).
 - **Gewichtung**: Priorität für die Sortierung und Suche ("niedrig", "mittel", "hoch". Standard: "niedrig").
 - **Hotstring**: optionales Kürzel für die automatische Erweiterung.
 - **Inhalt**: der Text, der eingefügt werden soll.
@@ -183,7 +183,7 @@ Die Variable `{{cursor}}` steht in Markdown-Textbausteinen nicht zur Verfügung,
 - wählen Sie **Text in die Zwischenablage kopieren** oder drücken Sie `Strg`+`Umschalt`+`C`, um Variablen aufzulösen und den resultierenden Text zu kopieren. Interaktive Variablen werden dabei im selben gemeinsamen Dialog wie beim Einfügen eines Textbausteins abgefragt;
 - wählen Sie **Rohinhalt in die Zwischenablage kopieren**, um den unveränderten Textbaustein einschließlich seiner Variablen-Platzhalter zu kopieren.
 
-Bei aktivierter Markdown-Formatierung stellen die normalen Kopier- und Einfügebefehle gleichzeitig gerendertes HTML, Rich Text Format (RTF) und gerenderten Reintext bereit. Die Zielanwendung wählt das beste von ihr unterstützte Format; Reintexteditoren erhalten daher unformatierten Text. RTF unterstützt Absätze, Überschriften, fette und kursive Hervorhebungen, Links, Code im Fließtext und als Block, Zitate, horizontale Linien, Zeilenumbrüche sowie geordnete und ungeordnete Listen. Bilder werden in allen Formaten durch ihren Alternativtext ersetzt. **Rohinhalt in die Zwischenablage kopieren** kopiert immer die unveränderte Markdown-Quelle als Reintext.
+Für Textbausteine mit aktivierter Markdown-Formatierung gelten die im Kapitel [Markdown-Formatierung](#markdown-formatierung) beschriebenen Regeln. Der Befehl **Rohinhalt in die Zwischenablage kopieren** behält unabhängig davon stets den ursprünglichen Inhalt bei.
 
 Beim Einfügen merkt sich btText das zuvor aktive Fenster, blendet sein eigenes Fenster aus und verwendet die Windows-Zwischenablage. Nach dem Vorgang wird der vorherige Inhalt der Zwischenablage wiederhergestellt, soweit dies möglich ist. btText wird dabei nicht beendet, sondern läuft im Hintergrund weiter und bleibt über Tastenkombination und Infobereich verfügbar. Das Zielprogramm muss ein normales Texteingabefeld bereitstellen. Ist kein gültiges vorheriges Fenster vorhanden oder kann es nicht aktiviert werden, zeigt btText einen Fehler an.
 
