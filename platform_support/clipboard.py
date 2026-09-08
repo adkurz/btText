@@ -1,4 +1,4 @@
-"""Copy Unicode text to the Windows clipboard with privacy controls."""
+"""Write plain-text and optional rich-text clipboard representations."""
 
 import ctypes
 import time
@@ -184,7 +184,7 @@ def copy_content(
     include_in_history: bool = True,
     allow_cloud_upload: bool = True,
 ) -> None:
-    """Copy plain text and optional HTML with independent privacy controls."""
+    """Copy plain text and optional HTML and RTF with privacy controls."""
     _open_clipboard()
     try:
         if not user32.EmptyClipboard():

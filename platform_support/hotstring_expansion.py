@@ -1,4 +1,4 @@
-"""Replace typed hotstrings through a temporary Windows clipboard paste."""
+"""Replace typed hotstrings with temporary multi-format clipboard content."""
 
 from core.hotstrings import HotstringExpansionError
 from core.rich_text import ClipboardContent

@@ -1,4 +1,4 @@
-"""Paste snippet text into another Windows application via the clipboard."""
+"""Paste snippet content into another Windows application via the clipboard."""
 
 from __future__ import annotations
 

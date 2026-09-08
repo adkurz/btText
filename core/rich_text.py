@@ -17,7 +17,7 @@ _ALLOWED_LINK_SCHEMES = frozenset(("http", "https", "mailto"))
 
 @dataclass(frozen=True)
 class ClipboardContent:
-    """Represent one clipboard item with plain text and optional HTML."""
+    """Bundle plain text, optional HTML and RTF, and caret metadata."""
 
     plain_text: str
     html: str | None = None
