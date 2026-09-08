@@ -49,6 +49,22 @@ class RichTextRenderingTestCase(unittest.TestCase):
         self.assertEqual(result.cursor_offset_from_end, 1)
         self.assertNotIn("\ue000", result.html)
 
+    def test_rtf_omits_only_the_final_paragraph_break(self):
+        single = render_clipboard_content(
+            RenderedSnippet("Hello **world**"),
+            True,
+        )
+        multiple = render_clipboard_content(
+            RenderedSnippet("First\n\nSecond"),
+            True,
+        )
+
+        self.assertEqual(single.html, "<p>Hello <strong>world</strong></p>")
+        self.assertEqual(multiple.html, "<p>First</p><p>Second</p>")
+        self.assertFalse(single.rtf.decode("ascii").endswith(r"\par }"))
+        self.assertFalse(multiple.rtf.decode("ascii").endswith(r"\par }"))
+        self.assertIn(r"First\par ", multiple.rtf.decode("ascii"))
+
     def test_rtf_escapes_markup_unicode_and_links(self):
         result = render_clipboard_content(
             RenderedSnippet(

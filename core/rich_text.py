@@ -197,6 +197,8 @@ class _RtfRenderer:
     def render(self, root: ElementTree.Element) -> bytes:
         """Return a complete RTF document suitable for clipboard transfer."""
         body = "".join(self._render_block(child) for child in root)
+        if body.endswith(r"\par "):
+            body = body[: -len(r"\par ")]
         document = (
             r"{\rtf1\ansi\ansicpg1252\deff0\uc1"
             r"{\fonttbl{\f0\fswiss Arial;}{\f1\fmodern Courier New;}}"
