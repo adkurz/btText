@@ -159,6 +159,8 @@ Sie können unter anderem folgende Schreibweisen verwenden:
 - `` `Code` `` für Code innerhalb einer Zeile;
 - `>` am Zeilenanfang für ein Zitat.
 
+Anklickbare Links müssen mit `http://`, `https://` oder `mailto:` beginnen. Andere Linkziele gibt btText aus Sicherheitsgründen als normalen beschrifteten Text ohne Linkfunktion aus.
+
 Eine Leerzeile im Markdown-Text trennt zwei Absätze. Zeilen, die nur im Editor untereinander stehen, werden innerhalb eines normalen Absatzes dagegen wie fortlaufender Text behandelt. Für einen ausdrücklichen Zeilenumbruch innerhalb eines Absatzes können Sie am Ende der Zeile zwei Leerzeichen eingeben.
 
 Beim normalen Kopieren, Einfügen oder Verwenden als Hotstring bereitet btText den Inhalt in mehreren Darstellungen vor. Das Zielprogramm entscheidet selbst, welche Darstellung es verwendet:

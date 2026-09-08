@@ -159,6 +159,8 @@ Among others, you can use the following syntax:
 - `` `code` `` for code within a line;
 - `>` at the start of a line for a quotation.
 
+Clickable links must start with `http://`, `https://`, or `mailto:`. For security, btText outputs other link targets as normal labeled text without an active link.
+
 A blank line in the Markdown text separates two paragraphs. Lines that merely appear one below another in the editor are treated as continuous text within a normal paragraph. To add an explicit line break within a paragraph, enter two spaces at the end of the line.
 
 For normal copying, insertion, or hotstring expansion, btText prepares the content in several representations. The target program decides which one it uses:

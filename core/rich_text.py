@@ -4,13 +4,16 @@ from copy import deepcopy
 from dataclasses import dataclass
 from xml.etree import ElementTree
 import uuid
-from urllib.parse import quote
+from urllib.parse import quote, urlsplit
 
 import markdown
 from markdown.extensions import Extension
 from markdown.treeprocessors import Treeprocessor
 
 from core.variables import RenderedSnippet
+
+
+_ALLOWED_LINK_SCHEMES = frozenset(("http", "https", "mailto"))
 
 
 @dataclass(frozen=True)
@@ -73,6 +76,7 @@ def render_clipboard_content(
         source = source[:position] + marker + source[position:]
 
     root = _parse_markdown_tree(rendered.text)
+    _sanitize_links(root)
     plain_text = _render_plain_text(root)
     cursor_offset = None
     if marker is not None:
@@ -102,6 +106,33 @@ def _parse_markdown_tree(source: str) -> ElementTree.Element:
     if capture.root is None:
         raise RuntimeError("Markdown did not produce a document tree.")
     return capture.root
+
+
+def _sanitize_links(root: ElementTree.Element) -> None:
+    """Keep only explicitly supported absolute Markdown link targets."""
+    for element in root.iter("a"):
+        href = element.get("href", "").strip()
+        if _is_allowed_link_target(href):
+            element.set("href", href)
+        else:
+            # Preserve the label and inline formatting without leaving an
+            # actionable link in either HTML or RTF.
+            element.tag = "span"
+            element.attrib.clear()
+
+
+def _is_allowed_link_target(href: str) -> bool:
+    """Return whether a link has a supported scheme and usable destination."""
+    try:
+        target = urlsplit(href)
+    except ValueError:
+        return False
+    scheme = target.scheme.lower()
+    if scheme not in _ALLOWED_LINK_SCHEMES:
+        return False
+    if scheme == "mailto":
+        return bool(target.path)
+    return bool(target.netloc)
 
 
 def _render_plain_text(root: ElementTree.Element) -> str:

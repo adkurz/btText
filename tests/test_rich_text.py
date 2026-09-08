@@ -39,6 +39,46 @@ class RichTextRenderingTestCase(unittest.TestCase):
         self.assertNotIn("<script>", result.html)
         self.assertIn("&lt;script&gt;", result.html)
 
+    def test_only_supported_absolute_links_remain_actionable(self):
+        for target in (
+            "http://example.com/path",
+            "https://example.com/path",
+            "mailto:person@example.com",
+        ):
+            with self.subTest(target=target):
+                result = render_clipboard_content(
+                    RenderedSnippet(f"[safe]({target})"),
+                    True,
+                )
+
+                self.assertIn(f'href="{target}"', result.html)
+                self.assertIn(
+                    f'HYPERLINK "{target}"'.encode("ascii"),
+                    result.rtf,
+                )
+
+    def test_unsupported_links_are_rendered_as_plain_labels(self):
+        for target in (
+            "javascript:alert(1)",
+            "file:///C:/secret.txt",
+            "//example.com/path",
+            "relative/path",
+            "http:missing-host",
+            "mailto:",
+        ):
+            with self.subTest(target=target):
+                result = render_clipboard_content(
+                    RenderedSnippet(f"[**label**]({target})"),
+                    True,
+                )
+
+                self.assertEqual(result.plain_text, "label")
+                self.assertNotIn("<a", result.html)
+                self.assertNotIn("href=", result.html)
+                self.assertNotIn(b"HYPERLINK", result.rtf)
+                self.assertIn("<strong>label</strong>", result.html)
+                self.assertIn(b"\\b label", result.rtf)
+
     def test_cursor_offset_is_mapped_to_rendered_plain_text(self):
         result = render_clipboard_content(
             RenderedSnippet("**AB** C", cursor_offset_from_end=1),
