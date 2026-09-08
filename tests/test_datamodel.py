@@ -180,6 +180,17 @@ class DataModelTestCase(unittest.TestCase):
             3,
         )
 
+    def test_markdown_setting_is_persisted_and_preserved_when_copying(self):
+        source = self.model.add_category(Category("Source"))
+        target = self.model.add_category(Category("Target"))
+        snippet = self.model.add_snippet(
+            Snippet("Formatted", "**content**", source.id, markdown_enabled=True)
+        )
+
+        self.assertTrue(self.model.get_snippet(snippet.id).markdown_enabled)
+        copied = self.model.copy_snippets((snippet.id,), target.id)[0]
+        self.assertTrue(self.model.get_snippet(copied.id).markdown_enabled)
+
     def test_snippets_have_a_stable_weight_name_and_id_order(self):
         category = self.model.add_category(Category("Ordering"))
         snippets = [
@@ -826,7 +837,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
 
             with self.assertRaisesRegex(
                 DataModelError,
-                r"newer version.*schema version: 6.*supported version: 5",
+                r"newer version.*schema version: 7.*supported version: 6",
             ):
                 DataModel(RecordingEventEmitter(), database_file)
 
@@ -956,7 +967,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             category = model.get_category(7)
             self.assertIsNone(category.parent_id)
             self.assertEqual(model.get_snippet(9).category_id, 7)
-            self.assertEqual(model._get_database_version(), 5)
+            self.assertEqual(model._get_database_version(), 6)
 
     def test_version_four_hotstring_index_becomes_case_sensitive(self):
         with ExitStack() as resources:
@@ -994,7 +1005,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
                 )
             )
 
-            self.assertEqual(migrated._get_database_version(), 5)
+            self.assertEqual(migrated._get_database_version(), 6)
             self.assertEqual(second.hotstring, "mfg")
             with self.assertRaises(SnippetValidationError):
                 migrated.add_snippet(
@@ -1042,7 +1053,7 @@ class DatabaseMigrationTestCase(unittest.TestCase):
             model = DataModel(RecordingEventEmitter(), database_file)
             resources.callback(model.close)
 
-            self.assertEqual(model._get_database_version(), 5)
+            self.assertEqual(model._get_database_version(), 6)
             with self.assertRaises(sqlite3.IntegrityError):
                 model._connection.execute(
                     "INSERT INTO snippet "

@@ -5,6 +5,7 @@ from collections.abc import Callable
 import wx
 
 from core import datamodel
+from core.rich_text import render_clipboard_content
 from core.events import EventEmitter
 import ui.validators as validators
 from core.error_messages import format_user_error
@@ -60,7 +61,7 @@ class SnippetEditor(wx.Dialog):
             cols=2, vgap=self.FromDIP(10), hgap=self.FromDIP(12)
         )
         form_sizer.AddGrowableCol(1, 1)
-        form_sizer.AddGrowableRow(4, 1)
+        form_sizer.AddGrowableRow(5, 1)
 
         # Create fields.
         # Translators: Label for the editable snippet name. "&" marks the
@@ -106,6 +107,11 @@ class SnippetEditor(wx.Dialog):
             # Translators: Hint explaining when an optional hotstring expands.
             _("Optional; expands after Space, Enter, Tab, or punctuation")
         )
+        self.markdown_input = wx.CheckBox(
+            self.pane,
+            # Translators: Checkbox enabling Markdown formatting for one snippet.
+            label=_("Enable &Markdown formatting"),
+        )
         # Translators: Label for the snippet text that will be inserted.
         # "&" marks the mnemonic for the adjacent multiline editor.
         self.content_label = wx.StaticText(self.pane, label=_("C&ontent"))
@@ -136,6 +142,8 @@ class SnippetEditor(wx.Dialog):
         form_sizer.Add(self.weight_input, 0, wx.EXPAND)
         form_sizer.Add(self.hotstring_label, 0, wx.ALIGN_CENTER_VERTICAL)
         form_sizer.Add(self.hotstring_input, 0, wx.EXPAND)
+        form_sizer.AddSpacer(0)
+        form_sizer.Add(self.markdown_input, 0, wx.EXPAND)
         form_sizer.Add(self.content_label, 0, wx.ALIGN_TOP)
         content_sizer = wx.BoxSizer(wx.VERTICAL)
         content_sizer.Add(self.content_input, 1, wx.EXPAND)
@@ -204,14 +212,16 @@ class SnippetEditor(wx.Dialog):
         self.weight_input.SetSelection(s.weight - 1)
         self.content_input.SetValue(s.content)
         self.hotstring_input.SetValue(s.hotstring or "")
+        self.markdown_input.SetValue(s.markdown_enabled)
 
-    def _current_state(self) -> tuple[str, int, int, str, str]:
+    def _current_state(self) -> tuple[str, int, int, str, bool, str]:
         """Return all editable values for unsaved-change detection."""
         return (
             self.name_input.GetValue(),
             self.category_input.GetSelection(),
             self.weight_input.GetSelection(),
             self.hotstring_input.GetValue(),
+            self.markdown_input.GetValue(),
             self.content_input.GetValue(),
         )
 
@@ -270,8 +280,12 @@ class SnippetEditor(wx.Dialog):
         rendered = self._render_variables(self.content_input.GetValue())
         if rendered is None:
             return
+        preview_text = render_clipboard_content(
+            rendered,
+            self.markdown_input.GetValue(),
+        ).plain_text
         with utils.managed_dialog(
-            VariablePreviewDialog(self, rendered.text)
+            VariablePreviewDialog(self, preview_text)
         ) as dialog:
             dialog.ShowModal()
 
@@ -317,6 +331,7 @@ class SnippetEditor(wx.Dialog):
             weight=snippet_weight,
             content=snippet_content,
             hotstring=snippet_hotstring or None,
+            markdown_enabled=self.markdown_input.GetValue(),
         )
         try:
             if self._snippet is None:  # Add new snippet

@@ -9,6 +9,7 @@ from core.app_settings import AppSettings
 from core.error_messages import format_user_error
 from core.events import EventEmitter
 from core.hotstrings import HotstringExpansionError
+from core.rich_text import render_clipboard_content
 from core.variables import (
     RenderedSnippet,
     VariableError,
@@ -123,20 +124,21 @@ class HotstringController:
             show_variable_error(self._parent, error)
             return
         pending = None
+        content = render_clipboard_content(rendered, snippet.markdown_enabled)
         try:
             pending = hotstring_expansion.expand_hotstring(
                 target,
-                rendered.text,
+                content,
                 len(snippet.hotstring or ""),
                 boundary_key if settings.preserve_hotstring_boundary else None,
             )
-            if rendered.cursor_offset_from_end is not None:
+            if content.cursor_offset_from_end is not None:
                 boundary_offset = int(
                     settings.preserve_hotstring_boundary
                     and boundary_key is not None
                 )
                 keyboard_input.move_cursor_left(
-                    rendered.cursor_offset_from_end + boundary_offset
+                    content.cursor_offset_from_end + boundary_offset
                 )
         except (clipboard.ClipboardError, HotstringExpansionError) as error:
             if pending is not None:

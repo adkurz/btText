@@ -107,6 +107,7 @@ Select a category in the category tree and select **New Text Snippet** (Neuer Te
 
 - **Name**: Designation of the text snippet; must be unique within a category.
 - **Category**: Target category of the text snippet. The currently selected category is pre-filled here.
+- **Enable Markdown formatting**: Interprets the content as Markdown when the snippet is copied, inserted, or expanded as a hotstring. btText offers both formatted HTML and a rendered plain-text fallback to the target program. Embedded raw HTML is treated as text.
 - **Weighting**: Priority for sorting and search ("low", "medium", "high". Default: "low").
 - **Hotstring**: Optional shortcut for automatic expansion.
 - **Content**: The text to be inserted.
@@ -150,6 +151,8 @@ Open btText using the global keyboard shortcut or via the icon in the system tra
 - Press `Enter` or select **Insert text snippet** (Textbaustein einfügen) from the context menu to insert it into the previously active Windows window;
 - Select **Copy text to clipboard** (Text in die Zwischenablage kopieren) or press `Ctrl`+`Shift`+`C` to resolve variables and copy the resulting text. Interactive variables are requested in the same combined dialog used when inserting a snippet.
 - Select **Copy raw content to clipboard** (Rohinhalt in die Zwischenablage kopieren) to copy the unchanged snippet source, including its variable placeholders.
+
+When Markdown formatting is enabled, the normal copy and insertion commands provide rendered HTML and rendered plain text simultaneously. The target program chooses the format it supports; plain-text editors therefore receive unformatted text. **Copy raw content to clipboard** always copies the unchanged Markdown source as plain text.
 
 When inserting, btText remembers the previously active window, hides its own window, and uses the Windows clipboard. After the process, the previous clipboard content is restored, as far as possible. btText does not terminate but continues to run in the background and remains available via keyboard shortcut and the system tray. The target program must provide a standard text input field. If no valid previous window is available or it cannot be activated, btText displays an error.
 

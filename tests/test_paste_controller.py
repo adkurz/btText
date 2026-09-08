@@ -7,6 +7,7 @@ from core.variables import (
     UnknownVariableError,
     VariableRenderingCancelled,
 )
+from core.rich_text import ClipboardContent
 from i18n import _
 from platform_support import clipboard, clipboard_paste, windows
 from ui.paste_controller import PasteController
@@ -53,7 +54,9 @@ class PasteControllerTestCase(unittest.TestCase):
         get_foreground_window.return_value = 42
         is_external_window.return_value = True
         model = Mock()
-        model.get_snippet.return_value = SimpleNamespace(content="Example")
+        model.get_snippet.return_value = SimpleNamespace(
+            content="Example", markdown_enabled=False
+        )
         before_paste = Mock()
         controller = PasteController(
             Mock(),
@@ -71,8 +74,7 @@ class PasteControllerTestCase(unittest.TestCase):
             50,
             controller._paste_after_hide,
             TARGET,
-            "Example",
-            None,
+            ClipboardContent("Example"),
         )
 
     @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
@@ -90,7 +92,7 @@ class PasteControllerTestCase(unittest.TestCase):
         is_external_window.return_value = True
         model = Mock()
         model.get_snippet.return_value = SimpleNamespace(
-            content="Today is {{date:long}}."
+            content="Today is {{date:long}}.", markdown_enabled=False
         )
         before_paste = Mock()
         render_snippet = Mock(
@@ -112,8 +114,7 @@ class PasteControllerTestCase(unittest.TestCase):
             50,
             controller._paste_after_hide,
             TARGET,
-            "Today is 6. August 2026.",
-            None,
+            ClipboardContent("Today is 6. August 2026."),
         )
 
     @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
@@ -128,7 +129,9 @@ class PasteControllerTestCase(unittest.TestCase):
         get_window_identity,
     ):
         model = Mock()
-        model.get_snippet.return_value = SimpleNamespace(content="A{{cursor}}BC")
+        model.get_snippet.return_value = SimpleNamespace(
+            content="A{{cursor}}BC", markdown_enabled=False
+        )
         controller = PasteController(
             Mock(),
             model,
@@ -143,8 +146,7 @@ class PasteControllerTestCase(unittest.TestCase):
             50,
             controller._paste_after_hide,
             TARGET,
-            "ABC",
-            2,
+            ClipboardContent("ABC", cursor_offset_from_end=2),
         )
 
     @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
@@ -222,9 +224,10 @@ class PasteControllerTestCase(unittest.TestCase):
         controller = PasteController.__new__(PasteController)
         controller.schedule_restore = Mock()
 
-        controller._paste_after_hide(TARGET, "Example")
+        content = ClipboardContent("Example")
+        controller._paste_after_hide(TARGET, content)
 
-        paste_text.assert_called_once_with(TARGET, "Example")
+        paste_text.assert_called_once_with(TARGET, content)
         controller.schedule_restore.assert_called_once_with(pending)
 
     @patch("ui.paste_controller.keyboard_input.move_cursor_left")
@@ -239,7 +242,10 @@ class PasteControllerTestCase(unittest.TestCase):
         controller = PasteController.__new__(PasteController)
         controller.schedule_restore = Mock()
 
-        controller._paste_after_hide(TARGET, "ABC", 2)
+        controller._paste_after_hide(
+            TARGET,
+            ClipboardContent("ABC", cursor_offset_from_end=2),
+        )
 
         move_cursor_left.assert_called_once_with(2)
         controller.schedule_restore.assert_called_once_with(pending)

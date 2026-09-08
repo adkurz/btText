@@ -107,6 +107,7 @@ Wählen Sie im Kategorienbaum eine Kategorie und öffnen Sie im Kontextmenü der
 
 - **Name**: Bezeichnung des Textbausteins; innerhalb einer Kategorie muss sie eindeutig sein.
 - **Kategorie**: Zielkategorie des Textbausteins. Hier ist bereits die aktuell gewählte Kategorie vorbelegt.
+- **Markdown-Formatierung aktivieren**: Interpretiert den Inhalt beim Kopieren, Einfügen oder Erweitern als Hotstring als Markdown. btText bietet der Zielanwendung sowohl formatiertes HTML als auch eine gerenderte Reintext-Ausweichdarstellung an. Eingebettetes rohes HTML wird als Text behandelt.
 - **Gewichtung**: Priorität für die Sortierung und Suche ("niedrig", "mittel", "hoch". Standard: "niedrig").
 - **Hotstring**: optionales Kürzel für die automatische Erweiterung.
 - **Inhalt**: der Text, der eingefügt werden soll.
@@ -150,6 +151,8 @@ Im Textbaustein-Editor zeigt **Variable einfügen** die verfügbaren Variablen u
 - `Eingabe` drücken oder im Kontextmenü **Textbaustein einfügen** wählen, um ihn in das zuvor aktive Windows-Fenster einzufügen;
 - wählen Sie **Text in die Zwischenablage kopieren** oder drücken Sie `Strg`+`Umschalt`+`C`, um Variablen aufzulösen und den resultierenden Text zu kopieren. Interaktive Variablen werden dabei im selben gemeinsamen Dialog wie beim Einfügen eines Textbausteins abgefragt;
 - wählen Sie **Rohinhalt in die Zwischenablage kopieren**, um den unveränderten Textbaustein einschließlich seiner Variablen-Platzhalter zu kopieren.
+
+Bei aktivierter Markdown-Formatierung stellen die normalen Kopier- und Einfügebefehle gleichzeitig gerendertes HTML und gerenderten Reintext bereit. Die Zielanwendung wählt das von ihr unterstützte Format; Reintexteditoren erhalten daher unformatierten Text. **Rohinhalt in die Zwischenablage kopieren** kopiert immer die unveränderte Markdown-Quelle als Reintext.
 
 Beim Einfügen merkt sich btText das zuvor aktive Fenster, blendet sein eigenes Fenster aus und verwendet die Windows-Zwischenablage. Nach dem Vorgang wird der vorherige Inhalt der Zwischenablage wiederhergestellt, soweit dies möglich ist. btText wird dabei nicht beendet, sondern läuft im Hintergrund weiter und bleibt über Tastenkombination und Infobereich verfügbar. Das Zielprogramm muss ein normales Texteingabefeld bereitstellen. Ist kein gültiges vorheriges Fenster vorhanden oder kann es nicht aktiviert werden, zeigt btText einen Fehler an.
 

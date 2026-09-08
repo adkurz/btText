@@ -3,7 +3,7 @@
 import sqlite3
 
 
-SCHEMA_VERSION = 5
+SCHEMA_VERSION = 6
 
 
 def create_category_indexes(connection: sqlite3.Connection) -> None:
@@ -50,6 +50,8 @@ def create_current_schema(connection: sqlite3.Connection) -> None:
             "char(13) || ' ')) > 0), "
             "content TEXT NOT NULL CHECK (length(content) > 0), "
             "hotstring TEXT CHECK (hotstring IS NULL OR length(hotstring) > 0), "
+            "markdown_enabled INTEGER NOT NULL DEFAULT 0 "
+            "CHECK (markdown_enabled IN (0, 1)), "
             "weight INTEGER NOT NULL DEFAULT 1 "
             "CHECK (weight IN (1, 2, 3)), "
             "UNIQUE (category_id, name), "

@@ -245,12 +245,23 @@ def migrate_from_4_to_5(connection: sqlite3.Connection) -> None:
         c.execute("PRAGMA user_version = 5")
 
 
+def migrate_from_5_to_6(connection: sqlite3.Connection) -> None:
+    """Add per-snippet Markdown rendering without changing existing snippets."""
+    with connection as c:
+        c.execute(
+            "ALTER TABLE snippet ADD COLUMN markdown_enabled INTEGER "
+            "NOT NULL DEFAULT 0 CHECK (markdown_enabled IN (0, 1))"
+        )
+        c.execute("PRAGMA user_version = 6")
+
+
 MIGRATIONS: dict[int, Migration] = {
     0: migrate_from_0_to_1,
     1: migrate_from_1_to_2,
     2: migrate_from_2_to_3,
     3: migrate_from_3_to_4,
     4: migrate_from_4_to_5,
+    5: migrate_from_5_to_6,
 }
 
 
