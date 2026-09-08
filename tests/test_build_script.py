@@ -4,6 +4,7 @@ import unittest
 from pathlib import Path
 
 BUILD_SCRIPT = Path(__file__).resolve().parents[1] / "build.ps1"
+PYINSTALLER_SPEC = Path(__file__).resolve().parents[1] / "btText.spec"
 
 
 class BuildScriptTests(unittest.TestCase):
@@ -19,6 +20,13 @@ class BuildScriptTests(unittest.TestCase):
             self.script,
         )
         self.assertIn("installer\\btText.nsi", self.script)
+        self.assertIn('"/DSOURCE_DIR=$ApplicationDirectory"', self.script)
+
+    def test_pyinstaller_disables_upx_for_all_build_outputs(self):
+        specification = PYINSTALLER_SPEC.read_text(encoding="utf-8")
+
+        self.assertEqual(specification.count("upx=False"), 2)
+        self.assertNotIn("upx=True", specification)
 
     def test_portable_only_build_does_not_require_nsis(self):
         self.assertIn("[switch]$PortableOnly", self.script)
