@@ -214,6 +214,24 @@ def _escape_rtf_text(value: str, *, preserve_lines: bool = False) -> str:
     return "".join(result)
 
 
+@dataclass(frozen=True)
+class _RtfLayout:
+    """Carry inherited paragraph indentation through nested RTF blocks."""
+
+    left_indent: int = 0
+    right_indent: int = 0
+
+    def indented(self, left: int = 0, right: int = 0) -> "_RtfLayout":
+        return _RtfLayout(
+            self.left_indent + left,
+            self.right_indent + right,
+        )
+
+    @property
+    def controls(self) -> str:
+        return rf"\li{self.left_indent}\ri{self.right_indent}"
+
+
 class _RtfRenderer:
     """Render btText's deliberately limited Markdown element vocabulary."""
 
@@ -241,85 +259,145 @@ class _RtfRenderer:
         )
         return document.encode("ascii")
 
-    def _render_block(self, element: ElementTree.Element, depth: int = 0) -> str:
+    def _render_block(
+        self,
+        element: ElementTree.Element,
+        layout: _RtfLayout = _RtfLayout(),
+    ) -> str:
         tag = element.tag
         if tag in self._HEADING_SIZES:
             return (
-                rf"\pard\keepn\sb240\sa120\b\fs{self._HEADING_SIZES[tag]} "
+                rf"\pard{layout.controls}\keepn\sb240\sa120\b"
+                rf"\fs{self._HEADING_SIZES[tag]} "
                 + self._render_inline_contents(element)
                 + r"\b0\fs22\par "
             )
         if tag == "p":
             return (
-                r"\pard\f0\fs22 "
+                rf"\pard{layout.controls}\f0\fs22 "
                 + self._render_inline_contents(element)
                 + r"\par "
             )
         if tag == "blockquote":
-            parts = []
-            for child in element:
-                if child.tag == "p":
-                    parts.append(
-                        r"\pard\li720\ri360 "
-                        + self._render_inline_contents(child)
-                        + r"\par "
-                    )
-                else:
-                    parts.append(self._render_block(child, depth))
-            return "".join(parts)
+            quote_layout = layout.indented(left=720, right=360)
+            return "".join(
+                self._render_block(child, quote_layout)
+                for child in element
+            )
         if tag in {"ul", "ol"}:
-            return self._render_list(element, depth)
+            return self._render_list(element, layout, depth=0)
         if tag == "pre":
             text = "".join(element.itertext())
+            code_layout = layout.indented(left=360)
             return (
-                r"\pard\li360\sa120\f1\fs20 "
+                rf"\pard{code_layout.controls}"
+                r"\sa120\f1\fs20 "
                 + _escape_rtf_text(text, preserve_lines=True)
                 + r"\f0\fs22\par "
             )
         if tag == "hr":
-            return r"\pard\brdrb\brdrs\brdrw10\brsp20\par "
+            return (
+                rf"\pard{layout.controls}"
+                r"\brdrb\brdrs\brdrw10\brsp20\par "
+            )
         return (
-            r"\pard " + self._render_inline_contents(element) + r"\par "
+            rf"\pard{layout.controls} "
+            + self._render_inline_contents(element)
+            + r"\par "
         )
 
-    def _render_list(self, element: ElementTree.Element, depth: int) -> str:
+    def _render_list(
+        self,
+        element: ElementTree.Element,
+        layout: _RtfLayout,
+        depth: int,
+    ) -> str:
         parts: list[str] = []
         ordered = element.tag == "ol"
         item_number = int(element.get("start", "1"))
-        left_indent = 360 * (depth + 1)
-        first_line_indent = -240
         for item in element:
             if item.tag != "li":
                 continue
             marker = f"{item_number}." if ordered else r"\bullet"
             parts.append(
-                rf"\pard\li{left_indent}\fi{first_line_indent} "
-                + marker
-                + r"\tab "
-                + self._render_list_item_contents(item, depth)
-                + r"\par "
+                self._render_list_item(
+                    item,
+                    marker,
+                    layout,
+                    depth,
+                )
             )
             item_number += 1
         return "".join(parts)
 
-    def _render_list_item_contents(
+    def _render_list_item(
         self,
         item: ElementTree.Element,
+        marker: str,
+        layout: _RtfLayout,
         depth: int,
     ) -> str:
-        parts = [_escape_rtf_text(item.text or "")]
-        nested_lists: list[ElementTree.Element] = []
+        parts: list[str] = []
+        inline_parts = [_escape_rtf_text(item.text or "")]
+        marker_pending = True
+        item_layout = layout.indented(left=360 * (depth + 1))
+
+        def flush_inline() -> None:
+            nonlocal marker_pending
+            contents = "".join(inline_parts)
+            inline_parts.clear()
+            if not contents:
+                return
+            parts.append(
+                self._render_list_paragraph(
+                    contents,
+                    marker if marker_pending else None,
+                    item_layout,
+                )
+            )
+            marker_pending = False
+
         for child in item:
-            if child.tag in {"ul", "ol"}:
-                nested_lists.append(child)
-            elif child.tag == "p":
-                parts.append(self._render_inline_contents(child))
+            if child.tag == "p":
+                flush_inline()
+                parts.append(
+                    self._render_list_paragraph(
+                        self._render_inline_contents(child),
+                        marker if marker_pending else None,
+                        item_layout,
+                    )
+                )
+                marker_pending = False
+            elif child.tag in {"ul", "ol"}:
+                flush_inline()
+                parts.append(
+                    self._render_list(
+                        child,
+                        layout,
+                        depth + 1,
+                    )
+                )
             else:
-                parts.append(self._render_inline(child))
-            parts.append(_escape_rtf_text(child.tail or ""))
-        for nested in nested_lists:
-            parts.append(r"\par " + self._render_list(nested, depth + 1))
+                inline_parts.append(self._render_inline(child))
+            inline_parts.append(_escape_rtf_text(child.tail or ""))
+        flush_inline()
         return "".join(parts)
+
+    @staticmethod
+    def _render_list_paragraph(
+        contents: str,
+        marker: str | None,
+        layout: _RtfLayout,
+    ) -> str:
+        if marker is None:
+            prefix = rf"\pard{layout.controls} "
+        else:
+            prefix = (
+                rf"\pard{layout.controls}\fi-240 "
+                + marker
+                + r"\tab "
+            )
+        return prefix + contents + r"\par "
 
     def _render_inline_contents(self, element: ElementTree.Element) -> str:
         parts = [_escape_rtf_text(element.text or "")]

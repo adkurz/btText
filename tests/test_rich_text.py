@@ -160,8 +160,90 @@ class RichTextRenderingTestCase(unittest.TestCase):
         self.assertIn(r"\f1 code", rtf)
         self.assertIn(r"\li720", rtf)
         self.assertIn(r"1.\tab First", rtf)
-        self.assertIn(r"\li720\fi-240 \bullet\tab Nested", rtf)
+        self.assertIn(r"\li720\ri0\fi-240 \bullet\tab Nested", rtf)
         self.assertIn(r"\brdrb\brdrs\brdrw10", rtf)
+
+    def test_rtf_preserves_three_nested_list_levels_in_document_order(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "- Level one\n"
+                "    - Level two\n"
+                "        - Level three"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        levels = (
+            r"\li360\ri0\fi-240 \bullet\tab Level one",
+            r"\li720\ri0\fi-240 \bullet\tab Level two",
+            r"\li1080\ri0\fi-240 \bullet\tab Level three",
+        )
+        positions = tuple(rtf.index(level) for level in levels)
+        self.assertEqual(positions, tuple(sorted(positions)))
+
+    def test_rtf_combines_quote_and_nested_list_indentation(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "> Intro\n>\n"
+                "> - Quoted one\n"
+                ">     - Quoted two\n>\n"
+                "> Outro"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        blocks = (
+            r"\li720\ri360\f0\fs22 Intro",
+            r"\li1080\ri360\fi-240 \bullet\tab Quoted one",
+            r"\li1440\ri360\fi-240 \bullet\tab Quoted two",
+            r"\li720\ri360\f0\fs22 Outro",
+        )
+        positions = tuple(rtf.index(block) for block in blocks)
+        self.assertEqual(positions, tuple(sorted(positions)))
+
+    def test_rtf_renders_multiple_list_item_paragraphs_before_nested_list(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "- First paragraph\n\n"
+                "    Second paragraph\n\n"
+                "    - Nested after paragraphs\n\n"
+                "- Last"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        blocks = (
+            r"\li360\ri0\fi-240 \bullet\tab First paragraph",
+            r"\li360\ri0 Second paragraph",
+            r"\li720\ri0\fi-240 \bullet\tab Nested after paragraphs",
+            r"\li360\ri0\fi-240 \bullet\tab Last",
+        )
+        positions = tuple(rtf.index(block) for block in blocks)
+        self.assertEqual(positions, tuple(sorted(positions)))
+        self.assertNotIn(r"\bullet\tab Second paragraph", rtf)
+
+    def test_rtf_encodes_diverse_unicode_as_utf16_code_units(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "Latin é; combining e\u0301; Hebrew אב; CJK 漢; emoji 🧑‍💻"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        for encoded in (
+            r"\u233?",
+            r"e\u769?",
+            r"\u1488?\u1489?",
+            r"\u28450?",
+            r"\u-10178?\u-8751?\u8205?\u-10179?\u-9029?",
+        ):
+            with self.subTest(encoded=encoded):
+                self.assertIn(encoded, rtf)
+        self.assertEqual(rtf.count("{"), rtf.count("}"))
 
 
 if __name__ == "__main__":
