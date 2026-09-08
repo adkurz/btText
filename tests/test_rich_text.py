@@ -79,6 +79,35 @@ class RichTextRenderingTestCase(unittest.TestCase):
                 self.assertIn("<strong>label</strong>", result.html)
                 self.assertIn(b"\\b label", result.rtf)
 
+    def test_images_are_replaced_with_alternative_text_in_every_format(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "Before ![diagram](https://example.com/tracker.png) after"
+            ),
+            True,
+        )
+
+        self.assertEqual(result.plain_text, "Before diagram after")
+        self.assertEqual(result.html, "<p>Before diagram after</p>")
+        self.assertIn(b"Before diagram after", result.rtf)
+        self.assertNotIn("<img", result.html)
+        self.assertNotIn("tracker.png", result.html)
+        self.assertNotIn(b"tracker.png", result.rtf)
+
+    def test_image_replacement_preserves_surrounding_inline_markup(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "**Before ![diagram](https://example.com/image.png) after**"
+            ),
+            True,
+        )
+
+        self.assertEqual(
+            result.html,
+            "<p><strong>Before diagram after</strong></p>",
+        )
+        self.assertIn(b"\\b Before diagram after", result.rtf)
+
     def test_cursor_offset_is_mapped_to_rendered_plain_text(self):
         result = render_clipboard_content(
             RenderedSnippet("**AB** C", cursor_offset_from_end=1),

@@ -77,6 +77,7 @@ def render_clipboard_content(
 
     root = _parse_markdown_tree(rendered.text)
     _sanitize_links(root)
+    _replace_images_with_alt_text(root)
     plain_text = _render_plain_text(root)
     cursor_offset = None
     if marker is not None:
@@ -135,6 +136,22 @@ def _is_allowed_link_target(href: str) -> bool:
     return bool(target.netloc)
 
 
+def _replace_images_with_alt_text(parent: ElementTree.Element) -> None:
+    """Replace every image with its alternative text in document order."""
+    previous: ElementTree.Element | None = None
+    for child in list(parent):
+        if child.tag == "img":
+            replacement = child.get("alt", "") + (child.tail or "")
+            if previous is None:
+                parent.text = (parent.text or "") + replacement
+            else:
+                previous.tail = (previous.tail or "") + replacement
+            parent.remove(child)
+            continue
+        _replace_images_with_alt_text(child)
+        previous = child
+
+
 def _render_plain_text(root: ElementTree.Element) -> str:
     """Render the supported Markdown element tree as readable plain text."""
     parts: list[str] = []
@@ -156,8 +173,6 @@ def _render_plain_text(root: ElementTree.Element) -> str:
         elif tag == "hr":
             parts.append("---")
             end_block()
-        elif tag == "img":
-            append_text(element.get("alt"))
         elif tag in ("ul", "ol"):
             ordered = tag == "ol"
             item_number = int(element.get("start", "1"))
@@ -353,8 +368,6 @@ class _RtfRenderer:
                 + contents
                 + r"}}}"
             )
-        if tag == "img":
-            return _escape_rtf_text(element.get("alt", ""))
         return contents
 
 
