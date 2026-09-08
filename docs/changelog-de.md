@@ -4,6 +4,8 @@
 
 - Hinzugefügt: Textbausteine können nun optional mit einfachem Markdown formatiert werden. Beim Einfügen werden sie nicht nur als Reintext, sondern auch als HTML und RTF ausgegeben, sodass die Formatierung beibehalten wird, sofern sie vom Zielprogramm unterstützt wird. Dies ermöglicht einfache Formatierungen (Fettdruck, Kursivschrift usw.), Links und Zitate.
 
+- Geändert: Auf UPX zur Kompression der Programmdateien wird zu Gunsten einer höheren Geschwindigkeit verzichtet.
+
 ## [v1.2.1] 23.08.2026
 
 - Verbessert: Der Installer achtet nun darauf, das btText nicht in einen bereits vorhandenen Ordner installiert wird, welcher nicht btText selbst enthält. Neuinstallation und Aktualisierungen sind weiterhin problemlos möglich.

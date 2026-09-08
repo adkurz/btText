@@ -3,6 +3,9 @@
 ## [Unreleased] 
 
 - Added: Text snippets can now optionally be formatted using simple Markdown. When inserted, they are output not only as plain text but also as HTML and RTF, so that the formatting is preserved if supported by the target program. This allows for simple formatting (bold, italics, etc.), links, and citations.
+
+- Changed: UPX is no longer used to compress the program files in order to achieve faster performance.
+
 ## [v1.2.1] 2026-08-23
 
 - Improved: The installer now ensures that btText is not installed into an existing folder that does not contain btText itself. New installations and updates are still possible without any problems.
