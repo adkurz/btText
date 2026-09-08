@@ -116,6 +116,33 @@ Click **Save** to apply changes. The name and content must not be empty. A hotst
 
 To edit, select a single text snippet and select **Edit text snippet** (Textbaustein bearbeiten) from the context menu or press `F2`.
 
+### Markdown Formatting
+
+Markdown provides simple formatting directly in the content of a text snippet. Enable **Enable Markdown formatting** when creating or editing the snippet. The setting applies only to that snippet; snippets without Markdown enabled continue to be inserted unchanged.
+
+Among others, you can use the following syntax:
+
+- `**important text**` for **bold text**;
+- `*emphasized text*` for *italic text*;
+- `# Heading` for a heading;
+- `- Item` for a bulleted list;
+- `1. Item` for a numbered list;
+- `[Label](https://example.com)` for a link;
+- `` `code` `` for code within a line;
+- `>` at the start of a line for a quotation.
+
+A blank line in the Markdown text separates two paragraphs. Lines that merely appear one below another in the editor are treated as continuous text within a normal paragraph. To add an explicit line break within a paragraph, enter two spaces at the end of the line.
+
+For normal copying, insertion, or hotstring expansion, btText prepares the content in several representations. The target program decides which one it uses:
+
+- Programs that support text formatting, such as Microsoft Word and many email applications, receive headings, emphasis, lists, and links where possible.
+- Plain-text programs such as Notepad receive only the readable text without formatting. A blank line remains between two paragraphs so that the paragraph structure is still recognizable.
+- **Copy raw content to clipboard** always copies the original Markdown syntax and does not apply formatting.
+
+The result may vary slightly between target programs. In particular, Microsoft Word may display an additional paragraph mark after a final paragraph when the text is explicitly pasted as HTML. btText avoids this additional paragraph mark in the Rich Text Format preferred by Word. Images are not currently embedded as part of a text snippet and should therefore not be treated as reliably transferable Markdown content.
+
+If a Markdown snippet contains variables, btText replaces them first and then formats the resulting text. For security reasons, HTML entered directly into the snippet is not activated as formatting and is instead treated as ordinary text.
+
 ### Variables
 
 Text snippets can contain variables that btText replaces immediately before insertion. Variable and format names are always English, independently of the user-interface language. For example, `{{date}}` inserts the current date and `{{time}}` inserts the current time.

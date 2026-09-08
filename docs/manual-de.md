@@ -116,6 +116,33 @@ Mit **Speichern** übernehmen Sie die Änderungen. Der Name und der Inhalt dürf
 
 Zum Bearbeiten markieren Sie einen einzelnen Textbaustein und wählen im Kontextmenü **Textbaustein bearbeiten** oder drücken `F2`.
 
+### Markdown-Formatierung
+
+Markdown ermöglicht einfache Formatierungen direkt im Inhalt eines Textbausteins. Aktivieren Sie dazu beim Anlegen oder Bearbeiten des Textbausteins **Markdown-Formatierung aktivieren**. Die Einstellung gilt nur für diesen Textbaustein; Textbausteine ohne aktiviertes Markdown werden weiterhin unverändert eingefügt.
+
+Sie können unter anderem folgende Schreibweisen verwenden:
+
+- `**wichtiger Text**` für **fetten Text**;
+- `*betonter Text*` für *kursiven Text*;
+- `# Überschrift` für eine Überschrift;
+- `- Eintrag` für eine Aufzählung;
+- `1. Eintrag` für eine nummerierte Liste;
+- `[Bezeichnung](https://example.com)` für einen Link;
+- `` `Code` `` für Code innerhalb einer Zeile;
+- `>` am Zeilenanfang für ein Zitat.
+
+Eine Leerzeile im Markdown-Text trennt zwei Absätze. Zeilen, die nur im Editor untereinander stehen, werden innerhalb eines normalen Absatzes dagegen wie fortlaufender Text behandelt. Für einen ausdrücklichen Zeilenumbruch innerhalb eines Absatzes können Sie am Ende der Zeile zwei Leerzeichen eingeben.
+
+Beim normalen Kopieren, Einfügen oder Verwenden als Hotstring bereitet btText den Inhalt in mehreren Darstellungen vor. Das Zielprogramm entscheidet selbst, welche Darstellung es verwendet:
+
+- Programme mit Textformatierung, beispielsweise Microsoft Word oder viele E-Mail-Programme, erhalten nach Möglichkeit Überschriften, Hervorhebungen, Listen und Links.
+- Reintextprogramme wie Editor erhalten nur den lesbaren Text ohne Formatierungen. Zwischen zwei Absätzen bleibt dabei eine Leerzeile erhalten, damit die Absatzgliederung erkennbar bleibt.
+- **Rohinhalt in die Zwischenablage kopieren** kopiert immer die ursprüngliche Markdown-Schreibweise und wendet keine Formatierung an.
+
+Das Ergebnis kann sich je nach Zielprogramm leicht unterscheiden. Insbesondere kann Microsoft Word beim ausdrücklich als HTML eingefügten Text nach einem abschließenden Absatz eine zusätzliche Absatzmarke anzeigen. Beim von Word bevorzugten Rich-Text-Format vermeidet btText diese zusätzliche Absatzmarke. Bilder werden derzeit nicht als Bestandteil eines Textbausteins eingebettet und sollten deshalb nicht als verlässlich übertragbare Markdown-Inhalte verwendet werden.
+
+Enthält ein Markdown-Textbaustein Variablen, ersetzt btText diese zuerst und formatiert anschließend den entstandenen Text. Direkt eingegebenes HTML wird aus Sicherheitsgründen nicht als Formatierung ausgeführt, sondern als normaler Text behandelt.
+
 ### Variablen
 
 Textbausteine können Variablen enthalten, die btText unmittelbar vor dem Einfügen ersetzt. Variablennamen und Formatnamen sind unabhängig von der Sprache der Benutzeroberfläche immer Englisch. Beispielsweise fügt `{{date}}` das aktuelle Datum und `{{time}}` die aktuelle Uhrzeit ein.
