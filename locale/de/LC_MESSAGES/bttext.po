@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-09-08 17:14+0200\n"
+"POT-Creation-Date: 2026-09-08 18:07+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -748,7 +748,7 @@ msgstr "&Vorhandene Datenbank öffnen …"
 #. Translators: Snippet-editor button that discards unsaved changes and
 #. Translators: Button that closes the variable picker without inserting.
 #: ui/database_selection.py:57 ui/search_dialog.py:62 ui/settings_dialog.py:101
-#: ui/snippet_editor.py:172 ui/variable_dialog.py:257
+#: ui/snippet_editor.py:176 ui/variable_dialog.py:257
 msgid "&Cancel"
 msgstr "&Abbrechen"
 
@@ -1377,22 +1377,22 @@ msgstr "&Hotstring"
 msgid "Optional; expands after Space, Enter, Tab, or punctuation"
 msgstr "Optional; wird nach Leertaste, Eingabetaste, Tab oder Satzzeichen erweitert"
 
-#. Translators: Checkbox enabling Markdown formatting for one snippet.
-#: ui/snippet_editor.py:113
-msgid "Enable &Markdown formatting"
-msgstr "&Markdown-Formatierung aktivieren"
-
 #. Translators: Label for the snippet text that will be inserted.
 #. "&" marks the mnemonic for the adjacent multiline editor.
-#: ui/snippet_editor.py:117
+#: ui/snippet_editor.py:112
 msgid "C&ontent"
 msgstr "&Inhalt"
 
 #. Translators: Snippet-editor button that opens the variable picker.
 #. "&" marks the keyboard mnemonic.
-#: ui/snippet_editor.py:127
+#: ui/snippet_editor.py:122
 msgid "Insert &variable..."
 msgstr "&Variable einfügen..."
+
+#. Translators: Checkbox enabling Markdown formatting for one snippet.
+#: ui/snippet_editor.py:128
+msgid "Enable &Markdown formatting"
+msgstr "&Markdown-Formatierung aktivieren"
 
 #. Translators: Snippet-editor button that previews resolved variables.
 #. "&" marks the keyboard mnemonic.
@@ -1402,24 +1402,24 @@ msgstr "V&orschau..."
 
 #. Translators: Snippet-editor button that saves the snippet and closes
 #. the dialog. "&" marks the keyboard mnemonic.
-#: ui/snippet_editor.py:168
+#: ui/snippet_editor.py:172
 msgid "&Save"
 msgstr "&Speichern"
 
 #. Translators: Confirmation shown when closing the snippet
 #. editor would discard changes made since it was opened.
-#: ui/snippet_editor.py:242
+#: ui/snippet_editor.py:246
 msgid "Do you want to discard the unsaved changes?"
 msgstr "Möchten Sie die ungespeicherten Änderungen verwerfen?"
 
 #. Translators: Title of the unsaved-changes confirmation in the
 #. snippet editor.
-#: ui/snippet_editor.py:245
+#: ui/snippet_editor.py:249
 msgid "Discard unsaved changes?"
 msgstr "Ungespeicherte Änderungen verwerfen?"
 
 #. Translators: Title of a dialog reporting invalid form input.
-#: ui/snippet_editor.py:360 ui/validators.py:29
+#: ui/snippet_editor.py:364 ui/validators.py:29
 msgid "Validation error"
 msgstr "Validierungsfehler"
 

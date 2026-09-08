@@ -61,7 +61,7 @@ class SnippetEditor(wx.Dialog):
             cols=2, vgap=self.FromDIP(10), hgap=self.FromDIP(12)
         )
         form_sizer.AddGrowableCol(1, 1)
-        form_sizer.AddGrowableRow(5, 1)
+        form_sizer.AddGrowableRow(4, 1)
 
         # Create fields.
         # Translators: Label for the editable snippet name. "&" marks the
@@ -107,11 +107,6 @@ class SnippetEditor(wx.Dialog):
             # Translators: Hint explaining when an optional hotstring expands.
             _("Optional; expands after Space, Enter, Tab, or punctuation")
         )
-        self.markdown_input = wx.CheckBox(
-            self.pane,
-            # Translators: Checkbox enabling Markdown formatting for one snippet.
-            label=_("Enable &Markdown formatting"),
-        )
         # Translators: Label for the snippet text that will be inserted.
         # "&" marks the mnemonic for the adjacent multiline editor.
         self.content_label = wx.StaticText(self.pane, label=_("C&ontent"))
@@ -127,6 +122,11 @@ class SnippetEditor(wx.Dialog):
             label=_("Insert &variable..."),
         )
         self.insert_variable_button.Bind(wx.EVT_BUTTON, self._on_insert_variable)
+        self.markdown_input = wx.CheckBox(
+            self.pane,
+            # Translators: Checkbox enabling Markdown formatting for one snippet.
+            label=_("Enable &Markdown formatting"),
+        )
         self.preview_button = wx.Button(
             self.pane,
             # Translators: Snippet-editor button that previews resolved variables.
@@ -142,8 +142,6 @@ class SnippetEditor(wx.Dialog):
         form_sizer.Add(self.weight_input, 0, wx.EXPAND)
         form_sizer.Add(self.hotstring_label, 0, wx.ALIGN_CENTER_VERTICAL)
         form_sizer.Add(self.hotstring_input, 0, wx.EXPAND)
-        form_sizer.AddSpacer(0)
-        form_sizer.Add(self.markdown_input, 0, wx.EXPAND)
         form_sizer.Add(self.content_label, 0, wx.ALIGN_TOP)
         content_sizer = wx.BoxSizer(wx.VERTICAL)
         content_sizer.Add(self.content_input, 1, wx.EXPAND)
@@ -152,6 +150,12 @@ class SnippetEditor(wx.Dialog):
             self.insert_variable_button,
             0,
             wx.RIGHT,
+            self.FromDIP(8),
+        )
+        content_action_sizer.Add(
+            self.markdown_input,
+            0,
+            wx.ALIGN_CENTER_VERTICAL | wx.RIGHT,
             self.FromDIP(8),
         )
         content_action_sizer.Add(self.preview_button)

@@ -255,6 +255,14 @@ class SnippetEditorConstructionTestCase(unittest.TestCase):
                 self.assertTrue(dialog.insert_variable_button.IsEnabled())
                 self.assertTrue(dialog.preview_button.IsEnabled())
                 self.assertIsInstance(dialog.markdown_input, wx.CheckBox)
+                self.assertIs(
+                    dialog.insert_variable_button.GetNextSibling(),
+                    dialog.markdown_input,
+                )
+                self.assertIs(
+                    dialog.markdown_input.GetNextSibling(),
+                    dialog.preview_button,
+                )
                 self.assertEqual(
                     dialog.content_input.GetWindowStyle() & wx.TE_MULTILINE,
                     wx.TE_MULTILINE,
