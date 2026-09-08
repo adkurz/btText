@@ -5,6 +5,7 @@ from collections.abc import Callable
 import wx
 
 from core import datamodel
+from core.rich_text import render_clipboard_content
 from core.events import EventEmitter
 import ui.validators as validators
 from core.error_messages import format_user_error
@@ -32,8 +33,8 @@ class SnippetEditor(wx.Dialog):
         ee: EventEmitter,
         model: datamodel.DataModel,
         category_id: int,
-        render_snippet: Callable[[str], RenderedSnippet],
-        validate_snippet: Callable[[str], None],
+        render_snippet: Callable[[str, bool], RenderedSnippet],
+        validate_snippet: Callable[[str, bool], None],
         variable_suggestions: tuple[VariableSuggestion, ...],
         snippet: datamodel.Snippet | None = None,
     ):
@@ -121,6 +122,11 @@ class SnippetEditor(wx.Dialog):
             label=_("Insert &variable..."),
         )
         self.insert_variable_button.Bind(wx.EVT_BUTTON, self._on_insert_variable)
+        self.markdown_input = wx.CheckBox(
+            self.pane,
+            # Translators: Checkbox enabling Markdown formatting for one snippet.
+            label=_("Enable &Markdown formatting"),
+        )
         self.preview_button = wx.Button(
             self.pane,
             # Translators: Snippet-editor button that previews resolved variables.
@@ -144,6 +150,12 @@ class SnippetEditor(wx.Dialog):
             self.insert_variable_button,
             0,
             wx.RIGHT,
+            self.FromDIP(8),
+        )
+        content_action_sizer.Add(
+            self.markdown_input,
+            0,
+            wx.ALIGN_CENTER_VERTICAL | wx.RIGHT,
             self.FromDIP(8),
         )
         content_action_sizer.Add(self.preview_button)
@@ -204,14 +216,16 @@ class SnippetEditor(wx.Dialog):
         self.weight_input.SetSelection(s.weight - 1)
         self.content_input.SetValue(s.content)
         self.hotstring_input.SetValue(s.hotstring or "")
+        self.markdown_input.SetValue(s.markdown_enabled)
 
-    def _current_state(self) -> tuple[str, int, int, str, str]:
+    def _current_state(self) -> tuple[str, int, int, str, bool, str]:
         """Return all editable values for unsaved-change detection."""
         return (
             self.name_input.GetValue(),
             self.category_input.GetSelection(),
             self.weight_input.GetSelection(),
             self.hotstring_input.GetValue(),
+            self.markdown_input.GetValue(),
             self.content_input.GetValue(),
         )
 
@@ -267,28 +281,44 @@ class SnippetEditor(wx.Dialog):
 
     def _on_preview(self, event: wx.CommandEvent) -> None:
         """Resolve current content and show it without changing the editor."""
-        rendered = self._render_variables(self.content_input.GetValue())
+        markdown_enabled = self.markdown_input.GetValue()
+        rendered = self._render_variables(
+            self.content_input.GetValue(),
+            markdown_enabled,
+        )
         if rendered is None:
             return
+        preview_text = render_clipboard_content(
+            rendered,
+            markdown_enabled,
+        ).plain_text
         with utils.managed_dialog(
-            VariablePreviewDialog(self, rendered.text)
+            VariablePreviewDialog(self, preview_text)
         ) as dialog:
             dialog.ShowModal()
 
-    def _render_variables(self, content: str) -> RenderedSnippet | None:
+    def _render_variables(
+        self,
+        content: str,
+        markdown_enabled: bool = False,
+    ) -> RenderedSnippet | None:
         """Render content or present one localized variable error."""
         try:
-            return self._render_snippet(content)
+            return self._render_snippet(content, markdown_enabled)
         except VariableRenderingCancelled:
             return None
         except VariableError as error:
             show_variable_error(self, error)
             return None
 
-    def _variables_are_valid(self, content: str) -> bool:
+    def _variables_are_valid(
+        self,
+        content: str,
+        markdown_enabled: bool,
+    ) -> bool:
         """Validate template structure without resolving contextual values."""
         try:
-            self._validate_snippet(content)
+            self._validate_snippet(content, markdown_enabled)
         except VariableError as error:
             show_variable_error(self, error)
             return False
@@ -307,7 +337,8 @@ class SnippetEditor(wx.Dialog):
             return
         snippet_weight = self.weight_input.GetSelection() + 1
         snippet_content = self.content_input.GetValue()
-        if not self._variables_are_valid(snippet_content):
+        markdown_enabled = self.markdown_input.GetValue()
+        if not self._variables_are_valid(snippet_content, markdown_enabled):
             self.content_input.SetFocus()
             return
         snippet_hotstring = self.hotstring_input.GetValue()
@@ -317,6 +348,7 @@ class SnippetEditor(wx.Dialog):
             weight=snippet_weight,
             content=snippet_content,
             hotstring=snippet_hotstring or None,
+            markdown_enabled=markdown_enabled,
         )
         try:
             if self._snippet is None:  # Add new snippet

@@ -24,21 +24,26 @@ class SnippetEditorUnsavedChangesTestCase(unittest.TestCase):
             category_input=controls[1],
             weight_input=controls[2],
             hotstring_input=controls[3],
-            content_input=controls[4],
+            markdown_input=controls[4],
+            content_input=controls[5],
             _initial_state=tuple(values if initial is None else initial),
         )
         dialog._current_state = lambda: SnippetEditor._current_state(dialog)
         return dialog
 
     def test_unchanged_values_are_not_reported_as_unsaved(self):
-        dialog = self._dialog_with_values(("Name", 1, 2, "abbr", "Content"))
+        dialog = self._dialog_with_values(
+            ("Name", 1, 2, "abbr", False, "Content")
+        )
 
         self.assertFalse(SnippetEditor._has_unsaved_changes(dialog))
 
     def test_each_editable_value_participates_in_change_detection(self):
-        initial = ("Name", 1, 2, "abbr", "Content")
+        initial = ("Name", 1, 2, "abbr", False, "Content")
 
-        for index, replacement in enumerate(("Other", 3, 0, "new", "Changed")):
+        for index, replacement in enumerate(
+            ("Other", 3, 0, "new", True, "Changed")
+        ):
             with self.subTest(index=index):
                 current = list(initial)
                 current[index] = replacement
@@ -167,6 +172,7 @@ class SnippetEditorVariableTestCase(unittest.TestCase):
                 GetValue=Mock(return_value="Today is {{date:long}}.")
             ),
             hotstring_input=Mock(GetValue=Mock(return_value="dated")),
+            markdown_input=Mock(GetValue=Mock(return_value=True)),
             _variables_are_valid=Mock(return_value=variables_are_valid),
             _model=model,
             _snippet=None,
@@ -181,7 +187,8 @@ class SnippetEditorVariableTestCase(unittest.TestCase):
         SnippetEditor.save(dialog, Mock())
 
         dialog._variables_are_valid.assert_called_once_with(
-            "Today is {{date:long}}."
+            "Today is {{date:long}}.",
+            True,
         )
         dialog.content_input.SetFocus.assert_called_once_with()
         model.add_snippet.assert_not_called()
@@ -197,6 +204,7 @@ class SnippetEditorVariableTestCase(unittest.TestCase):
         self.assertEqual(saved_snippet.category_id, 7)
         self.assertEqual(saved_snippet.weight, 2)
         self.assertEqual(saved_snippet.hotstring, "dated")
+        self.assertTrue(saved_snippet.markdown_enabled)
         self.assertTrue(dialog._closing_allowed)
         dialog.EndModal.assert_called_once_with(wx.OK)
 
@@ -209,10 +217,12 @@ class SnippetEditorVariableTestCase(unittest.TestCase):
         dialog = SimpleNamespace(
             content_input=Mock(GetValue=Mock(return_value="{{date}}")),
             _render_variables=Mock(return_value=RenderedSnippet("06.08.26")),
+            markdown_input=Mock(GetValue=Mock(return_value=False)),
         )
 
         SnippetEditor._on_preview(dialog, Mock())
 
+        dialog._render_variables.assert_called_once_with("{{date}}", False)
         preview_class.assert_called_once_with(dialog, "06.08.26")
         preview.ShowModal.assert_called_once_with()
 
@@ -244,6 +254,15 @@ class SnippetEditorConstructionTestCase(unittest.TestCase):
                 self.assertIsInstance(dialog.content_input, wx.TextCtrl)
                 self.assertTrue(dialog.insert_variable_button.IsEnabled())
                 self.assertTrue(dialog.preview_button.IsEnabled())
+                self.assertIsInstance(dialog.markdown_input, wx.CheckBox)
+                self.assertIs(
+                    dialog.insert_variable_button.GetNextSibling(),
+                    dialog.markdown_input,
+                )
+                self.assertIs(
+                    dialog.markdown_input.GetNextSibling(),
+                    dialog.preview_button,
+                )
                 self.assertEqual(
                     dialog.content_input.GetWindowStyle() & wx.TE_MULTILINE,
                     wx.TE_MULTILINE,

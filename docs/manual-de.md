@@ -107,6 +107,7 @@ Wählen Sie im Kategorienbaum eine Kategorie und öffnen Sie im Kontextmenü der
 
 - **Name**: Bezeichnung des Textbausteins; innerhalb einer Kategorie muss sie eindeutig sein.
 - **Kategorie**: Zielkategorie des Textbausteins. Hier ist bereits die aktuell gewählte Kategorie vorbelegt.
+- **Markdown-Formatierung aktivieren**: Aktiviert einfache Formatierungen für diesen Textbaustein. Schreibweisen, unterstützte Inhalte und das Verhalten verschiedener Zielprogramme beschreibt das Kapitel [Markdown-Formatierung](#markdown-formatierung).
 - **Gewichtung**: Priorität für die Sortierung und Suche ("niedrig", "mittel", "hoch". Standard: "niedrig").
 - **Hotstring**: optionales Kürzel für die automatische Erweiterung.
 - **Inhalt**: der Text, der eingefügt werden soll.
@@ -137,11 +138,42 @@ Kontextvariablen unterstützen keine Formatangabe. Beim Speichern prüft btText 
 
 Mit `{{input:Beschriftung}}` können Sie einen Wert interaktiv abfragen. Beispielsweise zeigt `{{input:Kundennummer}}` vor der Vorschau oder dem Einfügen ein Eingabefeld mit der Beschriftung „Kundennummer“ an und setzt den eingegebenen Text an dieser Stelle ein. Benötigt ein Textbaustein mehrere unterschiedliche Eingaben, zeigt btText alle Felder gemeinsam in einem Dialog und in der Reihenfolge ihres ersten Vorkommens an. Eine Beschriftung ist erforderlich und darf keinen Doppelpunkt und keine Variablenklammern enthalten. Kommt dieselbe Beschriftung mehrfach vor, erscheint sie im Dialog nur einmal und btText verwendet die Antwort an allen Stellen. Eine leere Antwort ist zulässig. Wenn Sie den gemeinsamen Eingabedialog abbrechen, wird auch die Vorschau beziehungsweise das Einfügen ohne Fehlermeldung abgebrochen. Eingaben werden nicht erneut als Variablen ausgewertet.
 
-`{{cursor}}` legt fest, wo sich die Schreibmarke nach dem Einfügen befinden soll. Die Anweisung selbst wird aus dem ausgegebenen Text entfernt. Steht nach ihr noch Text, bewegt btText die Schreibmarke nach dem Einfügen um die entsprechende Anzahl Zeichen zurück. `{{cursor}}` darf in einem Textbaustein nur einmal vorkommen und unterstützt keine Argumente. In der Vorschau wird nur der bereinigte Text angezeigt; eine Schreibmarkenbewegung findet dort nicht statt. Bei Hotstrings berücksichtigt btText zusätzlich ein beibehaltenes Begrenzungszeichen.
+`{{cursor}}` legt bei Textbausteinen ohne Markdown-Formatierung fest, wo sich die Schreibmarke nach dem Einfügen befinden soll. Die Anweisung selbst wird aus dem ausgegebenen Text entfernt. Steht nach ihr noch Text, bewegt btText die Schreibmarke nach dem Einfügen um die entsprechende Anzahl Zeichen zurück. `{{cursor}}` darf in einem Textbaustein nur einmal vorkommen und unterstützt keine Argumente. In der Vorschau wird nur der bereinigte Text angezeigt; eine Schreibmarkenbewegung findet dort nicht statt. Bei Hotstrings berücksichtigt btText zusätzlich ein beibehaltenes Begrenzungszeichen.
 
 Um die Zeichen `{{` oder `}}` unverändert auszugeben, verdoppeln Sie die jeweilige Zeichenfolge zu `{{{{` beziehungsweise `}}}}`. Unbekannte Variablen, ungültige Formate und fehlerhafte Klammern verhindern das Einfügen und werden als Fehler gemeldet.
 
 Im Textbaustein-Editor zeigt **Variable einfügen** die verfügbaren Variablen und deren mögliche Formate oder Einstellungen. Für `input` geben Sie anstelle eines Formats die gewünschte Beschriftung des zu erzeugenden Eingabefeldes ein. Für Variablen ohne zusätzliche Auswahl, etwa `{{app}}`, wird der Einstellungsbereich ausgeblendet. Im Eingabefeld Vorschau wird eine Vorschau der Variable angezeigt. Bei Variablen, bei welchen dies nicht möglich ist, wird dieser Bereich ebenfalls ausgeblendet. Der gewählte Ausdruck ersetzt die aktuelle Markierung oder wird an der Schreibmarke eingefügt. Mit **Vorschau** können Sie den vollständig aufgelösten Text in einem schreibgeschützten, mit der Tabulatortaste erreichbaren Textfeld prüfen und bei Bedarf kopieren. Beim Speichern prüft btText die Variablen erneut, speichert jedoch weiterhin den ursprünglichen Ausdruck und nicht den momentan angezeigten Wert.
+
+### Markdown-Formatierung
+
+Markdown ermöglicht einfache Formatierungen direkt im Inhalt eines Textbausteins. Aktivieren Sie dazu beim Anlegen oder Bearbeiten des Textbausteins **Markdown-Formatierung aktivieren**. Die Einstellung gilt nur für diesen Textbaustein; Textbausteine ohne aktiviertes Markdown werden weiterhin unverändert eingefügt.
+
+Sie können unter anderem folgende Schreibweisen verwenden:
+
+- `**wichtiger Text**` für **fetten Text**;
+- `*betonter Text*` für *kursiven Text*;
+- `# Überschrift` für eine Überschrift;
+- `- Eintrag` für eine Aufzählung;
+- `1. Eintrag` für eine nummerierte Liste;
+- `[Bezeichnung](https://example.com)` für einen Link;
+- `` `Code` `` für Code innerhalb einer Zeile;
+- `>` am Zeilenanfang für ein Zitat.
+
+Anklickbare Links müssen mit `http://`, `https://` oder `mailto:` beginnen. Andere Linkziele gibt btText aus Sicherheitsgründen als normalen beschrifteten Text ohne Linkfunktion aus.
+
+Eine Leerzeile im Markdown-Text trennt zwei Absätze. Zeilen, die nur im Editor untereinander stehen, werden innerhalb eines normalen Absatzes dagegen wie fortlaufender Text behandelt. Für einen ausdrücklichen Zeilenumbruch innerhalb eines Absatzes können Sie am Ende der Zeile zwei Leerzeichen eingeben.
+
+Beim normalen Kopieren, Einfügen oder Verwenden als Hotstring bereitet btText den Inhalt in mehreren Darstellungen vor. Das Zielprogramm entscheidet selbst, welche Darstellung es verwendet:
+
+- Programme mit Textformatierung, beispielsweise Microsoft Word oder viele E-Mail-Programme, erhalten nach Möglichkeit Überschriften, Hervorhebungen, Listen und Links.
+- Reintextprogramme wie Editor erhalten nur den lesbaren Text ohne Formatierungen. Zwischen zwei Absätzen bleibt dabei eine Leerzeile erhalten, damit die Absatzgliederung erkennbar bleibt.
+- **Rohinhalt in die Zwischenablage kopieren** kopiert immer die ursprüngliche Markdown-Schreibweise und wendet keine Formatierung an.
+
+Das Ergebnis kann sich je nach Zielprogramm leicht unterscheiden. Insbesondere kann Microsoft Word beim ausdrücklich als HTML eingefügten Text nach einem abschließenden Absatz eine zusätzliche Absatzmarke anzeigen. Beim von Word bevorzugten Rich-Text-Format vermeidet btText diese zusätzliche Absatzmarke. Bilder werden nicht eingebettet. Verwendet ein Markdown-Text eine Bildschreibweise, gibt btText stattdessen in allen Formaten den Alternativtext des Bildes aus.
+
+Enthält ein Markdown-Textbaustein Variablen, ersetzt btText diese zuerst und formatiert anschließend den entstandenen Text. Direkt eingegebenes HTML wird aus Sicherheitsgründen nicht als Formatierung ausgeführt, sondern als normaler Text behandelt.
+
+Die Variable `{{cursor}}` steht in Markdown-Textbausteinen nicht zur Verfügung, weil formatierte Zielprogramme die genaue Schreibmarkenposition nicht zuverlässig übermitteln. Wenn Sie `{{cursor}}` verwenden möchten, deaktivieren Sie die Markdown-Formatierung für diesen Textbaustein. btText weist beim Speichern auf eine unzulässige Kombination hin.
 
 ### Text einfügen oder kopieren
 
@@ -150,6 +182,8 @@ Im Textbaustein-Editor zeigt **Variable einfügen** die verfügbaren Variablen u
 - `Eingabe` drücken oder im Kontextmenü **Textbaustein einfügen** wählen, um ihn in das zuvor aktive Windows-Fenster einzufügen;
 - wählen Sie **Text in die Zwischenablage kopieren** oder drücken Sie `Strg`+`Umschalt`+`C`, um Variablen aufzulösen und den resultierenden Text zu kopieren. Interaktive Variablen werden dabei im selben gemeinsamen Dialog wie beim Einfügen eines Textbausteins abgefragt;
 - wählen Sie **Rohinhalt in die Zwischenablage kopieren**, um den unveränderten Textbaustein einschließlich seiner Variablen-Platzhalter zu kopieren.
+
+Für Textbausteine mit aktivierter Markdown-Formatierung gelten die im Kapitel [Markdown-Formatierung](#markdown-formatierung) beschriebenen Regeln. Der Befehl **Rohinhalt in die Zwischenablage kopieren** behält unabhängig davon stets den ursprünglichen Inhalt bei.
 
 Beim Einfügen merkt sich btText das zuvor aktive Fenster, blendet sein eigenes Fenster aus und verwendet die Windows-Zwischenablage. Nach dem Vorgang wird der vorherige Inhalt der Zwischenablage wiederhergestellt, soweit dies möglich ist. btText wird dabei nicht beendet, sondern läuft im Hintergrund weiter und bleibt über Tastenkombination und Infobereich verfügbar. Das Zielprogramm muss ein normales Texteingabefeld bereitstellen. Ist kein gültiges vorheriges Fenster vorhanden oder kann es nicht aktiviert werden, zeigt btText einen Fehler an.
 

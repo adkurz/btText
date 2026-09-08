@@ -10,9 +10,11 @@ from core.error_messages import format_user_error
 from core.variables import (
     RenderedSnippet,
     ResolutionContext,
+    ResolutionPlan,
     VariableEngine,
     VariableError,
     VariableRenderingCancelled,
+    VariableResolutionError,
 )
 from i18n import _
 from platform_support import clipboard, windows
@@ -50,9 +52,10 @@ class SnippetVariableResolver:
         self,
         template: str,
         target_window: int | None = None,
+        markdown_enabled: bool = False,
     ) -> RenderedSnippet:
         """Collect all interactive values, capture context, then render once."""
-        plan = self._engine.plan(template)
+        plan = self._validated_plan(template, markdown_enabled)
         answers: dict[str, str] = {}
         if plan.input_labels:
             requested_answers = self._request_inputs(plan.input_labels)
@@ -72,9 +75,23 @@ class SnippetVariableResolver:
         )
         return self._engine.render(template, context)
 
-    def validate(self, template: str) -> None:
+    def validate(self, template: str, markdown_enabled: bool = False) -> None:
         """Validate a template without reading runtime context values."""
-        self._engine.validate(template)
+        self._validated_plan(template, markdown_enabled)
+
+    def _validated_plan(
+        self,
+        template: str,
+        markdown_enabled: bool,
+    ) -> ResolutionPlan:
+        """Plan variables and enforce formatting compatibility."""
+        plan = self._engine.plan(template)
+        if markdown_enabled and "cursor" in plan.variable_names:
+            raise VariableResolutionError(
+                "variable_cursor_markdown_unsupported",
+                "The cursor variable cannot be used with Markdown formatting.",
+            )
+        return plan
 
     @staticmethod
     def _current_timestamp() -> datetime:

@@ -6,6 +6,7 @@ import wx
 
 from platform_support import clipboard, clipboard_paste
 from core import datamodel
+from core.rich_text import ClipboardContent, render_clipboard_content
 from core.error_messages import format_user_error
 from core.events import EventEmitter
 from core.variables import (
@@ -34,8 +35,8 @@ class SnippetList(wx.ListView):
         transfer_buffer: TransferBuffer,
         include_copied_text_in_clipboard_history: Callable[[], bool],
         allow_copied_text_cloud_upload: Callable[[], bool],
-        render_snippet: Callable[[str], RenderedSnippet],
-        validate_snippet: Callable[[str], None],
+        render_snippet: Callable[[str, bool], RenderedSnippet],
+        validate_snippet: Callable[[str, bool], None],
         variable_suggestions: tuple[VariableSuggestion, ...],
     ):
         """Build columns, commands, and model-event subscriptions."""
@@ -274,7 +275,10 @@ class SnippetList(wx.ListView):
             return
         try:
             snippet = self._model.get_snippet(snippet_ids[0])
-            rendered = self._render_snippet(snippet.content)
+            rendered = self._render_snippet(
+                snippet.content,
+                snippet.markdown_enabled,
+            )
         except VariableRenderingCancelled:
             return
         except VariableError as error:
@@ -283,7 +287,8 @@ class SnippetList(wx.ListView):
         except datamodel.DataModelError as error:
             self._show_clipboard_error(error)
             return
-        if not self._copy_text(rendered.text):
+        content = render_clipboard_content(rendered, snippet.markdown_enabled)
+        if not self._copy_content(content):
             return
         # Translators: Status after a resolved snippet's text was copied to the
         # Windows clipboard.
@@ -310,10 +315,14 @@ class SnippetList(wx.ListView):
         self._ee.emit("status.changed", _("Raw content copied to clipboard."))
 
     def _copy_text(self, text: str) -> bool:
-        """Copy text with the configured Windows clipboard privacy options."""
+        """Copy plain text with the configured clipboard privacy options."""
+        return self._copy_content(ClipboardContent(text))
+
+    def _copy_content(self, content: ClipboardContent) -> bool:
+        """Copy all representations with the configured privacy options."""
         try:
-            clipboard.copy_text(
-                text,
+            clipboard.copy_content(
+                content,
                 include_in_history=(self._include_copied_text_in_clipboard_history()),
                 allow_cloud_upload=self._allow_copied_text_cloud_upload(),
             )

@@ -65,6 +65,7 @@ class Snippet:
     weight: int = 1
     id: int | None = None
     hotstring: str | None = None
+    markdown_enabled: bool = False
 
 
 @dataclasses.dataclass
@@ -323,7 +324,8 @@ class DataModel:
     def get_snippets(self, category_id: int):
         """Yield snippets ordered by weight, name, and ID."""
         sql = (
-            "SELECT id, category_id, name, weight, content, hotstring FROM snippet "
+            "SELECT id, category_id, name, weight, content, hotstring, "
+            "markdown_enabled FROM snippet "
             "WHERE category_id = ? "
             "ORDER BY weight DESC, name COLLATE NOCASE, id"
         )
@@ -335,6 +337,7 @@ class DataModel:
                 content=snippet["content"],
                 weight=snippet["weight"],
                 hotstring=snippet["hotstring"],
+                markdown_enabled=bool(snippet["markdown_enabled"]),
             )
 
     @_translate_sqlite_errors
@@ -344,7 +347,7 @@ class DataModel:
             return  # An empty query deliberately yields no results.
         sql = (
             "SELECT s.id, s.category_id, c.name AS category_name, s.name, "
-            "s.weight, s.content, s.hotstring FROM snippet s "
+            "s.weight, s.content, s.hotstring, s.markdown_enabled FROM snippet s "
             "INNER JOIN category c ON s.category_id = c.id "
             "WHERE s.name LIKE :term ESCAPE '\\' "
             "OR s.content LIKE :term ESCAPE '\\' "
@@ -362,13 +365,15 @@ class DataModel:
                 content=snippet["content"],
                 weight=snippet["weight"],
                 hotstring=snippet["hotstring"],
+                markdown_enabled=bool(snippet["markdown_enabled"]),
             )
 
     @_translate_sqlite_errors
     def get_snippet(self, id: int) -> Snippet:
         """Return one snippet or raise :class:`EntityNotFoundError`."""
         result = self._connection.execute(
-            "SELECT id, category_id, name, weight, content, hotstring "
+            "SELECT id, category_id, name, weight, content, hotstring, "
+            "markdown_enabled "
             "FROM snippet WHERE id = ?",
             (id,),
         )
@@ -386,6 +391,7 @@ class DataModel:
             content=snippet["content"],
             weight=snippet["weight"],
             hotstring=snippet["hotstring"],
+            markdown_enabled=bool(snippet["markdown_enabled"]),
         )
 
     @_translate_sqlite_errors
@@ -567,8 +573,10 @@ class DataModel:
     ) -> None:
         """Recursively copy children and snippets, omitting hotstrings."""
         connection.execute(
-            "INSERT INTO snippet (category_id, name, content, weight) "
-            "SELECT ?, name, content, weight FROM snippet WHERE category_id = ?",
+            "INSERT INTO snippet "
+            "(category_id, name, content, weight, markdown_enabled) "
+            "SELECT ?, name, content, weight, markdown_enabled "
+            "FROM snippet WHERE category_id = ?",
             (target_id, source_id),
         )
         for child in self.get_category_children(source_id):
@@ -629,6 +637,7 @@ class DataModel:
                 category_id=category_id,
                 weight=source.weight,
                 hotstring=None,
+                markdown_enabled=source.markdown_enabled,
             )
             self.validate_snippet(snippet)
             snippets.append(snippet)
@@ -637,12 +646,14 @@ class DataModel:
                 for snippet in snippets:
                     snippet.id = c.execute(
                         "INSERT INTO snippet "
-                        "(name, category_id, weight, content) VALUES (?, ?, ?, ?)",
+                        "(name, category_id, weight, content, markdown_enabled) "
+                        "VALUES (?, ?, ?, ?, ?)",
                         (
                             snippet.name,
                             snippet.category_id,
                             snippet.weight,
                             snippet.content,
+                            int(snippet.markdown_enabled),
                         ),
                     ).lastrowid
         except sqlite3.IntegrityError as error:
@@ -708,14 +719,15 @@ class DataModel:
             with self._connection as c:
                 result = c.execute(
                     "INSERT INTO snippet "
-                    "(name, category_id, weight, content, hotstring) "
-                    "VALUES (?, ?, ?, ?, ?)",
+                    "(name, category_id, weight, content, hotstring, "
+                    "markdown_enabled) VALUES (?, ?, ?, ?, ?, ?)",
                     (
                         snippet.name,
                         snippet.category_id,
                         snippet.weight,
                         snippet.content,
                         snippet.hotstring,
+                        int(snippet.markdown_enabled),
                     ),
                 )
         except sqlite3.IntegrityError as error:
@@ -739,13 +751,15 @@ class DataModel:
             with self._connection as c:
                 c.execute(
                     "UPDATE snippet SET name = ?, category_id = ?, "
-                    "weight = ?, content = ?, hotstring = ? WHERE id = ?",
+                    "weight = ?, content = ?, hotstring = ?, "
+                    "markdown_enabled = ? WHERE id = ?",
                     (
                         snippet.name,
                         snippet.category_id,
                         snippet.weight,
                         snippet.content,
                         snippet.hotstring,
+                        int(snippet.markdown_enabled),
                         snippet.id,
                     ),
                 )
@@ -767,7 +781,8 @@ class DataModel:
     def get_hotstring_snippets(self) -> tuple[Snippet, ...]:
         """Return all snippets that have an expansion hotstring."""
         rows = self._connection.execute(
-            "SELECT id, category_id, name, weight, content, hotstring "
+            "SELECT id, category_id, name, weight, content, hotstring, "
+            "markdown_enabled "
             "FROM snippet WHERE hotstring IS NOT NULL "
             "ORDER BY length(hotstring) DESC, id"
         )
@@ -779,6 +794,7 @@ class DataModel:
                 weight=row["weight"],
                 content=row["content"],
                 hotstring=row["hotstring"],
+                markdown_enabled=bool(row["markdown_enabled"]),
             )
             for row in rows
         )

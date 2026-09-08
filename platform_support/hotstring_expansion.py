@@ -1,6 +1,7 @@
-"""Replace typed hotstrings through a temporary Windows clipboard paste."""
+"""Replace typed hotstrings with temporary multi-format clipboard content."""
 
 from core.hotstrings import HotstringExpansionError
+from core.rich_text import ClipboardContent
 from platform_support import keyboard_input, windows
 from platform_support.clipboard import ClipboardError
 from platform_support.clipboard_paste import PendingPaste, restore_after_failure
@@ -26,7 +27,7 @@ def replay_suppressed_boundary(
 
 def expand_hotstring(
     target: windows.WindowIdentity,
-    text: str,
+    content: ClipboardContent | str,
     hotstring_length: int,
     boundary_key: int | None,
 ) -> PendingPaste:
@@ -36,7 +37,7 @@ def expand_hotstring(
             "hotstring_target_window_missing",
             "The active window no longer exists.",
         )
-    pending = PendingPaste.prepare(text)
+    pending = PendingPaste.prepare(content)
     if not windows.activate_window_identity(target):
         operation_error = HotstringExpansionError(
             "hotstring_target_window_activation_failed",

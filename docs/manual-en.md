@@ -107,6 +107,7 @@ Select a category in the category tree and select **New Text Snippet** (Neuer Te
 
 - **Name**: Designation of the text snippet; must be unique within a category.
 - **Category**: Target category of the text snippet. The currently selected category is pre-filled here.
+- **Enable Markdown formatting**: Enables simple formatting for this snippet. The syntax, supported content, and behavior in different target programs are described under [Markdown Formatting](#markdown-formatting).
 - **Weighting**: Priority for sorting and search ("low", "medium", "high". Default: "low").
 - **Hotstring**: Optional shortcut for automatic expansion.
 - **Content**: The text to be inserted.
@@ -137,11 +138,42 @@ Context variables do not accept a format. When saving, btText validates only the
 
 Use `{{input:Label}}` to request a value interactively. For example, `{{input:Customer number}}` displays an input field labeled “Customer number” before previewing or inserting and places the entered text at that position. If a snippet requires several distinct inputs, btText displays every field together in one dialog and in the order of its first occurrence. A label is required and cannot contain a colon or variable braces. If the same label occurs more than once, it appears only once in the dialog and btText uses the answer in every position. An empty answer is valid. Cancelling the combined input dialog also cancels the preview or insertion without displaying an error. Entered text is not evaluated again as variables.
 
-`{{cursor}}` specifies the text-caret position after insertion. The instruction itself is removed from the output. If text follows it, btText moves the caret left by the corresponding number of characters after insertion. A snippet may contain `{{cursor}}` only once, and the instruction accepts no arguments. The preview displays only the cleaned text and does not move a caret. For hotstrings, btText also accounts for a preserved boundary character.
+For snippets without Markdown formatting, `{{cursor}}` specifies the text-caret position after insertion. The instruction itself is removed from the output. If text follows it, btText moves the caret left by the corresponding number of characters after insertion. A snippet may contain `{{cursor}}` only once, and the instruction accepts no arguments. The preview displays only the cleaned text and does not move a caret. For hotstrings, btText also accounts for a preserved boundary character.
 
 To insert the characters `{{` or `}}` literally, double the corresponding sequence as `{{{{` or `}}}}`. Unknown variables, unsupported formats, and malformed braces prevent insertion and are reported as errors.
 
 In the text snippet editor, **Insert variable** shows the available variables and their possible formats or settings. For `input`, enter the desired label for the input field to be created instead of a format. For variables without additional selection, such as `{{app}}`, the settings area is hidden. A preview of the variable is displayed in the Preview input field. For variables for which this is not possible, this area is also hidden. The selected expression replaces the current selection or is inserted at the cursor. **Preview** allows you to review and, if necessary, copy the fully resolved text in a read-only, tab-accessible text field. When saving, btText checks the variables again, but still saves the original expression and not the currently displayed value.
+
+### Markdown Formatting
+
+Markdown provides simple formatting directly in the content of a text snippet. Enable **Enable Markdown formatting** when creating or editing the snippet. The setting applies only to that snippet; snippets without Markdown enabled continue to be inserted unchanged.
+
+Among others, you can use the following syntax:
+
+- `**important text**` for **bold text**;
+- `*emphasized text*` for *italic text*;
+- `# Heading` for a heading;
+- `- Item` for a bulleted list;
+- `1. Item` for a numbered list;
+- `[Label](https://example.com)` for a link;
+- `` `code` `` for code within a line;
+- `>` at the start of a line for a quotation.
+
+Clickable links must start with `http://`, `https://`, or `mailto:`. For security, btText outputs other link targets as normal labeled text without an active link.
+
+A blank line in the Markdown text separates two paragraphs. Lines that merely appear one below another in the editor are treated as continuous text within a normal paragraph. To add an explicit line break within a paragraph, enter two spaces at the end of the line.
+
+For normal copying, insertion, or hotstring expansion, btText prepares the content in several representations. The target program decides which one it uses:
+
+- Programs that support text formatting, such as Microsoft Word and many email applications, receive headings, emphasis, lists, and links where possible.
+- Plain-text programs such as Notepad receive only the readable text without formatting. A blank line remains between two paragraphs so that the paragraph structure is still recognizable.
+- **Copy raw content to clipboard** always copies the original Markdown syntax and does not apply formatting.
+
+The result may vary slightly between target programs. In particular, Microsoft Word may display an additional paragraph mark after a final paragraph when the text is explicitly pasted as HTML. btText avoids this additional paragraph mark in the Rich Text Format preferred by Word. Images are not embedded. When Markdown image syntax is used, btText outputs the image's alternative text in every format instead.
+
+If a Markdown snippet contains variables, btText replaces them first and then formats the resulting text. For security reasons, HTML entered directly into the snippet is not activated as formatting and is instead treated as ordinary text.
+
+The `{{cursor}}` variable is not available in Markdown snippets because formatted target programs do not report the precise caret position reliably. To use `{{cursor}}`, disable Markdown formatting for that snippet. btText reports an unsupported combination when you try to save it.
 
 ### Inserting or Copying Text
 
@@ -150,6 +182,8 @@ Open btText using the global keyboard shortcut or via the icon in the system tra
 - Press `Enter` or select **Insert text snippet** (Textbaustein einfügen) from the context menu to insert it into the previously active Windows window;
 - Select **Copy text to clipboard** (Text in die Zwischenablage kopieren) or press `Ctrl`+`Shift`+`C` to resolve variables and copy the resulting text. Interactive variables are requested in the same combined dialog used when inserting a snippet.
 - Select **Copy raw content to clipboard** (Rohinhalt in die Zwischenablage kopieren) to copy the unchanged snippet source, including its variable placeholders.
+
+For snippets with Markdown formatting enabled, the rules described under [Markdown Formatting](#markdown-formatting) apply. **Copy raw content to clipboard** always preserves the original content regardless of this setting.
 
 When inserting, btText remembers the previously active window, hides its own window, and uses the Windows clipboard. After the process, the previous clipboard content is restored, as far as possible. btText does not terminate but continues to run in the background and remains available via keyboard shortcut and the system tray. The target program must provide a standard text input field. If no valid previous window is available or it cannot be activated, btText displays an error.
 

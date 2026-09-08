@@ -1,8 +1,10 @@
-"""Copy Unicode text to the Windows clipboard with privacy controls."""
+"""Write plain-text and optional rich-text clipboard representations."""
 
 import ctypes
 import time
 from ctypes import wintypes
+
+from core.rich_text import ClipboardContent
 
 CF_UNICODETEXT = 13
 GMEM_MOVEABLE = 0x0002
@@ -47,6 +49,12 @@ if not _CLIPBOARD_HISTORY_FORMAT:
 _CLOUD_CLIPBOARD_FORMAT = user32.RegisterClipboardFormatW("CanUploadToCloudClipboard")
 if not _CLOUD_CLIPBOARD_FORMAT:
     raise ctypes.WinError(ctypes.get_last_error())
+_HTML_FORMAT = user32.RegisterClipboardFormatW("HTML Format")
+if not _HTML_FORMAT:
+    raise ctypes.WinError(ctypes.get_last_error())
+_RTF_FORMAT = user32.RegisterClipboardFormatW("Rich Text Format")
+if not _RTF_FORMAT:
+    raise ctypes.WinError(ctypes.get_last_error())
 
 
 def _exclude_current_item_from_history_and_cloud() -> None:
@@ -89,6 +97,46 @@ def _set_clipboard_text(text: str) -> None:
     _set_clipboard_data(CF_UNICODETEXT, (text + "\0").encode("utf-16-le"))
 
 
+def _encode_cf_html(fragment: str) -> bytes:
+    """Encode an HTML fragment using the byte offsets required by CF_HTML."""
+    prefix = "<html><body><!--StartFragment-->"
+    suffix = "<!--EndFragment--></body></html>"
+    html = (prefix + fragment + suffix).encode("utf-8")
+    header_template = (
+        "Version:1.0\r\n"
+        "StartHTML:{start_html:010d}\r\n"
+        "EndHTML:{end_html:010d}\r\n"
+        "StartFragment:{start_fragment:010d}\r\n"
+        "EndFragment:{end_fragment:010d}\r\n"
+    )
+    placeholder_header = header_template.format(
+        start_html=0,
+        end_html=0,
+        start_fragment=0,
+        end_fragment=0,
+    ).encode("ascii")
+    start_html = len(placeholder_header)
+    start_fragment = start_html + len(prefix.encode("utf-8"))
+    end_fragment = start_fragment + len(fragment.encode("utf-8"))
+    end_html = start_html + len(html)
+    header = header_template.format(
+        start_html=start_html,
+        end_html=end_html,
+        start_fragment=start_fragment,
+        end_fragment=end_fragment,
+    ).encode("ascii")
+    return header + html + b"\0"
+
+
+def _set_clipboard_content(content: ClipboardContent) -> None:
+    """Write every representation of one item while the clipboard is open."""
+    _set_clipboard_text(content.plain_text)
+    if content.html is not None:
+        _set_clipboard_data(_HTML_FORMAT, _encode_cf_html(content.html))
+    if content.rtf is not None:
+        _set_clipboard_data(_RTF_FORMAT, content.rtf + b"\0")
+
+
 def _read_open_clipboard_text() -> str | None:
     """Read Unicode text while the caller owns the open clipboard."""
     if not user32.IsClipboardFormatAvailable(CF_UNICODETEXT):
@@ -124,11 +172,24 @@ def copy_text(
     allow_cloud_upload: bool = True,
 ) -> None:
     """Copy text with independent history and cloud-upload controls."""
+    copy_content(
+        ClipboardContent(text),
+        include_in_history=include_in_history,
+        allow_cloud_upload=allow_cloud_upload,
+    )
+
+
+def copy_content(
+    content: ClipboardContent,
+    include_in_history: bool = True,
+    allow_cloud_upload: bool = True,
+) -> None:
+    """Copy plain text and optional HTML and RTF with privacy controls."""
     _open_clipboard()
     try:
         if not user32.EmptyClipboard():
             raise ClipboardError("The clipboard could not be cleared.")
-        _set_clipboard_text(text)
+        _set_clipboard_content(content)
         if not include_in_history:
             # Windows recognizes a serialized DWORD of zero in this registered
             # format as a request to omit the item from clipboard history.

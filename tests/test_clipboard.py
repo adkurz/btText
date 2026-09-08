@@ -1,10 +1,54 @@
 import unittest
 from unittest.mock import patch
 
+from core.rich_text import ClipboardContent
 from platform_support import clipboard
 
 
 class CopyTextTestCase(unittest.TestCase):
+    def test_copy_content_sets_plain_text_and_html(self):
+        content = ClipboardContent(
+            "Hello",
+            "<p><strong>Hello</strong></p>",
+            rtf=b"{\\rtf1 Hello}",
+        )
+        with (
+            patch.object(clipboard, "_open_clipboard"),
+            patch.object(clipboard.user32, "EmptyClipboard", return_value=True),
+            patch.object(clipboard, "_set_clipboard_text") as set_text,
+            patch.object(clipboard, "_set_clipboard_data") as set_data,
+            patch.object(clipboard.user32, "CloseClipboard"),
+        ):
+            clipboard.copy_content(content)
+
+        set_text.assert_called_once_with("Hello")
+        html_call = next(
+            call for call in set_data.call_args_list
+            if call.args[0] == clipboard._HTML_FORMAT
+        )
+        self.assertIn(b"<strong>Hello</strong>", html_call.args[1])
+        set_data.assert_any_call(
+            clipboard._RTF_FORMAT,
+            b"{\\rtf1 Hello}\0",
+        )
+
+    def test_cf_html_offsets_address_utf8_bytes(self):
+        encoded = clipboard._encode_cf_html("<p>Gr\N{LATIN SMALL LETTER U WITH DIAERESIS}\N{WHITE SMILING FACE}</p>")
+        payload = encoded.rstrip(b"\0")
+        header, _html = payload.split(b"<html>", 1)
+        offsets = {}
+        for line in header.decode("ascii").splitlines():
+            key, value = line.split(":", 1)
+            if key != "Version":
+                offsets[key] = int(value)
+
+        self.assertEqual(payload[offsets["StartHTML"] : offsets["StartHTML"] + 6], b"<html>")
+        self.assertEqual(
+            payload[offsets["StartFragment"] : offsets["EndFragment"]],
+            "<p>Gr\N{LATIN SMALL LETTER U WITH DIAERESIS}\N{WHITE SMILING FACE}</p>".encode("utf-8"),
+        )
+        self.assertEqual(offsets["EndHTML"], len(payload))
+
     def test_copy_text_replaces_clipboard_with_unicode_text(self):
         with (
             patch.object(clipboard, "_open_clipboard") as open_clipboard,

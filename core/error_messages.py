@@ -305,6 +305,12 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "variable_occurrence_limit": lambda parameters: _(
         "The variable '{name}' may occur only once in a snippet."
     ).format(**parameters),
+    # Translators: Validation error when {{cursor}} is combined with Markdown.
+    # The technical variable name remains English in every interface language.
+    "variable_cursor_markdown_unsupported": lambda parameters: _(
+        "The variable 'cursor' cannot be used when Markdown formatting is "
+        "enabled. Disable Markdown formatting or remove the variable."
+    ),
     # Translators: Validation error when a global shortcut contains an
     # unsupported keyboard key.
     "hotkey_key_unsupported": lambda parameters: _(

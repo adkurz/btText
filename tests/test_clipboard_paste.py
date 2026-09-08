@@ -37,7 +37,7 @@ class PendingPasteTestCase(unittest.TestCase):
                 return_value=True,
             ),
             patch.object(clipboard_paste.user32, "CloseClipboard"),
-            patch.object(clipboard_paste, "_set_clipboard_text"),
+            patch.object(clipboard_paste, "_set_clipboard_content"),
             patch.object(clipboard_paste, "_set_clipboard_data"),
             patch.object(
                 clipboard_paste,
@@ -234,7 +234,7 @@ class PasteTextTestCase(unittest.TestCase):
             ),
             patch.object(
                 clipboard_paste,
-                "_set_clipboard_text",
+                "_set_clipboard_content",
                 side_effect=clipboard.ClipboardError("write failed"),
             ),
             patch.object(
@@ -269,7 +269,7 @@ class PasteTextTestCase(unittest.TestCase):
             ),
             patch.object(
                 clipboard_paste,
-                "_set_clipboard_text",
+                "_set_clipboard_content",
                 side_effect=operation_error,
             ),
             patch.object(clipboard_paste.user32, "CloseClipboard"),

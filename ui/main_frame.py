@@ -190,9 +190,10 @@ class MainFrame(sc.SizedFrame):
                 self._settings_controller.settings.include_copied_text_in_clipboard_history
             ),
             lambda: (self._settings_controller.settings.allow_copied_text_cloud_upload),
-            lambda text: self._variable_resolver.render(
+            lambda text, markdown_enabled: self._variable_resolver.render(
                 text,
                 self._paste_controller.target_window,
+                markdown_enabled,
             ),
             self._variable_resolver.validate,
             get_builtin_variable_suggestions(),

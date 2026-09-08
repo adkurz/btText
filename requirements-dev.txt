@@ -1,3 +1,2 @@
 -r requirements.txt
-Markdown>=3.10.3
 PyInstaller>=6.21.0

@@ -1,4 +1,4 @@
-"""Paste snippet text into another Windows application via the clipboard."""
+"""Paste snippet content into another Windows application via the clipboard."""
 
 from __future__ import annotations
 
@@ -7,13 +7,14 @@ import ctypes
 import uuid
 
 from core.user_errors import UserFacingError
+from core.rich_text import ClipboardContent
 from platform_support import keyboard_input, windows
 from platform_support.clipboard import (
     ClipboardError,
     _exclude_current_item_from_history_and_cloud,
     _open_clipboard,
     _set_clipboard_data,
-    _set_clipboard_text,
+    _set_clipboard_content,
     kernel32,
     user32,
 )
@@ -79,15 +80,20 @@ def _read_clipboard_bytes(format_id: int) -> bytes | None:
         kernel32.GlobalUnlock(handle)
 
 
-def _replace_clipboard(text: str, marker: bytes) -> ClipboardSnapshot:
-    """Save the clipboard and replace it with marked snippet text."""
+def _replace_clipboard(
+    content: ClipboardContent | str,
+    marker: bytes,
+) -> ClipboardSnapshot:
+    """Save the clipboard and replace it with marked snippet content."""
+    if isinstance(content, str):
+        content = ClipboardContent(content)
     snapshot = ClipboardSnapshot.capture()
     try:
         _open_clipboard()
         try:
             if not user32.EmptyClipboard():
                 raise ClipboardError("The clipboard could not be cleared.")
-            _set_clipboard_text(text)
+            _set_clipboard_content(content)
             _set_clipboard_data(_MARKER_FORMAT, marker)
             _exclude_current_item_from_history_and_cloud()
         finally:
@@ -112,10 +118,10 @@ class PendingPaste:
         self._marker = marker
 
     @classmethod
-    def prepare(cls, text: str) -> PendingPaste:
-        """Replace the clipboard with marked text and retain its snapshot."""
+    def prepare(cls, content: ClipboardContent | str) -> PendingPaste:
+        """Replace the clipboard with marked content and retain its snapshot."""
         marker = uuid.uuid4().bytes
-        return cls(_replace_clipboard(text, marker), marker)
+        return cls(_replace_clipboard(content, marker), marker)
 
     def restore_clipboard(self) -> None:
         """Restore every old format unless another app changed the clipboard."""
@@ -136,15 +142,18 @@ class PendingPaste:
         self._snapshot.close()
 
 
-def paste_text(target: windows.WindowIdentity, text: str) -> PendingPaste:
-    """Activate an unchanged target, put text on the clipboard, and paste."""
+def paste_text(
+    target: windows.WindowIdentity,
+    content: ClipboardContent | str,
+) -> PendingPaste:
+    """Activate an unchanged target, populate the clipboard, and paste."""
     if not windows.matches_window_identity(target):
         raise PasteTargetError(
             "paste_target_window_missing",
             "The previously active window no longer exists.",
         )
 
-    pending = PendingPaste.prepare(text)
+    pending = PendingPaste.prepare(content)
     if not windows.activate_window_identity(target):
         operation_error = PasteTargetError(
             "paste_target_window_activation_failed",

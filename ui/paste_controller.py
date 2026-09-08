@@ -5,6 +5,7 @@ from collections.abc import Callable
 import wx
 
 from core import datamodel
+from core.rich_text import ClipboardContent, render_clipboard_content
 from core.error_messages import format_user_error
 from core.variables import (
     RenderedSnippet,
@@ -30,7 +31,7 @@ class PasteController:
         model: datamodel.DataModel,
         before_paste: Callable[[], None],
         reveal_after_error: Callable[[str, str], None],
-        render_snippet: Callable[[str, int | None], RenderedSnippet],
+        render_snippet: Callable[[str, int | None, bool], RenderedSnippet],
     ):
         """Initialize paste coordination with explicit frame callbacks."""
         self._parent = parent
@@ -81,6 +82,7 @@ class PasteController:
             rendered = self._render_snippet(
                 snippet.content,
                 self._target_window.handle,
+                snippet.markdown_enabled,
             )
         except VariableRenderingCancelled:
             return
@@ -89,24 +91,23 @@ class PasteController:
             return
 
         self._before_paste()
+        content = render_clipboard_content(rendered, snippet.markdown_enabled)
         target = self._target_window
         wx.CallLater(
             PASTE_AFTER_HIDE_DELAY_MS,
             self._paste_after_hide,
             target,
-            rendered.text,
-            rendered.cursor_offset_from_end,
+            content,
         )
 
     def _paste_after_hide(
         self,
         target: windows.WindowIdentity,
-        text: str,
-        cursor_offset_from_end: int | None = None,
+        content: ClipboardContent,
     ) -> None:
         """Paste after native window activation has settled."""
         try:
-            pending = clipboard_paste.paste_text(target, text)
+            pending = clipboard_paste.paste_text(target, content)
         except clipboard.ClipboardError as error:
             self._reveal_after_error(
                 format_user_error(error),
@@ -115,8 +116,8 @@ class PasteController:
             )
             return
         try:
-            if cursor_offset_from_end is not None:
-                keyboard_input.move_cursor_left(cursor_offset_from_end)
+            if content.cursor_offset_from_end is not None:
+                keyboard_input.move_cursor_left(content.cursor_offset_from_end)
         except clipboard.ClipboardError as error:
             self.schedule_restore(pending)
             self._reveal_after_error(

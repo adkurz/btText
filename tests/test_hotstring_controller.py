@@ -9,11 +9,12 @@ from core.variables import (
     UnknownVariableError,
     VariableRenderingCancelled,
 )
+from core.rich_text import ClipboardContent
 from platform_support import windows
 from ui.hotstring_controller import HotstringController
 
 
-def render_unchanged(text, target_window=None):
+def render_unchanged(text, target_window=None, markdown_enabled=False):
     return RenderedSnippet(text)
 
 
@@ -142,7 +143,9 @@ class HotstringControllerTestCase(unittest.TestCase):
 
         controller._expand(TARGET, snippet, 32)
 
-        expand_hotstring.assert_called_once_with(TARGET, "Hello", 5, 32)
+        expand_hotstring.assert_called_once_with(
+            TARGET, ClipboardContent("Hello"), 5, 32
+        )
         schedule_restore.assert_called_once_with(pending)
         notify.assert_called_once_with(snippet)
         play_sound.assert_called_once_with("hotstring.wav")
@@ -207,10 +210,14 @@ class HotstringControllerTestCase(unittest.TestCase):
 
         controller._expand(TARGET, snippet, 32)
 
-        render_snippet.assert_called_once_with("Today is {{date:long}}.", 42)
+        render_snippet.assert_called_once_with(
+            "Today is {{date:long}}.",
+            42,
+            False,
+        )
         expand_hotstring.assert_called_once_with(
             TARGET,
-            "Today is 6. August 2026.",
+            ClipboardContent("Today is 6. August 2026."),
             5,
             32,
         )
