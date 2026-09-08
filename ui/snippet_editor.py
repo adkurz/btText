@@ -34,7 +34,7 @@ class SnippetEditor(wx.Dialog):
         model: datamodel.DataModel,
         category_id: int,
         render_snippet: Callable[[str], RenderedSnippet],
-        validate_snippet: Callable[[str], None],
+        validate_snippet: Callable[[str, bool], None],
         variable_suggestions: tuple[VariableSuggestion, ...],
         snippet: datamodel.Snippet | None = None,
     ):
@@ -299,10 +299,14 @@ class SnippetEditor(wx.Dialog):
             show_variable_error(self, error)
             return None
 
-    def _variables_are_valid(self, content: str) -> bool:
+    def _variables_are_valid(
+        self,
+        content: str,
+        markdown_enabled: bool,
+    ) -> bool:
         """Validate template structure without resolving contextual values."""
         try:
-            self._validate_snippet(content)
+            self._validate_snippet(content, markdown_enabled)
         except VariableError as error:
             show_variable_error(self, error)
             return False
@@ -321,7 +325,8 @@ class SnippetEditor(wx.Dialog):
             return
         snippet_weight = self.weight_input.GetSelection() + 1
         snippet_content = self.content_input.GetValue()
-        if not self._variables_are_valid(snippet_content):
+        markdown_enabled = self.markdown_input.GetValue()
+        if not self._variables_are_valid(snippet_content, markdown_enabled):
             self.content_input.SetFocus()
             return
         snippet_hotstring = self.hotstring_input.GetValue()
@@ -331,7 +336,7 @@ class SnippetEditor(wx.Dialog):
             weight=snippet_weight,
             content=snippet_content,
             hotstring=snippet_hotstring or None,
-            markdown_enabled=self.markdown_input.GetValue(),
+            markdown_enabled=markdown_enabled,
         )
         try:
             if self._snippet is None:  # Add new snippet

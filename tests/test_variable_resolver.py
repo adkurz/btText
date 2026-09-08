@@ -9,6 +9,7 @@ from core.variables import (
     ResolutionPlan,
     UnknownVariableError,
     VariableRenderingCancelled,
+    VariableResolutionError,
 )
 from ui.variable_resolver import SnippetVariableResolver, show_variable_error
 
@@ -68,9 +69,31 @@ class SnippetVariableResolverTestCase(unittest.TestCase):
         ):
             resolver.validate("{{clipboard}} {{app}}")
 
-        engine.validate.assert_called_once_with("{{clipboard}} {{app}}")
+        engine.plan.assert_called_once_with("{{clipboard}} {{app}}")
         read_text.assert_not_called()
         get_application_name.assert_not_called()
+
+    def test_cursor_is_rejected_when_markdown_is_enabled(self):
+        engine = Mock()
+        engine.plan.return_value = ResolutionPlan(variable_names=("cursor",))
+        resolver = SnippetVariableResolver(engine)
+
+        with self.assertRaises(VariableResolutionError) as raised:
+            resolver.validate("Before {{cursor}} after", markdown_enabled=True)
+
+        self.assertEqual(
+            raised.exception.code,
+            "variable_cursor_markdown_unsupported",
+        )
+
+    def test_cursor_remains_available_without_markdown(self):
+        engine = Mock()
+        engine.plan.return_value = ResolutionPlan(variable_names=("cursor",))
+        resolver = SnippetVariableResolver(engine)
+
+        resolver.validate("Before {{cursor}} after", markdown_enabled=False)
+
+        engine.plan.assert_called_once_with("Before {{cursor}} after")
 
     def test_context_values_are_lazy_and_memoized_per_rendering(self):
         engine = Mock()

@@ -88,6 +88,11 @@ class VariableEngineTestCase(unittest.TestCase):
 
         self.assertEqual(result.text, "{{value}} and }}")
 
+    def test_escaped_expression_is_not_reported_as_a_variable(self):
+        plan = self.engine.plan("{{{{value}}}}")
+
+        self.assertEqual(plan.variable_names, ())
+
     def test_unknown_variable_has_a_stable_error(self):
         with self.assertRaises(UnknownVariableError) as raised:
             self.engine.render("Before {{missing}}", self.context)
@@ -175,7 +180,13 @@ class VariableEngineTestCase(unittest.TestCase):
             "{{input:Customer}} {{input:Reference}} {{input:Customer}}"
         )
 
-        self.assertEqual(plan, ResolutionPlan(("Customer", "Reference")))
+        self.assertEqual(
+            plan,
+            ResolutionPlan(
+                ("Customer", "Reference"),
+                ("input",),
+            ),
+        )
         self.assertEqual(collector.call_count, 3)
         resolver.assert_not_called()
 

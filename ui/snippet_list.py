@@ -36,7 +36,7 @@ class SnippetList(wx.ListView):
         include_copied_text_in_clipboard_history: Callable[[], bool],
         allow_copied_text_cloud_upload: Callable[[], bool],
         render_snippet: Callable[[str], RenderedSnippet],
-        validate_snippet: Callable[[str], None],
+        validate_snippet: Callable[[str, bool], None],
         variable_suggestions: tuple[VariableSuggestion, ...],
     ):
         """Build columns, commands, and model-event subscriptions."""

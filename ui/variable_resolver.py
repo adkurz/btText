@@ -13,6 +13,7 @@ from core.variables import (
     VariableEngine,
     VariableError,
     VariableRenderingCancelled,
+    VariableResolutionError,
 )
 from i18n import _
 from platform_support import clipboard, windows
@@ -72,9 +73,14 @@ class SnippetVariableResolver:
         )
         return self._engine.render(template, context)
 
-    def validate(self, template: str) -> None:
+    def validate(self, template: str, markdown_enabled: bool = False) -> None:
         """Validate a template without reading runtime context values."""
-        self._engine.validate(template)
+        plan = self._engine.plan(template)
+        if markdown_enabled and "cursor" in plan.variable_names:
+            raise VariableResolutionError(
+                "variable_cursor_markdown_unsupported",
+                "The cursor variable cannot be used with Markdown formatting.",
+            )
 
     @staticmethod
     def _current_timestamp() -> datetime:

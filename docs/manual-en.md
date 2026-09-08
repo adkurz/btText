@@ -116,6 +116,34 @@ Click **Save** to apply changes. The name and content must not be empty. A hotst
 
 To edit, select a single text snippet and select **Edit text snippet** (Textbaustein bearbeiten) from the context menu or press `F2`.
 
+### Variables
+
+Text snippets can contain variables that btText replaces immediately before insertion. Variable and format names are always English, independently of the user-interface language. For example, `{{date}}` inserts the current date and `{{time}}` inserts the current time.
+
+The following variables are available for dates, times, and their combination:
+
+- `{{date}}`, `{{time}}`, and `{{datetime}}` use the short format;
+- `{{date:short}}`, `{{date:medium}}`, `{{date:long}}`, and `{{date:full}}` select localized formats with different levels of detail;
+- the same format names can be used with `time` and `datetime`;
+- `{{date:iso}}`, `{{time:iso}}`, and `{{datetime:iso}}` produce a stable, language-independent ISO format.
+
+Localized formats follow the language currently used by btText. For example, `{{date:long}}` may produce `6. August 2026` in German and `August 6, 2026` in English. Every date and time variable in one insertion uses the same captured point in time.
+
+Two context variables are also available:
+
+- `{{clipboard}}` inserts the current Unicode text from the Windows clipboard. If the clipboard does not contain text, the variable is replaced with an empty string. The variable reads the content only for a preview or immediately before insertion and does not modify it while doing so.
+- `{{app}}` inserts the executable filename of the target application, for example `notepad.exe`. Window titles and full application paths are not exposed. The target is the window that was active before btText was opened.
+
+Context variables do not accept a format. When saving, btText validates only their syntax and does not access the clipboard or target application. A preview requires the relevant context and may therefore report an error. Inserted context values are not evaluated again as variables.
+
+Use `{{input:Label}}` to request a value interactively. For example, `{{input:Customer number}}` displays an input field labeled “Customer number” before previewing or inserting and places the entered text at that position. If a snippet requires several distinct inputs, btText displays every field together in one dialog and in the order of its first occurrence. A label is required and cannot contain a colon or variable braces. If the same label occurs more than once, it appears only once in the dialog and btText uses the answer in every position. An empty answer is valid. Cancelling the combined input dialog also cancels the preview or insertion without displaying an error. Entered text is not evaluated again as variables.
+
+For snippets without Markdown formatting, `{{cursor}}` specifies the text-caret position after insertion. The instruction itself is removed from the output. If text follows it, btText moves the caret left by the corresponding number of characters after insertion. A snippet may contain `{{cursor}}` only once, and the instruction accepts no arguments. The preview displays only the cleaned text and does not move a caret. For hotstrings, btText also accounts for a preserved boundary character.
+
+To insert the characters `{{` or `}}` literally, double the corresponding sequence as `{{{{` or `}}}}`. Unknown variables, unsupported formats, and malformed braces prevent insertion and are reported as errors.
+
+In the text snippet editor, **Insert variable** shows the available variables and their possible formats or settings. For `input`, enter the desired label for the input field to be created instead of a format. For variables without additional selection, such as `{{app}}`, the settings area is hidden. A preview of the variable is displayed in the Preview input field. For variables for which this is not possible, this area is also hidden. The selected expression replaces the current selection or is inserted at the cursor. **Preview** allows you to review and, if necessary, copy the fully resolved text in a read-only, tab-accessible text field. When saving, btText checks the variables again, but still saves the original expression and not the currently displayed value.
+
 ### Markdown Formatting
 
 Markdown provides simple formatting directly in the content of a text snippet. Enable **Enable Markdown formatting** when creating or editing the snippet. The setting applies only to that snippet; snippets without Markdown enabled continue to be inserted unchanged.
@@ -143,33 +171,7 @@ The result may vary slightly between target programs. In particular, Microsoft W
 
 If a Markdown snippet contains variables, btText replaces them first and then formats the resulting text. For security reasons, HTML entered directly into the snippet is not activated as formatting and is instead treated as ordinary text.
 
-### Variables
-
-Text snippets can contain variables that btText replaces immediately before insertion. Variable and format names are always English, independently of the user-interface language. For example, `{{date}}` inserts the current date and `{{time}}` inserts the current time.
-
-The following variables are available for dates, times, and their combination:
-
-- `{{date}}`, `{{time}}`, and `{{datetime}}` use the short format;
-- `{{date:short}}`, `{{date:medium}}`, `{{date:long}}`, and `{{date:full}}` select localized formats with different levels of detail;
-- the same format names can be used with `time` and `datetime`;
-- `{{date:iso}}`, `{{time:iso}}`, and `{{datetime:iso}}` produce a stable, language-independent ISO format.
-
-Localized formats follow the language currently used by btText. For example, `{{date:long}}` may produce `6. August 2026` in German and `August 6, 2026` in English. Every date and time variable in one insertion uses the same captured point in time.
-
-Two context variables are also available:
-
-- `{{clipboard}}` inserts the current Unicode text from the Windows clipboard. If the clipboard does not contain text, the variable is replaced with an empty string. The variable reads the content only for a preview or immediately before insertion and does not modify it while doing so.
-- `{{app}}` inserts the executable filename of the target application, for example `notepad.exe`. Window titles and full application paths are not exposed. The target is the window that was active before btText was opened.
-
-Context variables do not accept a format. When saving, btText validates only their syntax and does not access the clipboard or target application. A preview requires the relevant context and may therefore report an error. Inserted context values are not evaluated again as variables.
-
-Use `{{input:Label}}` to request a value interactively. For example, `{{input:Customer number}}` displays an input field labeled “Customer number” before previewing or inserting and places the entered text at that position. If a snippet requires several distinct inputs, btText displays every field together in one dialog and in the order of its first occurrence. A label is required and cannot contain a colon or variable braces. If the same label occurs more than once, it appears only once in the dialog and btText uses the answer in every position. An empty answer is valid. Cancelling the combined input dialog also cancels the preview or insertion without displaying an error. Entered text is not evaluated again as variables.
-
-`{{cursor}}` specifies the text-caret position after insertion. The instruction itself is removed from the output. If text follows it, btText moves the caret left by the corresponding number of characters after insertion. A snippet may contain `{{cursor}}` only once, and the instruction accepts no arguments. The preview displays only the cleaned text and does not move a caret. For hotstrings, btText also accounts for a preserved boundary character.
-
-To insert the characters `{{` or `}}` literally, double the corresponding sequence as `{{{{` or `}}}}`. Unknown variables, unsupported formats, and malformed braces prevent insertion and are reported as errors.
-
-In the text snippet editor, **Insert variable** shows the available variables and their possible formats or settings. For `input`, enter the desired label for the input field to be created instead of a format. For variables without additional selection, such as `{{app}}`, the settings area is hidden. A preview of the variable is displayed in the Preview input field. For variables for which this is not possible, this area is also hidden. The selected expression replaces the current selection or is inserted at the cursor. **Preview** allows you to review and, if necessary, copy the fully resolved text in a read-only, tab-accessible text field. When saving, btText checks the variables again, but still saves the original expression and not the currently displayed value.
+The `{{cursor}}` variable is not available in Markdown snippets because formatted target programs do not report the precise caret position reliably. To use `{{cursor}}`, disable Markdown formatting for that snippet. btText reports an unsupported combination when you try to save it.
 
 ### Inserting or Copying Text
 

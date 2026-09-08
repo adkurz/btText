@@ -120,6 +120,7 @@ class ResolutionPlan:
     """
 
     input_labels: tuple[str, ...] = ()
+    variable_names: tuple[str, ...] = ()
 
 
 @dataclass(frozen=True)
@@ -242,16 +243,21 @@ class VariableEngine:
         occurrences: dict[str, int] = {}
         input_labels: list[str] = []
         known_labels: set[str] = set()
+        variable_names: list[str] = []
+        known_names: set[str] = set()
         for part in self._parse(template):
             if isinstance(part, _VariableToken):
                 definition = self._get_validated_definition(part)
                 self._validate_occurrence(definition, part, occurrences)
+                if part.name not in known_names:
+                    known_names.add(part.name)
+                    variable_names.append(part.name)
                 if definition.collect_input_labels is not None:
                     for label in definition.collect_input_labels(part.arguments):
                         if label not in known_labels:
                             known_labels.add(label)
                             input_labels.append(label)
-        return ResolutionPlan(tuple(input_labels))
+        return ResolutionPlan(tuple(input_labels), tuple(variable_names))
 
     @staticmethod
     def _validate_occurrence(

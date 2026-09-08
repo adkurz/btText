@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-09-08 14:54+0200\n"
+"POT-Creation-Date: 2026-09-08 16:24+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -385,51 +385,57 @@ msgstr "Die Variable 'input' benötigt genau eine nicht leere Beschriftung."
 msgid "The variable '{name}' may occur only once in a snippet."
 msgstr "Die Variable '{name}' darf in einem Textbaustein nur einmal vorkommen."
 
+#. Translators: Validation error when {{cursor}} is combined with Markdown.
+#. The technical variable name remains English in every interface language.
+#: core/error_messages.py:311
+msgid "The variable 'cursor' cannot be used when Markdown formatting is enabled. Disable Markdown formatting or remove the variable."
+msgstr "Die Variable 'cursor' kann bei aktivierter Markdown-Formatierung nicht verwendet werden. Deaktivieren Sie die Markdown-Formatierung oder entfernen Sie die Variable."
+
 #. Translators: Validation error when a global shortcut contains an
 #. unsupported keyboard key.
-#: core/error_messages.py:311
+#: core/error_messages.py:317
 msgid "The shortcut contains an unsupported key."
 msgstr "Die Tastenkombination enthält eine nicht unterstützte Taste."
 
 #. Translators: Validation error when a global shortcut has no Ctrl, Shift,
 #. Alt, or Windows modifier.
-#: core/error_messages.py:316
+#: core/error_messages.py:322
 msgid "The shortcut requires at least one modifier."
 msgstr "Die Tastenkombination muss mindestens eine Sondertaste enthalten."
 
 #. Translators: Validation error when a shortcut from settings cannot be
 #. parsed.
-#: core/error_messages.py:320
+#: core/error_messages.py:326
 msgid "The shortcut has an invalid format."
 msgstr "Die Tastenkombination hat ein ungültiges Format."
 
 #. Translators: Validation error when a shortcut repeats the same modifier.
-#: core/error_messages.py:324
+#: core/error_messages.py:330
 msgid "The shortcut contains a duplicate modifier."
 msgstr "Die Tastenkombination enthält eine Sondertaste mehrfach."
 
 #. Translators: Validation error when a shortcut has zero or multiple main
 #. keys.
-#: core/error_messages.py:328
+#: core/error_messages.py:334
 msgid "The shortcut must contain exactly one key."
 msgstr "Die Tastenkombination muss genau eine Haupttaste enthalten."
 
 #. Translators: Validation error when a key cannot be used for a global
 #. shortcut.
-#: core/error_messages.py:332
+#: core/error_messages.py:338
 msgid "This key cannot be used as a shortcut."
 msgstr "Diese Taste kann nicht für eine Tastenkombination verwendet werden."
 
 #. Translators: Settings error when the selected UI language has no installed
 #. gettext catalog.
-#: core/error_messages.py:337
+#: core/error_messages.py:343
 msgid "No translation catalog is available for the selected language."
 msgstr "Für die ausgewählte Sprache ist kein Übersetzungskatalog verfügbar."
 
 #. Translators: Startup warning after a damaged translation catalog forced
 #. btText to continue in English. {language} is a locale code such as de;
 #. {reason} is a technical catalog-loading error.
-#: core/error_messages.py:343
+#: core/error_messages.py:349
 #, python-brace-format
 msgid ""
 "The translation catalog for {language} could not be loaded. btText will continue in English.\n"
@@ -441,13 +447,13 @@ msgstr ""
 "{reason}"
 
 #. Translators: Settings error when the saved UI language code is malformed.
-#: core/error_messages.py:351
+#: core/error_messages.py:357
 msgid "The language setting has an invalid format."
 msgstr "Die Spracheinstellung hat ein ungültiges Format."
 
 #. Translators: Safe fallback when no specific localized application-error
 #. message is available.
-#: core/error_messages.py:366
+#: core/error_messages.py:372
 msgid "An unexpected application error occurred."
 msgstr "Es ist ein unerwarteter Anwendungsfehler aufgetreten."
 
@@ -1413,7 +1419,7 @@ msgid "Discard unsaved changes?"
 msgstr "Ungespeicherte Änderungen verwerfen?"
 
 #. Translators: Title of a dialog reporting invalid form input.
-#: ui/snippet_editor.py:347 ui/validators.py:29
+#: ui/snippet_editor.py:352 ui/validators.py:29
 msgid "Validation error"
 msgstr "Validierungsfehler"
 
@@ -1775,6 +1781,6 @@ msgstr "Aufgelöster Textbausteintext"
 
 #. Translators: Title for a variable error that prevents a snippet from
 #. being inserted manually or expanded through a hotstring.
-#: ui/variable_resolver.py:118
+#: ui/variable_resolver.py:124
 msgid "Variable error"
 msgstr "Variablenfehler"

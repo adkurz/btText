@@ -116,6 +116,34 @@ Mit **Speichern** übernehmen Sie die Änderungen. Der Name und der Inhalt dürf
 
 Zum Bearbeiten markieren Sie einen einzelnen Textbaustein und wählen im Kontextmenü **Textbaustein bearbeiten** oder drücken `F2`.
 
+### Variablen
+
+Textbausteine können Variablen enthalten, die btText unmittelbar vor dem Einfügen ersetzt. Variablennamen und Formatnamen sind unabhängig von der Sprache der Benutzeroberfläche immer Englisch. Beispielsweise fügt `{{date}}` das aktuelle Datum und `{{time}}` die aktuelle Uhrzeit ein.
+
+Für Datum, Uhrzeit und deren Kombination stehen folgende Variablen zur Verfügung:
+
+- `{{date}}`, `{{time}}` und `{{datetime}}` verwenden das kurze Format;
+- `{{date:short}}`, `{{date:medium}}`, `{{date:long}}` und `{{date:full}}` wählen unterschiedlich ausführliche, sprachabhängige Datumsformate;
+- dieselben Formatnamen können mit `time` und `datetime` verwendet werden;
+- `{{date:iso}}`, `{{time:iso}}` und `{{datetime:iso}}` erzeugen ein festes, sprachunabhängiges ISO-Format.
+
+Die sprachabhängigen Formate richten sich nach der aktuell von btText verwendeten Sprache. So kann `{{date:long}}` auf Deutsch beispielsweise `6. August 2026` und auf Englisch `August 6, 2026` ergeben. Alle Datums- und Zeitvariablen eines Einfügevorgangs verwenden denselben Zeitpunkt.
+
+Zusätzlich stehen zwei Kontextvariablen zur Verfügung:
+
+- `{{clipboard}}` fügt den aktuellen Unicode-Text aus der Windows-Zwischenablage ein. Enthält die Zwischenablage keinen Text, wird die Variable durch eine leere Zeichenfolge ersetzt. Die Variable liest den Inhalt erst für die Vorschau oder unmittelbar vor dem Einfügen und verändert ihn dabei nicht.
+- `{{app}}` fügt den Dateinamen der ausführbaren Datei der Zielanwendung ein, beispielsweise `notepad.exe`. Fenstertitel und vollständige Programmpfade werden nicht ausgegeben. Als Ziel gilt das Fenster, das vor dem Öffnen von btText aktiv war.
+
+Kontextvariablen unterstützen keine Formatangabe. Beim Speichern prüft btText lediglich ihre Schreibweise und greift dabei weder auf die Zwischenablage noch auf die Zielanwendung zu. Eine Vorschau benötigt dagegen den jeweiligen Kontext und kann deshalb einen Fehler melden. Eingefügte Kontextwerte werden nicht erneut als Variablen ausgewertet.
+
+Mit `{{input:Beschriftung}}` können Sie einen Wert interaktiv abfragen. Beispielsweise zeigt `{{input:Kundennummer}}` vor der Vorschau oder dem Einfügen ein Eingabefeld mit der Beschriftung „Kundennummer“ an und setzt den eingegebenen Text an dieser Stelle ein. Benötigt ein Textbaustein mehrere unterschiedliche Eingaben, zeigt btText alle Felder gemeinsam in einem Dialog und in der Reihenfolge ihres ersten Vorkommens an. Eine Beschriftung ist erforderlich und darf keinen Doppelpunkt und keine Variablenklammern enthalten. Kommt dieselbe Beschriftung mehrfach vor, erscheint sie im Dialog nur einmal und btText verwendet die Antwort an allen Stellen. Eine leere Antwort ist zulässig. Wenn Sie den gemeinsamen Eingabedialog abbrechen, wird auch die Vorschau beziehungsweise das Einfügen ohne Fehlermeldung abgebrochen. Eingaben werden nicht erneut als Variablen ausgewertet.
+
+`{{cursor}}` legt bei Textbausteinen ohne Markdown-Formatierung fest, wo sich die Schreibmarke nach dem Einfügen befinden soll. Die Anweisung selbst wird aus dem ausgegebenen Text entfernt. Steht nach ihr noch Text, bewegt btText die Schreibmarke nach dem Einfügen um die entsprechende Anzahl Zeichen zurück. `{{cursor}}` darf in einem Textbaustein nur einmal vorkommen und unterstützt keine Argumente. In der Vorschau wird nur der bereinigte Text angezeigt; eine Schreibmarkenbewegung findet dort nicht statt. Bei Hotstrings berücksichtigt btText zusätzlich ein beibehaltenes Begrenzungszeichen.
+
+Um die Zeichen `{{` oder `}}` unverändert auszugeben, verdoppeln Sie die jeweilige Zeichenfolge zu `{{{{` beziehungsweise `}}}}`. Unbekannte Variablen, ungültige Formate und fehlerhafte Klammern verhindern das Einfügen und werden als Fehler gemeldet.
+
+Im Textbaustein-Editor zeigt **Variable einfügen** die verfügbaren Variablen und deren mögliche Formate oder Einstellungen. Für `input` geben Sie anstelle eines Formats die gewünschte Beschriftung des zu erzeugenden Eingabefeldes ein. Für Variablen ohne zusätzliche Auswahl, etwa `{{app}}`, wird der Einstellungsbereich ausgeblendet. Im Eingabefeld Vorschau wird eine Vorschau der Variable angezeigt. Bei Variablen, bei welchen dies nicht möglich ist, wird dieser Bereich ebenfalls ausgeblendet. Der gewählte Ausdruck ersetzt die aktuelle Markierung oder wird an der Schreibmarke eingefügt. Mit **Vorschau** können Sie den vollständig aufgelösten Text in einem schreibgeschützten, mit der Tabulatortaste erreichbaren Textfeld prüfen und bei Bedarf kopieren. Beim Speichern prüft btText die Variablen erneut, speichert jedoch weiterhin den ursprünglichen Ausdruck und nicht den momentan angezeigten Wert.
+
 ### Markdown-Formatierung
 
 Markdown ermöglicht einfache Formatierungen direkt im Inhalt eines Textbausteins. Aktivieren Sie dazu beim Anlegen oder Bearbeiten des Textbausteins **Markdown-Formatierung aktivieren**. Die Einstellung gilt nur für diesen Textbaustein; Textbausteine ohne aktiviertes Markdown werden weiterhin unverändert eingefügt.
@@ -143,33 +171,7 @@ Das Ergebnis kann sich je nach Zielprogramm leicht unterscheiden. Insbesondere k
 
 Enthält ein Markdown-Textbaustein Variablen, ersetzt btText diese zuerst und formatiert anschließend den entstandenen Text. Direkt eingegebenes HTML wird aus Sicherheitsgründen nicht als Formatierung ausgeführt, sondern als normaler Text behandelt.
 
-### Variablen
-
-Textbausteine können Variablen enthalten, die btText unmittelbar vor dem Einfügen ersetzt. Variablennamen und Formatnamen sind unabhängig von der Sprache der Benutzeroberfläche immer Englisch. Beispielsweise fügt `{{date}}` das aktuelle Datum und `{{time}}` die aktuelle Uhrzeit ein.
-
-Für Datum, Uhrzeit und deren Kombination stehen folgende Variablen zur Verfügung:
-
-- `{{date}}`, `{{time}}` und `{{datetime}}` verwenden das kurze Format;
-- `{{date:short}}`, `{{date:medium}}`, `{{date:long}}` und `{{date:full}}` wählen unterschiedlich ausführliche, sprachabhängige Datumsformate;
-- dieselben Formatnamen können mit `time` und `datetime` verwendet werden;
-- `{{date:iso}}`, `{{time:iso}}` und `{{datetime:iso}}` erzeugen ein festes, sprachunabhängiges ISO-Format.
-
-Die sprachabhängigen Formate richten sich nach der aktuell von btText verwendeten Sprache. So kann `{{date:long}}` auf Deutsch beispielsweise `6. August 2026` und auf Englisch `August 6, 2026` ergeben. Alle Datums- und Zeitvariablen eines Einfügevorgangs verwenden denselben Zeitpunkt.
-
-Zusätzlich stehen zwei Kontextvariablen zur Verfügung:
-
-- `{{clipboard}}` fügt den aktuellen Unicode-Text aus der Windows-Zwischenablage ein. Enthält die Zwischenablage keinen Text, wird die Variable durch eine leere Zeichenfolge ersetzt. Die Variable liest den Inhalt erst für die Vorschau oder unmittelbar vor dem Einfügen und verändert ihn dabei nicht.
-- `{{app}}` fügt den Dateinamen der ausführbaren Datei der Zielanwendung ein, beispielsweise `notepad.exe`. Fenstertitel und vollständige Programmpfade werden nicht ausgegeben. Als Ziel gilt das Fenster, das vor dem Öffnen von btText aktiv war.
-
-Kontextvariablen unterstützen keine Formatangabe. Beim Speichern prüft btText lediglich ihre Schreibweise und greift dabei weder auf die Zwischenablage noch auf die Zielanwendung zu. Eine Vorschau benötigt dagegen den jeweiligen Kontext und kann deshalb einen Fehler melden. Eingefügte Kontextwerte werden nicht erneut als Variablen ausgewertet.
-
-Mit `{{input:Beschriftung}}` können Sie einen Wert interaktiv abfragen. Beispielsweise zeigt `{{input:Kundennummer}}` vor der Vorschau oder dem Einfügen ein Eingabefeld mit der Beschriftung „Kundennummer“ an und setzt den eingegebenen Text an dieser Stelle ein. Benötigt ein Textbaustein mehrere unterschiedliche Eingaben, zeigt btText alle Felder gemeinsam in einem Dialog und in der Reihenfolge ihres ersten Vorkommens an. Eine Beschriftung ist erforderlich und darf keinen Doppelpunkt und keine Variablenklammern enthalten. Kommt dieselbe Beschriftung mehrfach vor, erscheint sie im Dialog nur einmal und btText verwendet die Antwort an allen Stellen. Eine leere Antwort ist zulässig. Wenn Sie den gemeinsamen Eingabedialog abbrechen, wird auch die Vorschau beziehungsweise das Einfügen ohne Fehlermeldung abgebrochen. Eingaben werden nicht erneut als Variablen ausgewertet.
-
-`{{cursor}}` legt fest, wo sich die Schreibmarke nach dem Einfügen befinden soll. Die Anweisung selbst wird aus dem ausgegebenen Text entfernt. Steht nach ihr noch Text, bewegt btText die Schreibmarke nach dem Einfügen um die entsprechende Anzahl Zeichen zurück. `{{cursor}}` darf in einem Textbaustein nur einmal vorkommen und unterstützt keine Argumente. In der Vorschau wird nur der bereinigte Text angezeigt; eine Schreibmarkenbewegung findet dort nicht statt. Bei Hotstrings berücksichtigt btText zusätzlich ein beibehaltenes Begrenzungszeichen.
-
-Um die Zeichen `{{` oder `}}` unverändert auszugeben, verdoppeln Sie die jeweilige Zeichenfolge zu `{{{{` beziehungsweise `}}}}`. Unbekannte Variablen, ungültige Formate und fehlerhafte Klammern verhindern das Einfügen und werden als Fehler gemeldet.
-
-Im Textbaustein-Editor zeigt **Variable einfügen** die verfügbaren Variablen und deren mögliche Formate oder Einstellungen. Für `input` geben Sie anstelle eines Formats die gewünschte Beschriftung des zu erzeugenden Eingabefeldes ein. Für Variablen ohne zusätzliche Auswahl, etwa `{{app}}`, wird der Einstellungsbereich ausgeblendet. Im Eingabefeld Vorschau wird eine Vorschau der Variable angezeigt. Bei Variablen, bei welchen dies nicht möglich ist, wird dieser Bereich ebenfalls ausgeblendet. Der gewählte Ausdruck ersetzt die aktuelle Markierung oder wird an der Schreibmarke eingefügt. Mit **Vorschau** können Sie den vollständig aufgelösten Text in einem schreibgeschützten, mit der Tabulatortaste erreichbaren Textfeld prüfen und bei Bedarf kopieren. Beim Speichern prüft btText die Variablen erneut, speichert jedoch weiterhin den ursprünglichen Ausdruck und nicht den momentan angezeigten Wert.
+Die Variable `{{cursor}}` steht in Markdown-Textbausteinen nicht zur Verfügung, weil formatierte Zielprogramme die genaue Schreibmarkenposition nicht zuverlässig übermitteln. Wenn Sie `{{cursor}}` verwenden möchten, deaktivieren Sie die Markdown-Formatierung für diesen Textbaustein. btText weist beim Speichern auf eine unzulässige Kombination hin.
 
 ### Text einfügen oder kopieren
 
