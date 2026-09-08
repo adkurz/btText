@@ -25,6 +25,9 @@ class RichTextRenderingTestCase(unittest.TestCase):
             "<h1>Greeting</h1><p>Hello <strong>Ada</strong>.</p>"
             "<ul><li>First</li><li>Second</li></ul>",
         )
+        self.assertTrue(result.rtf.startswith(b"{\\rtf1"))
+        self.assertIn(b"\\b Ada", result.rtf)
+        self.assertIn(b"\\bullet\\tab First", result.rtf)
 
     def test_raw_html_is_escaped_instead_of_being_activated(self):
         result = render_clipboard_content(
@@ -45,6 +48,38 @@ class RichTextRenderingTestCase(unittest.TestCase):
         self.assertEqual(result.plain_text, "AB C")
         self.assertEqual(result.cursor_offset_from_end, 1)
         self.assertNotIn("\ue000", result.html)
+
+    def test_rtf_escapes_markup_unicode_and_links(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "Text {backslash\\ path} \N{GRINNING FACE} and "
+                "[a link](https://example.com/a b)"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        self.assertIn(r"\{backslash\\ path\}", rtf)
+        self.assertIn(r"\u-10179?\u-8704?", rtf)
+        self.assertIn('HYPERLINK "https://example.com/a%20b"', rtf)
+        self.assertEqual(rtf.count("{"), rtf.count("}"))
+
+    def test_rtf_formats_headings_code_quotes_and_nested_lists(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "## Heading\n\n> Quote with `code`\n\n"
+                "1. First\n    - Nested\n2. Second\n\n---"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        self.assertIn(r"\b\fs32 Heading", rtf)
+        self.assertIn(r"\f1 code", rtf)
+        self.assertIn(r"\li720", rtf)
+        self.assertIn(r"1.\tab First", rtf)
+        self.assertIn(r"\li720\fi-240 \bullet\tab Nested", rtf)
+        self.assertIn(r"\brdrb\brdrs\brdrw10", rtf)
 
 
 if __name__ == "__main__":

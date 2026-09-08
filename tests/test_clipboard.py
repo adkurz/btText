@@ -7,7 +7,11 @@ from platform_support import clipboard
 
 class CopyTextTestCase(unittest.TestCase):
     def test_copy_content_sets_plain_text_and_html(self):
-        content = ClipboardContent("Hello", "<p><strong>Hello</strong></p>")
+        content = ClipboardContent(
+            "Hello",
+            "<p><strong>Hello</strong></p>",
+            rtf=b"{\\rtf1 Hello}",
+        )
         with (
             patch.object(clipboard, "_open_clipboard"),
             patch.object(clipboard.user32, "EmptyClipboard", return_value=True),
@@ -23,6 +27,10 @@ class CopyTextTestCase(unittest.TestCase):
             if call.args[0] == clipboard._HTML_FORMAT
         )
         self.assertIn(b"<strong>Hello</strong>", html_call.args[1])
+        set_data.assert_any_call(
+            clipboard._RTF_FORMAT,
+            b"{\\rtf1 Hello}\0",
+        )
 
     def test_cf_html_offsets_address_utf8_bytes(self):
         encoded = clipboard._encode_cf_html("<p>Gr\N{LATIN SMALL LETTER U WITH DIAERESIS}\N{WHITE SMILING FACE}</p>")

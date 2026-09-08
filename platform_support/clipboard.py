@@ -52,6 +52,9 @@ if not _CLOUD_CLIPBOARD_FORMAT:
 _HTML_FORMAT = user32.RegisterClipboardFormatW("HTML Format")
 if not _HTML_FORMAT:
     raise ctypes.WinError(ctypes.get_last_error())
+_RTF_FORMAT = user32.RegisterClipboardFormatW("Rich Text Format")
+if not _RTF_FORMAT:
+    raise ctypes.WinError(ctypes.get_last_error())
 
 
 def _exclude_current_item_from_history_and_cloud() -> None:
@@ -130,6 +133,8 @@ def _set_clipboard_content(content: ClipboardContent) -> None:
     _set_clipboard_text(content.plain_text)
     if content.html is not None:
         _set_clipboard_data(_HTML_FORMAT, _encode_cf_html(content.html))
+    if content.rtf is not None:
+        _set_clipboard_data(_RTF_FORMAT, content.rtf + b"\0")
 
 
 def _read_open_clipboard_text() -> str | None:
