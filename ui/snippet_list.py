@@ -35,7 +35,7 @@ class SnippetList(wx.ListView):
         transfer_buffer: TransferBuffer,
         include_copied_text_in_clipboard_history: Callable[[], bool],
         allow_copied_text_cloud_upload: Callable[[], bool],
-        render_snippet: Callable[[str], RenderedSnippet],
+        render_snippet: Callable[[str, bool], RenderedSnippet],
         validate_snippet: Callable[[str, bool], None],
         variable_suggestions: tuple[VariableSuggestion, ...],
     ):
@@ -275,7 +275,10 @@ class SnippetList(wx.ListView):
             return
         try:
             snippet = self._model.get_snippet(snippet_ids[0])
-            rendered = self._render_snippet(snippet.content)
+            rendered = self._render_snippet(
+                snippet.content,
+                snippet.markdown_enabled,
+            )
         except VariableRenderingCancelled:
             return
         except VariableError as error:

@@ -222,6 +222,7 @@ class SnippetEditorVariableTestCase(unittest.TestCase):
 
         SnippetEditor._on_preview(dialog, Mock())
 
+        dialog._render_variables.assert_called_once_with("{{date}}", False)
         preview_class.assert_called_once_with(dialog, "06.08.26")
         preview.ShowModal.assert_called_once_with()
 

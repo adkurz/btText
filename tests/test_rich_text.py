@@ -108,15 +108,12 @@ class RichTextRenderingTestCase(unittest.TestCase):
         )
         self.assertIn(b"\\b Before diagram after", result.rtf)
 
-    def test_cursor_offset_is_mapped_to_rendered_plain_text(self):
-        result = render_clipboard_content(
-            RenderedSnippet("**AB** C", cursor_offset_from_end=1),
-            True,
-        )
-
-        self.assertEqual(result.plain_text, "AB C")
-        self.assertEqual(result.cursor_offset_from_end, 1)
-        self.assertNotIn("\ue000", result.html)
+    def test_markdown_rejects_rendered_cursor_metadata(self):
+        with self.assertRaises(ValueError):
+            render_clipboard_content(
+                RenderedSnippet("**AB** C", cursor_offset_from_end=1),
+                True,
+            )
 
     def test_rtf_omits_only_the_final_paragraph_break(self):
         single = render_clipboard_content(

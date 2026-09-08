@@ -3,7 +3,6 @@
 from copy import deepcopy
 from dataclasses import dataclass
 from xml.etree import ElementTree
-import uuid
 from urllib.parse import quote, urlsplit
 
 import markdown
@@ -68,25 +67,13 @@ def render_clipboard_content(
             cursor_offset_from_end=rendered.cursor_offset_from_end,
         )
 
-    marker = None
-    source = rendered.text
     if rendered.cursor_offset_from_end is not None:
-        marker = f"\ue000{uuid.uuid4().hex}\ue001"
-        position = len(source) - rendered.cursor_offset_from_end
-        source = source[:position] + marker + source[position:]
+        raise ValueError("Markdown content must not contain a cursor instruction.")
 
     root = _parse_markdown_tree(rendered.text)
     _sanitize_links(root)
     _replace_images_with_alt_text(root)
     plain_text = _render_plain_text(root)
-    cursor_offset = None
-    if marker is not None:
-        marked_plain_text = _render_plain_text(_parse_markdown_tree(source))
-        marker_position = marked_plain_text.find(marker)
-        if marker_position < 0:
-            raise RuntimeError("Markdown discarded the cursor position.")
-        cursor_offset = len(plain_text) - marker_position
-
     html = "".join(
         ElementTree.tostring(child, encoding="unicode", method="html")
         for child in root
@@ -94,7 +81,6 @@ def render_clipboard_content(
     return ClipboardContent(
         plain_text=plain_text,
         html=html,
-        cursor_offset_from_end=cursor_offset,
         rtf=_render_rtf(root),
     )
 

@@ -300,7 +300,8 @@ class SnippetListClipboardTestCase(unittest.TestCase):
         SnippetList.copy_text_to_clipboard(snippet_list, Mock())
 
         snippet_list._render_snippet.assert_called_once_with(
-            "Hello {{input:Name}}"
+            "Hello {{input:Name}}",
+            False,
         )
         copy_content.assert_called_once_with(
             ClipboardContent("Hello Ada"),
@@ -316,7 +317,12 @@ class SnippetListClipboardTestCase(unittest.TestCase):
         snippet_list = SimpleNamespace(
             get_selected_ids=Mock(return_value=[7]),
             _model=SimpleNamespace(
-                get_snippet=Mock(return_value=SimpleNamespace(content="{{input:Name}}"))
+                get_snippet=Mock(
+                    return_value=SimpleNamespace(
+                        content="{{input:Name}}",
+                        markdown_enabled=False,
+                    )
+                )
             ),
             _render_snippet=Mock(side_effect=VariableRenderingCancelled),
             _ee=Mock(),

@@ -14,7 +14,7 @@ from platform_support import windows
 from ui.hotstring_controller import HotstringController
 
 
-def render_unchanged(text, target_window=None):
+def render_unchanged(text, target_window=None, markdown_enabled=False):
     return RenderedSnippet(text)
 
 
@@ -210,7 +210,11 @@ class HotstringControllerTestCase(unittest.TestCase):
 
         controller._expand(TARGET, snippet, 32)
 
-        render_snippet.assert_called_once_with("Today is {{date:long}}.", 42)
+        render_snippet.assert_called_once_with(
+            "Today is {{date:long}}.",
+            42,
+            False,
+        )
         expand_hotstring.assert_called_once_with(
             TARGET,
             ClipboardContent("Today is 6. August 2026."),

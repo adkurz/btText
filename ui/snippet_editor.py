@@ -33,7 +33,7 @@ class SnippetEditor(wx.Dialog):
         ee: EventEmitter,
         model: datamodel.DataModel,
         category_id: int,
-        render_snippet: Callable[[str], RenderedSnippet],
+        render_snippet: Callable[[str, bool], RenderedSnippet],
         validate_snippet: Callable[[str, bool], None],
         variable_suggestions: tuple[VariableSuggestion, ...],
         snippet: datamodel.Snippet | None = None,
@@ -277,22 +277,30 @@ class SnippetEditor(wx.Dialog):
 
     def _on_preview(self, event: wx.CommandEvent) -> None:
         """Resolve current content and show it without changing the editor."""
-        rendered = self._render_variables(self.content_input.GetValue())
+        markdown_enabled = self.markdown_input.GetValue()
+        rendered = self._render_variables(
+            self.content_input.GetValue(),
+            markdown_enabled,
+        )
         if rendered is None:
             return
         preview_text = render_clipboard_content(
             rendered,
-            self.markdown_input.GetValue(),
+            markdown_enabled,
         ).plain_text
         with utils.managed_dialog(
             VariablePreviewDialog(self, preview_text)
         ) as dialog:
             dialog.ShowModal()
 
-    def _render_variables(self, content: str) -> RenderedSnippet | None:
+    def _render_variables(
+        self,
+        content: str,
+        markdown_enabled: bool = False,
+    ) -> RenderedSnippet | None:
         """Render content or present one localized variable error."""
         try:
-            return self._render_snippet(content)
+            return self._render_snippet(content, markdown_enabled)
         except VariableRenderingCancelled:
             return None
         except VariableError as error:

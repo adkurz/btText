@@ -13,7 +13,7 @@ from platform_support import clipboard, clipboard_paste, windows
 from ui.paste_controller import PasteController
 
 
-def render_unchanged(text, target_window=None):
+def render_unchanged(text, target_window=None, markdown_enabled=False):
     return RenderedSnippet(text)
 
 
@@ -108,7 +108,11 @@ class PasteControllerTestCase(unittest.TestCase):
 
         controller.insert_snippet(7)
 
-        render_snippet.assert_called_once_with("Today is {{date:long}}.", 42)
+        render_snippet.assert_called_once_with(
+            "Today is {{date:long}}.",
+            42,
+            False,
+        )
         before_paste.assert_called_once_with()
         call_later.assert_called_once_with(
             50,
@@ -165,7 +169,10 @@ class PasteControllerTestCase(unittest.TestCase):
         get_foreground_window.return_value = 42
         is_external_window.return_value = True
         model = Mock()
-        model.get_snippet.return_value = SimpleNamespace(content="{{missing}}")
+        model.get_snippet.return_value = SimpleNamespace(
+            content="{{missing}}",
+            markdown_enabled=False,
+        )
         before_paste = Mock()
         render_snippet = Mock(
             side_effect=UnknownVariableError(
@@ -200,7 +207,8 @@ class PasteControllerTestCase(unittest.TestCase):
     ):
         model = Mock()
         model.get_snippet.return_value = SimpleNamespace(
-            content="{{input:Customer number}}"
+            content="{{input:Customer number}}",
+            markdown_enabled=False,
         )
         before_paste = Mock()
         controller = PasteController(

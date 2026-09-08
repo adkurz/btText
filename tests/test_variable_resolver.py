@@ -86,6 +86,20 @@ class SnippetVariableResolverTestCase(unittest.TestCase):
             "variable_cursor_markdown_unsupported",
         )
 
+    def test_invalid_markdown_cursor_is_rejected_before_rendering(self):
+        engine = Mock()
+        engine.plan.return_value = ResolutionPlan(variable_names=("cursor",))
+        resolver = SnippetVariableResolver(engine)
+
+        with self.assertRaises(VariableResolutionError):
+            resolver.render(
+                "Before {{cursor}} after",
+                target_window=42,
+                markdown_enabled=True,
+            )
+
+        engine.render.assert_not_called()
+
     def test_cursor_remains_available_without_markdown(self):
         engine = Mock()
         engine.plan.return_value = ResolutionPlan(variable_names=("cursor",))

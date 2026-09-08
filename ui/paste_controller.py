@@ -31,7 +31,7 @@ class PasteController:
         model: datamodel.DataModel,
         before_paste: Callable[[], None],
         reveal_after_error: Callable[[str, str], None],
-        render_snippet: Callable[[str, int | None], RenderedSnippet],
+        render_snippet: Callable[[str, int | None, bool], RenderedSnippet],
     ):
         """Initialize paste coordination with explicit frame callbacks."""
         self._parent = parent
@@ -82,6 +82,7 @@ class PasteController:
             rendered = self._render_snippet(
                 snippet.content,
                 self._target_window.handle,
+                snippet.markdown_enabled,
             )
         except VariableRenderingCancelled:
             return
