@@ -46,7 +46,7 @@ class HotstringController:
         *,
         clipboard_session: ClipboardPasteSession | None = None,
     ):
-        """Create the hook and subscribe to snippet mutations."""
+        """Create the hook and subscribe to mutations affecting hotstrings."""
         self._parent = parent
         self._model = model
         self._get_settings = get_settings
@@ -65,6 +65,8 @@ class HotstringController:
         ee.on("snippet.added", self.refresh)
         ee.on("snippet.edited", self.refresh)
         ee.on("snippet.deleted", self.refresh)
+        # Category deletion cascades to snippets without emitting snippet events.
+        ee.on("category.deleted", self.refresh)
 
     def start(self) -> bool:
         """Start monitoring and report whether the hook was installed."""
@@ -87,7 +89,7 @@ class HotstringController:
         self._hook.stop()
 
     def refresh(self, *_arguments) -> None:
-        """Reload active hotstrings after any snippet mutation."""
+        """Reload active hotstrings after snippet changes or category deletion."""
         snippets = self._model.get_hotstring_snippets()
         self._hook.update(
             {snippet.hotstring: snippet for snippet in snippets if snippet.hotstring}

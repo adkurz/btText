@@ -3,7 +3,8 @@ from unittest.mock import Mock, patch
 
 from core import datamodel
 from core.app_settings import AppSettings
-from core.hotstrings import HotstringExpansionError
+from core.events import EventEmitter
+from core.hotstrings import HotstringExpansionError, HotstringMatcher
 from core.variables import (
     RenderedSnippet,
     UnknownVariableError,
@@ -51,7 +52,67 @@ class HotstringControllerTestCase(unittest.TestCase):
         controller.refresh()
 
         keyboard_hook.return_value.update.assert_called_once_with({"hello": snippet})
-        self.assertEqual(ee.on.call_count, 3)
+        self.assertEqual(ee.on.call_count, 4)
+        ee.on.assert_any_call("category.deleted", controller.refresh)
+
+    @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
+    def test_category_deletion_removes_subtree_hotstrings(self, keyboard_hook):
+        for keep_survivor in (False, True):
+            with self.subTest(keep_survivor=keep_survivor):
+                ee = EventEmitter()
+                model = datamodel.DataModel(ee, ":memory:")
+                try:
+                    root = model.add_category(datamodel.Category("Removed"))
+                    child = model.add_category(
+                        datamodel.Category("Child", parent_id=root.id)
+                    )
+                    removed = [
+                        model.add_snippet(
+                            datamodel.Snippet(
+                                "Removed snippet", "Removed text", category.id,
+                                hotstring=trigger,
+                            )
+                        )
+                        for category, trigger in ((root, ";root"), (child, ";child"))
+                    ]
+                    expected = {}
+                    if keep_survivor:
+                        other = model.add_category(datamodel.Category("Retained"))
+                        survivor = model.add_snippet(
+                            datamodel.Snippet(
+                                "Retained snippet", "Retained text", other.id,
+                                hotstring=";retained",
+                            )
+                        )
+                        expected[survivor.hotstring] = survivor
+                    matcher = HotstringMatcher()
+                    hook = keyboard_hook.return_value
+                    hook.reset_mock()
+                    hook.update.side_effect = matcher.update
+                    controller = HotstringController(
+                        Mock(), ee, model, lambda: AppSettings(), Mock(), Mock(),
+                        render_unchanged,
+                    )
+                    controller.refresh()
+                    hook.update.reset_mock()
+
+                    model.delete_category(root.id)
+
+                    hook.update.assert_called_once_with(expected)
+                    self.assertEqual(
+                        {snippet.hotstring for snippet in model.get_hotstring_snippets()},
+                        set(expected),
+                    )
+                    for snippet in removed:
+                        for character in snippet.hotstring:
+                            self.assertIsNone(matcher.character(character))
+                        self.assertIsNone(matcher.character(" "))
+                    if keep_survivor:
+                        for character in survivor.hotstring:
+                            self.assertIsNone(matcher.character(character))
+                        self.assertEqual(matcher.character(" "), survivor)
+                finally:
+                    model.close()
 
     @patch("ui.hotstring_controller.wx.MessageBox")
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
