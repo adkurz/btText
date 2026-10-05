@@ -27,6 +27,10 @@ class RecordingClipboardSnapshot:
 
 
 class PendingPasteTestCase(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch.object(clipboard.user32, "CreateWindowExW", return_value=123))
+        self.enterContext(patch.object(clipboard.user32, "DestroyWindow", return_value=True))
+
     @contextmanager
     def _restore_retry_scenario(self, *, fail_writes=()):
         original_formats = {
@@ -49,7 +53,8 @@ class PendingPasteTestCase(unittest.TestCase):
             "fail_empty": False,
         }
 
-        def open_clipboard():
+        def open_clipboard(*, owner):
+            self.assertEqual(owner, 123)
             self.assertFalse(state["locked"])
             state["locked"] = True
 
@@ -194,7 +199,8 @@ class PendingPasteTestCase(unittest.TestCase):
         ])
         pending = PendingPaste(snapshot, b"marker")
 
-        def open_clipboard():
+        def open_clipboard(*, owner):
+            self.assertEqual(owner, 123)
             self.assertFalse(state["locked"])
             state["locked"] = True
             events.append("open")
@@ -450,6 +456,10 @@ class PendingPasteTestCase(unittest.TestCase):
 
 
 class PasteTextTestCase(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch.object(clipboard.user32, "CreateWindowExW", return_value=123))
+        self.enterContext(patch.object(clipboard.user32, "DestroyWindow", return_value=True))
+
     def test_invalid_target_is_rejected_before_clipboard_replacement(self):
         with (
             patch.object(

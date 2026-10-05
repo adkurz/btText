@@ -9,6 +9,10 @@ from platform_support.clipboard_snapshot import (
 
 
 class ClipboardSnapshotTestCase(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch.object(clipboard.user32, "CreateWindowExW", return_value=123))
+        self.enterContext(patch.object(clipboard.user32, "DestroyWindow", return_value=True))
+
     def test_empty_clipboard_creates_empty_snapshot(self):
         with (
             patch.object(clipboard_snapshot, "_open_clipboard"),

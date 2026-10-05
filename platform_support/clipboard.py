@@ -2,12 +2,15 @@
 
 import ctypes
 import time
+from collections.abc import Iterator
+from contextlib import contextmanager
 from ctypes import wintypes
 
 from core.rich_text import ClipboardContent
 
 CF_UNICODETEXT = 13
 GMEM_MOVEABLE = 0x0002
+HWND_MESSAGE = -3
 
 
 class ClipboardError(RuntimeError):
@@ -17,6 +20,14 @@ class ClipboardError(RuntimeError):
 user32 = ctypes.WinDLL("user32", use_last_error=True)
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 
+user32.CreateWindowExW.argtypes = (
+    wintypes.DWORD, wintypes.LPCWSTR, wintypes.LPCWSTR, wintypes.DWORD,
+    ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+    wintypes.HWND, wintypes.HMENU, wintypes.HINSTANCE, wintypes.LPVOID,
+)
+user32.CreateWindowExW.restype = wintypes.HWND
+user32.DestroyWindow.argtypes = (wintypes.HWND,)
+user32.DestroyWindow.restype = wintypes.BOOL
 user32.RegisterClipboardFormatW.argtypes = (wintypes.LPCWSTR,)
 user32.RegisterClipboardFormatW.restype = wintypes.UINT
 user32.OpenClipboard.argtypes = (wintypes.HWND,)
@@ -64,10 +75,40 @@ def _exclude_current_item_from_history_and_cloud() -> None:
     _set_clipboard_data(_CLOUD_CLIPBOARD_FORMAT, disabled)
 
 
-def _open_clipboard(attempts: int = 6, delay: float = 0.01) -> None:
-    """Open the process-wide clipboard, retrying short-lived contention."""
+@contextmanager
+def _clipboard_owner_window() -> Iterator[int]:
+    """Keep a message-only owner alive for one eager clipboard write.
+
+    The predefined STATIC class needs no custom window procedure. This window
+    never becomes visible or receives focus, and is created and destroyed on
+    the calling thread. All data is materialized before the owner is destroyed;
+    btText does not use delayed clipboard rendering.
+    """
+    owner = user32.CreateWindowExW(
+        0, "STATIC", "btText Clipboard", 0, 0, 0, 0, 0,
+        HWND_MESSAGE, None, None, None,
+    )
+    if not owner:
+        raise ClipboardError("The clipboard data could not be set.")
+    try:
+        yield owner
+    finally:
+        user32.DestroyWindow(owner)
+
+
+def _open_clipboard(
+    attempts: int = 6,
+    delay: float = 0.01,
+    *,
+    owner: int | None = None,
+) -> None:
+    """Open the clipboard, retaining the supplied owner during retries.
+
+    Read-only callers may omit the owner. Writers must supply a live window
+    and keep it alive until after CloseClipboard.
+    """
     for attempt in range(attempts):
-        if user32.OpenClipboard(None):
+        if user32.OpenClipboard(owner):
             return
         if attempt + 1 < attempts:
             time.sleep(delay)
@@ -185,20 +226,21 @@ def copy_content(
     allow_cloud_upload: bool = True,
 ) -> None:
     """Copy plain text and optional HTML and RTF with privacy controls."""
-    _open_clipboard()
-    try:
-        if not user32.EmptyClipboard():
-            raise ClipboardError("The clipboard could not be cleared.")
-        # Apply every requested exclusion before publishing any content. If a
-        # later format fails, partial content must retain its privacy controls.
-        if not include_in_history:
-            # Windows recognizes a serialized DWORD of zero in this registered
-            # format as a request to omit the item from clipboard history.
-            _set_clipboard_data(_CLIPBOARD_HISTORY_FORMAT, b"\0\0\0\0")
-        if not allow_cloud_upload:
-            # This registered format controls cross-device synchronization
-            # independently from the local clipboard-history setting.
-            _set_clipboard_data(_CLOUD_CLIPBOARD_FORMAT, b"\0\0\0\0")
-        _set_clipboard_content(content)
-    finally:
-        user32.CloseClipboard()
+    with _clipboard_owner_window() as owner:
+        _open_clipboard(owner=owner)
+        try:
+            if not user32.EmptyClipboard():
+                raise ClipboardError("The clipboard could not be cleared.")
+            # Apply every requested exclusion before publishing any content. If a
+            # later format fails, partial content must retain its privacy controls.
+            if not include_in_history:
+                # Windows recognizes a serialized DWORD of zero in this registered
+                # format as a request to omit the item from clipboard history.
+                _set_clipboard_data(_CLIPBOARD_HISTORY_FORMAT, b"\0\0\0\0")
+            if not allow_cloud_upload:
+                # This registered format controls cross-device synchronization
+                # independently from the local clipboard-history setting.
+                _set_clipboard_data(_CLOUD_CLIPBOARD_FORMAT, b"\0\0\0\0")
+            _set_clipboard_content(content)
+        finally:
+            user32.CloseClipboard()

@@ -11,6 +11,7 @@ from platform_support.clipboard import (
     CF_UNICODETEXT,
     GMEM_MOVEABLE,
     ClipboardError,
+    _clipboard_owner_window,
     _open_clipboard,
     _set_clipboard_data,
     kernel32,
@@ -409,42 +410,43 @@ def _restore_copied_formats(
     attempt_formats: list[_ClipboardFormatCopy] = []
     clipboard_open = False
     clipboard_emptied = False
-    try:
-        for copied_format in copied_formats:
-            attempt_formats.append(copied_format.duplicate())
-        _open_clipboard()
-        clipboard_open = True
-        # Keep the clipboard locked from ownership validation through the last
-        # write so another application's newer copy can never be overwritten.
-        if is_owner is not None and not is_owner():
-            return
-        if not user32.EmptyClipboard():
-            raise ClipboardError("The clipboard could not be restored.")
-        clipboard_emptied = True
-        for copied_format in attempt_formats:
-            if copied_format.kind == "hglobal":
-                assert isinstance(copied_format.value, bytes)
-                _set_clipboard_data(copied_format.format_id, copied_format.value)
-                continue
+    with _clipboard_owner_window() as owner:
+        try:
+            for copied_format in copied_formats:
+                attempt_formats.append(copied_format.duplicate())
+            _open_clipboard(owner=owner)
+            clipboard_open = True
+            # Keep the clipboard locked from ownership validation through the last
+            # write so another application's newer copy can never be overwritten.
+            if is_owner is not None and not is_owner():
+                return
+            if not user32.EmptyClipboard():
+                raise ClipboardError("The clipboard could not be restored.")
+            clipboard_emptied = True
+            for copied_format in attempt_formats:
+                if copied_format.kind == "hglobal":
+                    assert isinstance(copied_format.value, bytes)
+                    _set_clipboard_data(copied_format.format_id, copied_format.value)
+                    continue
 
-            if copied_format.kind == "metafile":
-                assert isinstance(copied_format.value, tuple)
-                handle = _set_metafile_picture(copied_format.value)
-            else:
-                assert isinstance(copied_format.value, int)
-                handle = copied_format.value
-            if not user32.SetClipboardData(copied_format.format_id, handle):
                 if copied_format.kind == "metafile":
-                    kernel32.GlobalFree(handle)
-                raise ClipboardError("A clipboard object could not be restored.")
-            # Windows owns both the outer handle and contained object now.
-            copied_format.value = b""
-    except Exception:
-        if clipboard_emptied and on_write_failure is not None:
-            on_write_failure()
-        raise
-    finally:
-        for copied_format in attempt_formats:
-            copied_format.release()
-        if clipboard_open:
-            user32.CloseClipboard()
+                    assert isinstance(copied_format.value, tuple)
+                    handle = _set_metafile_picture(copied_format.value)
+                else:
+                    assert isinstance(copied_format.value, int)
+                    handle = copied_format.value
+                if not user32.SetClipboardData(copied_format.format_id, handle):
+                    if copied_format.kind == "metafile":
+                        kernel32.GlobalFree(handle)
+                    raise ClipboardError("A clipboard object could not be restored.")
+                # Windows owns both the outer handle and contained object now.
+                copied_format.value = b""
+        except Exception:
+            if clipboard_emptied and on_write_failure is not None:
+                on_write_failure()
+            raise
+        finally:
+            for copied_format in attempt_formats:
+                copied_format.release()
+            if clipboard_open:
+                user32.CloseClipboard()

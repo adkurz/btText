@@ -6,6 +6,12 @@ from platform_support import clipboard
 
 
 class CopyTextTestCase(unittest.TestCase):
+    def setUp(self):
+        self.owner_window = self.enterContext(
+            patch.object(clipboard.user32, "CreateWindowExW", return_value=123)
+        )
+        self.enterContext(patch.object(clipboard.user32, "DestroyWindow", return_value=True))
+
     def test_privacy_controls_protect_content_even_when_a_format_write_fails(self):
         content = ClipboardContent("Private", "<p>Private</p>", rtf=b"{\\rtf1 Private}")
         content_formats = (
@@ -167,7 +173,7 @@ class CopyTextTestCase(unittest.TestCase):
         ):
             clipboard.copy_text("Text \N{CHECK MARK}")
 
-        open_clipboard.assert_called_once_with()
+        open_clipboard.assert_called_once_with(owner=123)
         empty_clipboard.assert_called_once_with()
         set_text.assert_called_once_with("Text \N{CHECK MARK}")
         close_clipboard.assert_called_once_with()

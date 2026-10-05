@@ -11,6 +11,7 @@ from core.rich_text import ClipboardContent
 from platform_support import keyboard_input, windows
 from platform_support.clipboard import (
     ClipboardError,
+    _clipboard_owner_window,
     _exclude_current_item_from_history_and_cloud,
     _open_clipboard,
     _set_clipboard_data,
@@ -87,23 +88,24 @@ def _replace_clipboard(
     """Save the clipboard and replace it with marked snippet content."""
     if isinstance(content, str):
         content = ClipboardContent(content)
-    snapshot = ClipboardSnapshot.capture()
-    try:
-        _open_clipboard()
+    with _clipboard_owner_window() as owner:
+        snapshot = ClipboardSnapshot.capture()
         try:
-            if not user32.EmptyClipboard():
-                raise ClipboardError("The clipboard could not be cleared.")
-            # Even partial content must stay private if writing or recovery fails.
-            _exclude_current_item_from_history_and_cloud()
-            _set_clipboard_content(content)
-            _set_clipboard_data(_MARKER_FORMAT, marker)
-        finally:
-            user32.CloseClipboard()
-        return snapshot
-    except Exception as operation_error:
-        # EmptyClipboard may already have discarded the original contents.
-        restore_after_failure(snapshot.restore, operation_error)
-        raise
+            _open_clipboard(owner=owner)
+            try:
+                if not user32.EmptyClipboard():
+                    raise ClipboardError("The clipboard could not be cleared.")
+                # Even partial content must stay private if writing or recovery fails.
+                _exclude_current_item_from_history_and_cloud()
+                _set_clipboard_content(content)
+                _set_clipboard_data(_MARKER_FORMAT, marker)
+            finally:
+                user32.CloseClipboard()
+            return snapshot
+        except Exception as operation_error:
+            # EmptyClipboard may already have discarded the original contents.
+            restore_after_failure(snapshot.restore, operation_error)
+            raise
 
 
 class PendingPaste:
