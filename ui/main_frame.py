@@ -15,6 +15,7 @@ from core.error_messages import format_user_error
 from core.events import EventEmitter
 from i18n import _
 from platform_support import windows
+from platform_support.clipboard_paste import ClipboardPasteSession
 from platform_support.documentation import open_changelog, open_manual
 from platform_support.logging_support import open_log_directory
 from ui import utils
@@ -109,12 +110,14 @@ class MainFrame(sc.SizedFrame):
             create_builtin_variable_engine(),
             self,
         )
+        clipboard_session = ClipboardPasteSession()
         self._paste_controller = PasteController(
             self,
             model,
             self._prepare_external_paste,
             self._reveal_after_paste_error,
             self._variable_resolver.render,
+            clipboard_session=clipboard_session,
         )
         self._hotstring_controller = HotstringController(
             self,
@@ -124,6 +127,7 @@ class MainFrame(sc.SizedFrame):
             self._paste_controller.schedule_restore,
             lambda snippet: self.tray_icon.show_hotstring_notification(snippet),
             self._variable_resolver.render,
+            clipboard_session=clipboard_session,
         )
         self._settings_controller = SettingsController(
             self,

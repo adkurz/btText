@@ -32,6 +32,8 @@ class PasteController:
         before_paste: Callable[[], None],
         reveal_after_error: Callable[[str, str], None],
         render_snippet: Callable[[str, int | None, bool], RenderedSnippet],
+        *,
+        clipboard_session: clipboard_paste.ClipboardPasteSession | None = None,
     ):
         """Initialize paste coordination with explicit frame callbacks."""
         self._parent = parent
@@ -39,6 +41,11 @@ class PasteController:
         self._before_paste = before_paste
         self._reveal_after_error = reveal_after_error
         self._render_snippet = render_snippet
+        self._clipboard_session = (
+            clipboard_session
+            if clipboard_session is not None
+            else clipboard_paste.ClipboardPasteSession()
+        )
         self._target_window: windows.WindowIdentity | None = None
         self.remember_foreground_window()
 
@@ -107,7 +114,11 @@ class PasteController:
     ) -> None:
         """Paste after native window activation has settled."""
         try:
-            pending = clipboard_paste.paste_text(target, content)
+            pending = clipboard_paste.paste_text(
+                target,
+                content,
+                session=self._clipboard_session,
+            )
         except clipboard.ClipboardError as error:
             self._reveal_after_error(
                 format_user_error(error),

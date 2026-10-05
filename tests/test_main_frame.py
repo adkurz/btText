@@ -13,6 +13,7 @@ from core.variables import RenderedSnippet, VariableRenderingCancelled
 from core.rich_text import ClipboardContent
 from core.shortcuts import DEFAULT_TOGGLE_HOTKEY
 from i18n import _
+from platform_support.clipboard_paste import ClipboardPasteSession
 from ui.category_tree import CategoryTree
 from ui.main_frame import MainFrame
 from ui.snippet_list import SnippetList
@@ -200,6 +201,14 @@ class MainFrameConstructionTestCase(unittest.TestCase):
                 self.assertIsNotNone(frame.GetMenuBar())
                 self.assertIsNotNone(frame.GetStatusBar())
                 self.assertFalse(frame.IsShown())
+                clipboard_session = paste_controller_class.call_args.kwargs[
+                    "clipboard_session"
+                ]
+                self.assertIsInstance(clipboard_session, ClipboardPasteSession)
+                self.assertIs(
+                    hotstring_controller_class.call_args.kwargs["clipboard_session"],
+                    clipboard_session,
+                )
                 exit_item = frame.GetMenuBar().FindItemById(wx.ID_EXIT)
                 self.assertEqual(exit_item.GetItemLabel(), _("E&xit\tCtrl+Q"))
                 self.assertEqual(frame.category_tree.GetName(), _("Categories"))

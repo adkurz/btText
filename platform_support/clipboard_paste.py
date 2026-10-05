@@ -166,9 +166,32 @@ class PendingPaste:
         self._snapshot.close()
 
 
+class ClipboardPasteSession:
+    """Coordinate temporary clipboard contents for UI-thread paste operations."""
+
+    def __init__(self) -> None:
+        self._pending: PendingPaste | None = None
+
+    def prepare(self, content: ClipboardContent | str) -> PendingPaste:
+        """Finish the previous restore before capturing another clipboard item."""
+        if self._pending is not None:
+            # The marker check preserves newer external copies. If restoration
+            # fails, retain the old snapshot and reject this replacement so its
+            # existing delayed restore can retry without losing the original.
+            self._pending.restore_clipboard()
+            self._pending = None
+        pending = PendingPaste.prepare(content)
+        self._pending = pending
+        # Old timers may still run, but their successfully restored or discarded
+        # snapshots are closed and cannot change this new clipboard item.
+        return pending
+
+
 def paste_text(
     target: windows.WindowIdentity,
     content: ClipboardContent | str,
+    *,
+    session: ClipboardPasteSession | None = None,
 ) -> PendingPaste:
     """Activate an unchanged target, populate the clipboard, and paste."""
     if not windows.matches_window_identity(target):
@@ -177,7 +200,11 @@ def paste_text(
             "The previously active window no longer exists.",
         )
 
-    pending = PendingPaste.prepare(content)
+    pending = (
+        session.prepare(content)
+        if session is not None
+        else PendingPaste.prepare(content)
+    )
     if not windows.activate_window_identity(target):
         operation_error = PasteTargetError(
             "paste_target_window_activation_failed",

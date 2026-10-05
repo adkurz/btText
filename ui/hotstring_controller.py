@@ -24,7 +24,7 @@ from platform_support import (
     sounds,
     windows,
 )
-from platform_support.clipboard_paste import PendingPaste
+from platform_support.clipboard_paste import ClipboardPasteSession, PendingPaste
 from ui.variable_resolver import show_variable_error
 
 
@@ -43,6 +43,8 @@ class HotstringController:
         schedule_clipboard_restore: Callable[[PendingPaste], None],
         notify_expansion: Callable[[datamodel.Snippet], None],
         render_snippet: Callable[[str, int | None, bool], RenderedSnippet],
+        *,
+        clipboard_session: ClipboardPasteSession | None = None,
     ):
         """Create the hook and subscribe to snippet mutations."""
         self._parent = parent
@@ -51,6 +53,11 @@ class HotstringController:
         self._schedule_clipboard_restore = schedule_clipboard_restore
         self._notify_expansion = notify_expansion
         self._render_snippet = render_snippet
+        self._clipboard_session = (
+            clipboard_session
+            if clipboard_session is not None
+            else ClipboardPasteSession()
+        )
         self._hook = hotstrings.KeyboardHook(
             self._queue_expansion,
             lambda: windows.is_external_window(windows.get_foreground_window()),
@@ -135,6 +142,7 @@ class HotstringController:
                 content,
                 len(snippet.hotstring or ""),
                 boundary_key if settings.preserve_hotstring_boundary else None,
+                session=self._clipboard_session,
             )
             if content.cursor_offset_from_end is not None:
                 boundary_offset = int(

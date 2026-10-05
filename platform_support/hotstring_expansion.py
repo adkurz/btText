@@ -4,7 +4,11 @@ from core.hotstrings import HotstringExpansionError
 from core.rich_text import ClipboardContent
 from platform_support import keyboard_input, windows
 from platform_support.clipboard import ClipboardError
-from platform_support.clipboard_paste import PendingPaste, restore_after_failure
+from platform_support.clipboard_paste import (
+    ClipboardPasteSession,
+    PendingPaste,
+    restore_after_failure,
+)
 
 
 def replay_suppressed_boundary(
@@ -30,6 +34,8 @@ def expand_hotstring(
     content: ClipboardContent | str,
     hotstring_length: int,
     boundary_key: int | None,
+    *,
+    session: ClipboardPasteSession | None = None,
 ) -> PendingPaste:
     """Replace a typed hotstring and optionally replay its boundary key."""
     if not windows.matches_window_identity(target):
@@ -37,7 +43,11 @@ def expand_hotstring(
             "hotstring_target_window_missing",
             "The active window no longer exists.",
         )
-    pending = PendingPaste.prepare(content)
+    pending = (
+        session.prepare(content)
+        if session is not None
+        else PendingPaste.prepare(content)
+    )
     if not windows.activate_window_identity(target):
         operation_error = HotstringExpansionError(
             "hotstring_target_window_activation_failed",

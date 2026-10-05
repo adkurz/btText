@@ -144,7 +144,8 @@ class HotstringControllerTestCase(unittest.TestCase):
         controller._expand(TARGET, snippet, 32)
 
         expand_hotstring.assert_called_once_with(
-            TARGET, ClipboardContent("Hello"), 5, 32
+            TARGET, ClipboardContent("Hello"), 5, 32,
+            session=controller._clipboard_session,
         )
         schedule_restore.assert_called_once_with(pending)
         notify.assert_called_once_with(snippet)
@@ -220,6 +221,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             ClipboardContent("Today is 6. August 2026."),
             5,
             32,
+            session=controller._clipboard_session,
         )
 
     @patch("ui.hotstring_controller.keyboard_input.move_cursor_left")

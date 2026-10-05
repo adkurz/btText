@@ -231,11 +231,14 @@ class PasteControllerTestCase(unittest.TestCase):
         paste_text.return_value = pending
         controller = PasteController.__new__(PasteController)
         controller.schedule_restore = Mock()
+        controller._clipboard_session = clipboard_paste.ClipboardPasteSession()
 
         content = ClipboardContent("Example")
         controller._paste_after_hide(TARGET, content)
 
-        paste_text.assert_called_once_with(TARGET, content)
+        paste_text.assert_called_once_with(
+            TARGET, content, session=controller._clipboard_session
+        )
         controller.schedule_restore.assert_called_once_with(pending)
 
     @patch("ui.paste_controller.keyboard_input.move_cursor_left")
@@ -249,6 +252,7 @@ class PasteControllerTestCase(unittest.TestCase):
         paste_text.return_value = pending
         controller = PasteController.__new__(PasteController)
         controller.schedule_restore = Mock()
+        controller._clipboard_session = clipboard_paste.ClipboardPasteSession()
 
         controller._paste_after_hide(
             TARGET,
@@ -267,6 +271,7 @@ class PasteControllerTestCase(unittest.TestCase):
         controller = PasteController.__new__(PasteController)
         controller._parent = Mock()
         controller._reveal_after_error = Mock()
+        controller._clipboard_session = clipboard_paste.ClipboardPasteSession()
 
         controller._paste_after_hide(TARGET, "Example")
 
