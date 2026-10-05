@@ -2,10 +2,14 @@
 
 from copy import deepcopy
 from dataclasses import dataclass
+from html import unescape
+from html.entities import html5
+import re
 from xml.etree import ElementTree
 from urllib.parse import quote, urlsplit
 
 import markdown
+from markdown import util as markdown_util
 from markdown.extensions import Extension
 from markdown.treeprocessors import Treeprocessor
 
@@ -13,6 +17,11 @@ from core.variables import RenderedSnippet
 
 
 _ALLOWED_LINK_SCHEMES = frozenset(("http", "https", "mailto"))
+_AMP_ENTITY_RE = re.compile(
+    re.escape(markdown_util.AMP_SUBSTITUTE)
+    + r"([a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+);"
+)
+_ATTRIBUTE_ENTITY_RE = re.compile(r"&([a-zA-Z][a-zA-Z0-9]*|#[0-9]+|#x[0-9a-fA-F]+);")
 
 
 @dataclass(frozen=True)
@@ -92,7 +101,51 @@ def _parse_markdown_tree(source: str) -> ElementTree.Element:
     parser.convert(source)
     if capture.root is None:
         raise RuntimeError("Markdown did not produce a document tree.")
+    _normalize_markdown_tree(capture.root, parser)
     return capture.root
+
+
+def _normalize_markdown_tree(
+    root: ElementTree.Element,
+    parser: markdown.Markdown,
+) -> None:
+    """Resolve parser representations into Unicode before format rendering."""
+    def stashed_entity(match: re.Match[str]) -> str:
+        # Raw HTML processors are disabled, so only entities enter this stash.
+        return str(parser.htmlStash.rawHtmlBlocks[int(match.group(1))])
+
+    def normalize_text(value: str) -> str:
+        # Decode only parser-generated entities. Decoding the whole string
+        # would also reinterpret literal or already decoded entity text.
+        value = markdown_util.HTML_PLACEHOLDER_RE.sub(
+            lambda match: unescape(stashed_entity(match)), value
+        )
+        return _AMP_ENTITY_RE.sub(
+            lambda match: unescape("&" + match.group(1) + ";"), value
+        )
+
+    def attribute_entity(match: re.Match[str]) -> str:
+        # Markdown's serializer preserves complete entity references in
+        # attributes. Ordinary URL parameters such as &copy=1 stay literal.
+        name = match.group(1)
+        if name.startswith("#"):
+            return unescape(match.group(0))
+        return html5.get(name + ";", match.group(0))
+
+    for element in root.iter():
+        if element.text:
+            # Code is HTML-escaped by Markdown even before serialization.
+            element.text = (
+                unescape(element.text)
+                if element.tag == "code"
+                else normalize_text(element.text)
+            )
+        if element.tail:
+            element.tail = normalize_text(element.tail)
+        for name, value in element.items():
+            value = markdown_util.HTML_PLACEHOLDER_RE.sub(stashed_entity, value)
+            value = value.replace(markdown_util.AMP_SUBSTITUTE, "&")
+            element.set(name, _ATTRIBUTE_ENTITY_RE.sub(attribute_entity, value))
 
 
 def _sanitize_links(root: ElementTree.Element) -> None:

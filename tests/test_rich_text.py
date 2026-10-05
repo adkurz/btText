@@ -39,6 +39,125 @@ class RichTextRenderingTestCase(unittest.TestCase):
         self.assertNotIn("<script>", result.html)
         self.assertIn("&lt;script&gt;", result.html)
 
+    def test_entities_are_decoded_in_text_and_inline_tails(self):
+        result = render_clipboard_content(
+            RenderedSnippet("A &amp; **B &copy;** &#169; &#x1F600; &amp;amp;"),
+            True,
+        )
+
+        self.assertEqual(result.plain_text, "A & B \u00a9 \u00a9 \U0001f600 &amp;")
+        self.assertEqual(
+            result.html,
+            "<p>A &amp; <strong>B \u00a9</strong> \u00a9 \U0001f600 &amp;amp;</p>",
+        )
+        self.assertIn(b"A & ", result.rtf)
+        self.assertIn(rb"\b B \u169?", result.rtf)
+        self.assertIn(rb"\u-10179?\u-8704? &amp;", result.rtf)
+        for value in (result.plain_text, result.html, result.rtf.decode("ascii")):
+            self.assertNotIn("wzxhzdk:", value)
+
+    def test_automatic_email_links_are_normalized_before_link_validation(self):
+        for source in ("<person@example.com>", "<mailto:person@example.com>"):
+            with self.subTest(source=source):
+                result = render_clipboard_content(RenderedSnippet(source), True)
+
+                self.assertEqual(result.plain_text, "person@example.com")
+                self.assertEqual(
+                    result.html,
+                    '<p><a href="mailto:person@example.com">person@example.com</a></p>',
+                )
+                self.assertIn(b'HYPERLINK "mailto:person@example.com"', result.rtf)
+                self.assertNotIn(rb"\u2?amp", result.rtf)
+
+    def test_inline_code_preserves_literal_special_characters_and_entities(self):
+        result = render_clipboard_content(
+            RenderedSnippet("`a < b > c & &amp; &#169; {x}`"),
+            True,
+        )
+
+        self.assertEqual(result.plain_text, "a < b > c & &amp; &#169; {x}")
+        self.assertEqual(
+            result.html,
+            "<p><code>a &lt; b &gt; c &amp; &amp;amp; &amp;#169; {x}</code></p>",
+        )
+        self.assertIn(rb"\f1 a < b > c & &amp; &#169; \{x\}", result.rtf)
+
+    def test_code_blocks_preserve_literal_special_characters_and_entities(self):
+        result = render_clipboard_content(
+            RenderedSnippet("    a < b & &amp;\n    &#169; > c"),
+            True,
+        )
+
+        self.assertEqual(result.plain_text, "a < b & &amp;\n&#169; > c")
+        self.assertIn("a &lt; b &amp; &amp;amp;\n&amp;#169; &gt; c", result.html)
+        self.assertIn(rb"a < b & &amp;\line &#169; > c", result.rtf)
+
+    def test_link_attributes_decode_entities_exactly_once(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                '[label](https://example.com/?a=1&amp;b=&amp;amp; "A &amp; B")'
+            ),
+            True,
+        )
+
+        self.assertEqual(result.plain_text, "label")
+        self.assertIn('href="https://example.com/?a=1&amp;b=&amp;amp;"', result.html)
+        self.assertIn('title="A &amp; B"', result.html)
+        self.assertIn(b'HYPERLINK "https://example.com/?a=1&b=&amp;"', result.rtf)
+
+    def test_entity_encoded_unsupported_link_is_rejected_after_normalization(self):
+        result = render_clipboard_content(
+            RenderedSnippet("[label](javascript&#58;alert(1))"),
+            True,
+        )
+
+        self.assertEqual(result.plain_text, "label")
+        self.assertEqual(result.html, "<p><span>label</span></p>")
+        self.assertNotIn(b"HYPERLINK", result.rtf)
+
+    def test_url_parameters_and_alternative_text_preserve_entity_like_names(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "[label](https://example.com/?x=1&copy=2&notebook=3&notit;=4) "
+                "![A &copy=1 &notebook &notit;](https://example.com/image.png)"
+            ),
+            True,
+        )
+
+        self.assertEqual(result.plain_text, "label A &copy=1 &notebook &notit;")
+        self.assertIn(
+            'href="https://example.com/?x=1&amp;copy=2&amp;notebook=3&amp;notit;=4"',
+            result.html,
+        )
+        self.assertIn("A &amp;copy=1 &amp;notebook &amp;notit;", result.html)
+        self.assertIn(
+            b'HYPERLINK "https://example.com/?x=1&copy=2&notebook=3&notit;=4"',
+            result.rtf,
+        )
+
+    def test_image_alternative_text_decodes_entities_exactly_once(self):
+        result = render_clipboard_content(
+            RenderedSnippet("![A &amp; B &amp;amp;](https://example.com/image.png)"),
+            True,
+        )
+
+        self.assertEqual(result.plain_text, "A & B &amp;")
+        self.assertEqual(result.html, "<p>A &amp; B &amp;amp;</p>")
+        self.assertIn(b"A & B &amp;", result.rtf)
+
+    def test_decoded_entities_remain_text_instead_of_html_or_markdown(self):
+        result = render_clipboard_content(
+            RenderedSnippet("&lt;script&gt;x&lt;/script&gt; &#42;literal&#42; &unknown;"),
+            True,
+        )
+
+        self.assertEqual(result.plain_text, "<script>x</script> *literal* &unknown;")
+        self.assertEqual(
+            result.html,
+            "<p>&lt;script&gt;x&lt;/script&gt; *literal* &amp;unknown;</p>",
+        )
+        self.assertIn(b"<script>x</script> *literal* &unknown;", result.rtf)
+
     def test_only_supported_absolute_links_remain_actionable(self):
         for target in (
             "http://example.com/path",
