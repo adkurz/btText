@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, call, patch
+from unittest.mock import ANY, Mock, call, patch
 
 from platform_support import clipboard, clipboard_snapshot
 from platform_support.clipboard_snapshot import (
@@ -89,7 +89,9 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
         ) as restore_copied_formats:
             snapshot.restore()
 
-        restore_copied_formats.assert_called_once_with(copied_formats, is_owner=None)
+        restore_copied_formats.assert_called_once_with(
+            copied_formats, is_owner=ANY, on_write_failure=ANY,
+        )
         snapshot.close.assert_called_once_with()
 
     def test_discard_releases_copied_bitmap(self):
@@ -202,9 +204,16 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
             _ClipboardFormatCopy(clipboard_snapshot.CF_BITMAP, "bitmap", 101),
             _ClipboardFormatCopy(clipboard_snapshot.CF_DSPBITMAP, "bitmap", 102),
         ]
+        snapshot = ClipboardSnapshot(copied_formats)
+        is_owner = Mock(side_effect=(True, False))
 
         with (
             patch.object(clipboard_snapshot, "_open_clipboard"),
+            patch.object(
+                clipboard_snapshot.user32,
+                "GetClipboardSequenceNumber",
+                return_value=100,
+            ),
             patch.object(
                 clipboard_snapshot.user32,
                 "CopyImage",
@@ -223,13 +232,16 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
             patch.object(clipboard_snapshot.user32, "CloseClipboard"),
             patch.object(clipboard_snapshot.gdi32, "DeleteObject") as delete,
         ):
-            with self.assertRaises(clipboard.ClipboardError):
-                clipboard_snapshot._restore_copied_formats(copied_formats)
+            try:
+                with self.assertRaises(clipboard.ClipboardError):
+                    snapshot.restore(is_owner=is_owner)
 
-            self.assertEqual([item.value for item in copied_formats], [101, 102])
-            clipboard_snapshot._restore_copied_formats(copied_formats)
-            for copied_format in copied_formats:
-                copied_format.release()
+                self.assertFalse(snapshot._closed)
+                self.assertEqual([item.value for item in copied_formats], [101, 102])
+                snapshot.restore(is_owner=is_owner)
+                self.assertTrue(snapshot._closed)
+            finally:
+                snapshot.close()
 
         self.assertEqual(empty_clipboard.call_count, 2)
         self.assertEqual(set_clipboard_data.call_count, 4)

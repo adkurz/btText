@@ -1,4 +1,5 @@
 import unittest
+from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
 from platform_support import clipboard, clipboard_paste, clipboard_snapshot, windows
@@ -25,6 +26,159 @@ class RecordingClipboardSnapshot:
 
 
 class PendingPasteTestCase(unittest.TestCase):
+    @contextmanager
+    def _restore_retry_scenario(self, *, fail_writes=()):
+        original_formats = {
+            clipboard.CF_UNICODETEXT: "original\0".encode("utf-16-le"),
+            clipboard._HTML_FORMAT: b"original HTML\0",
+            clipboard._RTF_FORMAT: b"original RTF\0",
+        }
+        snapshot = ClipboardSnapshot([
+            _ClipboardFormatCopy(format_id, "hglobal", data)
+            for format_id, data in original_formats.items()
+        ])
+        pending = PendingPaste(snapshot, b"marker")
+        state = {
+            "locked": False,
+            "formats": {clipboard_paste._MARKER_FORMAT: b"marker"},
+            "sequence": 100,
+            "sequence_available": True,
+            "writes": 0,
+            "empties": 0,
+            "fail_empty": False,
+        }
+
+        def open_clipboard():
+            self.assertFalse(state["locked"])
+            state["locked"] = True
+
+        def close_clipboard():
+            self.assertTrue(state["locked"])
+            state["locked"] = False
+
+        def read_marker(format_id):
+            self.assertTrue(state["locked"])
+            return state["formats"].get(format_id)
+
+        def get_sequence():
+            self.assertTrue(state["locked"])
+            return state["sequence"] if state["sequence_available"] else 0
+
+        def empty_clipboard():
+            self.assertTrue(state["locked"])
+            if state["fail_empty"]:
+                return False
+            state["empties"] += 1
+            state["sequence"] += 1
+            state["formats"].clear()
+            return True
+
+        def set_data(format_id, data):
+            self.assertTrue(state["locked"])
+            state["writes"] += 1
+            if state["writes"] in fail_writes:
+                raise clipboard.ClipboardError("write failed")
+            state["sequence"] += 1
+            state["formats"][format_id] = data
+
+        with (
+            patch.object(clipboard_snapshot, "_open_clipboard", side_effect=open_clipboard),
+            patch.object(clipboard_paste, "_read_clipboard_bytes", side_effect=read_marker),
+            patch.object(clipboard_snapshot.user32, "GetClipboardSequenceNumber", side_effect=get_sequence),
+            patch.object(clipboard_snapshot.user32, "EmptyClipboard", side_effect=empty_clipboard),
+            patch.object(clipboard_snapshot, "_set_clipboard_data", side_effect=set_data),
+            patch.object(clipboard_snapshot.user32, "CloseClipboard", side_effect=close_clipboard),
+        ):
+            try:
+                yield pending, snapshot, state, original_formats
+            finally:
+                snapshot.close()
+
+    def test_restore_retries_empty_and_partial_writes_without_losing_formats(self):
+        for failed_write in (1, 2, 3):
+            with self.subTest(failed_write=failed_write):
+                with self._restore_retry_scenario(fail_writes=(failed_write,)) as scenario:
+                    pending, snapshot, state, original_formats = scenario
+                    with self.assertRaisesRegex(clipboard.ClipboardError, "write failed"):
+                        pending.restore_clipboard()
+
+                    self.assertFalse(snapshot._closed)
+                    self.assertFalse(state["locked"])
+                    self.assertNotIn(clipboard_paste._MARKER_FORMAT, state["formats"])
+                    pending.restore_clipboard()
+
+                    self.assertEqual(state["formats"], original_formats)
+                    self.assertEqual(state["empties"], 2)
+                    self.assertTrue(snapshot._closed)
+
+    def test_restore_retries_repeated_write_failures(self):
+        with self._restore_retry_scenario(fail_writes=(2, 4)) as scenario:
+            pending, snapshot, state, original_formats = scenario
+            for _attempt in range(2):
+                with self.assertRaisesRegex(clipboard.ClipboardError, "write failed"):
+                    pending.restore_clipboard()
+                self.assertFalse(snapshot._closed)
+            pending.restore_clipboard()
+            self.assertEqual(state["formats"], original_formats)
+            self.assertEqual(state["empties"], 3)
+            self.assertTrue(snapshot._closed)
+
+    def test_restore_retry_preserves_external_changes_even_with_same_marker(self):
+        for external_formats in (
+            {},
+            {clipboard.CF_UNICODETEXT: b"new copy"},
+            {clipboard_paste._MARKER_FORMAT: b"marker"},
+        ):
+            with self.subTest(external_formats=external_formats):
+                with self._restore_retry_scenario(fail_writes=(2,)) as scenario:
+                    pending, snapshot, state, _original_formats = scenario
+                    with self.assertRaises(clipboard.ClipboardError):
+                        pending.restore_clipboard()
+                    state["formats"] = external_formats.copy()
+                    state["sequence"] += 1
+                    pending.restore_clipboard()
+                    self.assertEqual(state["formats"], external_formats)
+                    self.assertEqual(state["empties"], 1)
+                    self.assertTrue(snapshot._closed)
+
+    def test_restore_retry_keeps_snapshot_when_sequence_is_unavailable(self):
+        for available_on_failure in (False, True):
+            with self.subTest(available_on_failure=available_on_failure):
+                with self._restore_retry_scenario(fail_writes=(1,)) as scenario:
+                    pending, snapshot, state, _original_formats = scenario
+                    state["sequence_available"] = available_on_failure
+                    with self.assertRaisesRegex(clipboard.ClipboardError, "write failed"):
+                        pending.restore_clipboard()
+                    state["sequence_available"] = False
+                    with self.assertRaises(clipboard.ClipboardError):
+                        pending.restore_clipboard()
+                    self.assertFalse(snapshot._closed)
+                    self.assertEqual(state["empties"], 1)
+                    self.assertFalse(state["locked"])
+                    state["sequence_available"] = True
+                    if available_on_failure:
+                        pending.restore_clipboard()
+                        self.assertTrue(snapshot._closed)
+                        self.assertEqual(state["formats"], _original_formats)
+                    else:
+                        with self.assertRaises(clipboard.ClipboardError):
+                            pending.restore_clipboard()
+                        self.assertFalse(snapshot._closed)
+                        self.assertEqual(state["empties"], 1)
+
+    def test_restore_retries_failure_before_emptying_with_original_marker(self):
+        with self._restore_retry_scenario() as scenario:
+            pending, snapshot, state, original_formats = scenario
+            state["fail_empty"] = True
+            with self.assertRaises(clipboard.ClipboardError):
+                pending.restore_clipboard()
+            self.assertFalse(snapshot._closed)
+            state["fail_empty"] = False
+            pending.restore_clipboard()
+            self.assertEqual(state["formats"], original_formats)
+            self.assertEqual(state["empties"], 1)
+            self.assertTrue(snapshot._closed)
+
     def test_restore_cannot_overwrite_a_copy_after_marker_validation(self):
         state = {
             "locked": False,

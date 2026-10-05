@@ -35,6 +35,8 @@ logger = logging.getLogger("bttext.clipboard")
 
 
 gdi32 = ctypes.WinDLL("gdi32", use_last_error=True)
+user32.GetClipboardSequenceNumber.argtypes = ()
+user32.GetClipboardSequenceNumber.restype = wintypes.DWORD
 user32.CopyImage.argtypes = (
     wintypes.HANDLE,
     wintypes.UINT,
@@ -189,6 +191,7 @@ class ClipboardSnapshot:
         """Own copied formats until they are restored or explicitly discarded."""
         self._copied_formats = copied_formats
         self._closed = False
+        self._failed_restore_sequence: int | None = None
 
     @classmethod
     def capture(cls) -> ClipboardSnapshot:
@@ -207,10 +210,32 @@ class ClipboardSnapshot:
 
         ``is_owner`` reads the open clipboard. If it rejects restoration, the
         current contents are preserved and this snapshot is discarded.
+        After a destructive failure, retries require the unchanged sequence
+        of that failed attempt because clearing the clipboard removed its marker.
         """
         if self._closed:
             return
-        _restore_copied_formats(self._copied_formats, is_owner=is_owner)
+
+        def owns_current_contents() -> bool:
+            if self._failed_restore_sequence is not None:
+                current_sequence = user32.GetClipboardSequenceNumber()
+                if not self._failed_restore_sequence or not current_sequence:
+                    # Missing sequence evidence cannot authorize another write.
+                    # Keep the snapshot until the caller retries or discards it.
+                    raise ClipboardError("The clipboard could not be restored.")
+                return current_sequence == self._failed_restore_sequence
+            return is_owner is None or is_owner()
+
+        def retain_failed_sequence() -> None:
+            # Called before releasing the clipboard lock, so this version
+            # identifies only the contents left by our own failed write.
+            self._failed_restore_sequence = user32.GetClipboardSequenceNumber()
+
+        _restore_copied_formats(
+            self._copied_formats,
+            is_owner=owns_current_contents,
+            on_write_failure=retain_failed_sequence,
+        )
         self.close()
 
     def close(self) -> None:
@@ -378,10 +403,12 @@ def _restore_copied_formats(
     copied_formats: list[_ClipboardFormatCopy],
     *,
     is_owner: Callable[[], bool] | None = None,
+    on_write_failure: Callable[[], None] | None = None,
 ) -> None:
     """Restore formats through disposable copies so a failed attempt is retryable."""
     attempt_formats: list[_ClipboardFormatCopy] = []
     clipboard_open = False
+    clipboard_emptied = False
     try:
         for copied_format in copied_formats:
             attempt_formats.append(copied_format.duplicate())
@@ -393,6 +420,7 @@ def _restore_copied_formats(
             return
         if not user32.EmptyClipboard():
             raise ClipboardError("The clipboard could not be restored.")
+        clipboard_emptied = True
         for copied_format in attempt_formats:
             if copied_format.kind == "hglobal":
                 assert isinstance(copied_format.value, bytes)
@@ -411,6 +439,10 @@ def _restore_copied_formats(
                 raise ClipboardError("A clipboard object could not be restored.")
             # Windows owns both the outer handle and contained object now.
             copied_format.value = b""
+    except Exception:
+        if clipboard_emptied and on_write_failure is not None:
+            on_write_failure()
+        raise
     finally:
         for copied_format in attempt_formats:
             copied_format.release()
