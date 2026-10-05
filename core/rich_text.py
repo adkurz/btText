@@ -200,9 +200,28 @@ def _render_plain_text(root: ElementTree.Element) -> str:
     """Render the supported Markdown element tree as readable plain text."""
     parts: list[str] = []
 
-    def append_text(value: str | None, *, preserve_lines: bool = False) -> None:
-        if value:
-            parts.append(value if preserve_lines else value.replace("\n", " "))
+    def append_text(
+        value: str | None,
+        *,
+        preserve_lines: bool = False,
+        indent: str = "",
+    ) -> None:
+        if not value:
+            return
+        if not preserve_lines:
+            value = value.replace("\n", " ")
+        for index, line in enumerate(value.split("\n")):
+            if index:
+                parts.append("\n")
+            if indent and (not parts or parts[-1].endswith("\n")):
+                # Source indentation in ordinary paragraphs is whitespace,
+                # while code indentation remains part of the content.
+                if not preserve_lines:
+                    line = line.lstrip(" \t")
+                if line:
+                    parts.append(indent)
+            if line:
+                parts.append(line)
 
     def end_block(lines: int = 2) -> None:
         current = "".join(parts)
@@ -210,34 +229,55 @@ def _render_plain_text(root: ElementTree.Element) -> str:
         if missing > 0:
             parts.append("\n" * missing)
 
-    def visit(element: ElementTree.Element, list_depth: int = 0) -> None:
+    def visit(
+        element: ElementTree.Element,
+        list_depth: int = 0,
+        continuation_indent: str = "",
+    ) -> None:
         tag = element.tag
         if tag == "br":
             parts.append("\n")
         elif tag == "hr":
-            parts.append("---")
+            append_text("---", indent=continuation_indent)
             end_block()
         elif tag in ("ul", "ol"):
+            if list_depth:
+                end_block(1)
             ordered = tag == "ol"
             item_number = int(element.get("start", "1"))
             for child in element:
                 if child.tag != "li":
-                    visit(child, list_depth + 1)
+                    visit(child, list_depth + 1, continuation_indent)
                     continue
-                parts.append("  " * list_depth)
-                parts.append(f"{item_number}. " if ordered else "- ")
-                visit(child, list_depth + 1)
+                item_indent = "  " * list_depth
+                marker = f"{item_number}. " if ordered else "- "
+                parts.append(item_indent)
+                parts.append(marker)
+                visit(child, list_depth + 1, item_indent + " " * len(marker))
                 end_block(1)
                 item_number += 1
-            end_block()
+            end_block(1 if list_depth else 2)
         elif tag == "pre":
-            append_text("".join(element.itertext()), preserve_lines=True)
+            append_text(
+                "".join(element.itertext()),
+                preserve_lines=True,
+                indent=continuation_indent,
+            )
             end_block()
         else:
-            append_text(element.text)
-            for child in element:
-                visit(child, list_depth)
-                append_text(child.tail)
+            append_text(element.text, indent=continuation_indent)
+            for index, child in enumerate(element):
+                if (
+                    continuation_indent
+                    and child.tag in {
+                        "p", "pre", "blockquote", "hr",
+                        "h1", "h2", "h3", "h4", "h5", "h6",
+                    }
+                    and (element.text or index)
+                ):
+                    end_block()
+                visit(child, list_depth, continuation_indent)
+                append_text(child.tail, indent=continuation_indent)
             if tag in {"p", "h1", "h2", "h3", "h4", "h5", "h6", "blockquote"}:
                 end_block()
 

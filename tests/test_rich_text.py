@@ -41,6 +41,80 @@ class RichTextRenderingTestCase(unittest.TestCase):
         self.assertIn(b"\\b Ada", result.rtf)
         self.assertIn(b"\\bullet\\tab First", result.rtf)
 
+    def test_plain_text_preserves_nested_list_line_breaks(self):
+        cases = (
+            (
+                "Intro\n\n- Parent\n    - Child\n        - Grandchild\n"
+                "    - Other child\n- Sibling\n\nOutro",
+                "Intro\n\n- Parent\n  - Child\n    - Grandchild\n"
+                "  - Other child\n- Sibling\n\nOutro",
+            ),
+            (
+                "1. Parent\n    - Child\n        1. Grandchild\n"
+                "        2. Other grandchild\n    - Other child\n2. Sibling",
+                "1. Parent\n  - Child\n    1. Grandchild\n"
+                "    2. Other grandchild\n  - Other child\n2. Sibling",
+            ),
+            (
+                "> - Parent\n>     - Child\n> - Sibling",
+                "- Parent\n  - Child\n- Sibling",
+            ),
+        )
+        for source, expected in cases:
+            with self.subTest(source=source):
+                result = render_clipboard_content(RenderedSnippet(source), True)
+
+                self.assertEqual(result.plain_text, expected)
+
+    def test_plain_text_indents_list_continuations(self):
+        cases = (
+            (
+                "- First **bold**  \n    Second line\n\n"
+                "    Another paragraph\n\n    - Nested\n\n"
+                "    After nested\n\n- Last",
+                "- First bold\n  Second line\n\n"
+                "  Another paragraph\n\n  - Nested\n\n"
+                "  After nested\n\n- Last",
+            ),
+            (
+                "- Parent\n    - Child\n\n        Another paragraph\n\n"
+                "        - Grandchild\n\n        After nested\n\n- Sibling",
+                "- Parent\n\n  - Child\n\n    Another paragraph\n\n"
+                "    - Grandchild\n\n    After nested\n\n- Sibling",
+            ),
+        )
+        for source, expected in cases:
+            with self.subTest(source=source):
+                result = render_clipboard_content(RenderedSnippet(source), True)
+
+                self.assertEqual(result.plain_text, expected)
+
+    def test_plain_text_preserves_code_indentation_within_a_list(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "- First\n\n        x = 1\n            y = 2\n\n"
+                "    After\n\n- Next"
+            ),
+            True,
+        )
+
+        self.assertEqual(
+            result.plain_text,
+            "- First\n\n  x = 1\n      y = 2\n\n  After\n\n- Next",
+        )
+
+    def test_plain_text_aligns_ordered_list_continuations_with_wide_markers(self):
+        items = "\n".join(f"{number}. Item {number}" for number in range(1, 11))
+        result = render_clipboard_content(
+            RenderedSnippet(items + "\n\n    Continuation  \n    Last line"),
+            True,
+        )
+
+        self.assertEqual(
+            result.plain_text,
+            items + "\n\n    Continuation\n    Last line",
+        )
+
     def test_raw_html_is_escaped_instead_of_being_activated(self):
         result = render_clipboard_content(
             RenderedSnippet("<script>alert('unsafe')</script>"),
