@@ -4,6 +4,8 @@ from unittest.mock import Mock, patch
 
 import wx
 
+from core.builtin_variables import create_builtin_variable_engine
+from core.rich_text import render_clipboard_content
 from core.variables import (
     RenderedSnippet,
     ResolutionPlan,
@@ -15,6 +17,39 @@ from ui.variable_resolver import SnippetVariableResolver, show_variable_error
 
 
 class SnippetVariableResolverTestCase(unittest.TestCase):
+    def test_empty_input_can_be_rendered_as_markdown(self):
+        request_inputs = Mock(return_value={"Name": ""})
+        resolver = SnippetVariableResolver(
+            create_builtin_variable_engine(),
+            request_inputs=request_inputs,
+            get_locale=lambda: "en",
+        )
+
+        rendered = resolver.render("{{input:Name}}", markdown_enabled=True)
+        content = render_clipboard_content(rendered, True)
+
+        request_inputs.assert_called_once_with(("Name",))
+        self.assertEqual(rendered.text, "")
+        self.assertEqual(content.plain_text, "")
+        self.assertEqual(content.html, "")
+
+    @patch("ui.variable_resolver.clipboard.read_text")
+    def test_empty_clipboard_can_be_rendered_as_markdown(self, read_text):
+        resolver = SnippetVariableResolver(
+            create_builtin_variable_engine(), get_locale=lambda: "en"
+        )
+        for value in (None, "", " \n\t"):
+            with self.subTest(value=value):
+                read_text.return_value = value
+                read_text.reset_mock()
+
+                rendered = resolver.render("{{clipboard}}", markdown_enabled=True)
+                content = render_clipboard_content(rendered, True)
+
+                read_text.assert_called_once_with()
+                self.assertEqual(content.plain_text, "")
+                self.assertEqual(content.html, "")
+
     @patch("ui.variable_resolver.i18n.get_formatting_locale", return_value="fr_FR")
     def test_default_locale_uses_the_formatting_locale(self, get_locale):
         engine = Mock()

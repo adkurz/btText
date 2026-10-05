@@ -5,6 +5,18 @@ from core.variables import RenderedSnippet
 
 
 class RichTextRenderingTestCase(unittest.TestCase):
+    def test_blank_markdown_produces_empty_clipboard_representations(self):
+        for source in ("", " ", "\t\r\n", "\u00a0"):
+            with self.subTest(source=source):
+                result = render_clipboard_content(RenderedSnippet(source), True)
+
+                self.assertEqual(result.plain_text, "")
+                self.assertEqual(result.html, "")
+                self.assertIsNone(result.cursor_offset_from_end)
+                self.assertTrue(result.rtf.startswith(b"{\\rtf1"))
+                self.assertTrue(result.rtf.endswith(b"}"))
+                self.assertNotIn(rb"\par ", result.rtf)
+
     def test_plain_snippet_is_not_interpreted_as_markdown(self):
         result = render_clipboard_content(RenderedSnippet("**literal**", 2), False)
 

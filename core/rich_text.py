@@ -96,6 +96,11 @@ def render_clipboard_content(
 
 def _parse_markdown_tree(source: str) -> ElementTree.Element:
     """Parse source and return a detached, normalized element tree."""
+    # Markdown returns early for blank input without running tree processors.
+    # Empty variable values therefore need an ordinary empty document tree.
+    if not source.strip():
+        return ElementTree.Element("div")
+
     capture = _TreeCaptureExtension()
     parser = markdown.Markdown(extensions=[capture], output_format="html")
     parser.convert(source)
