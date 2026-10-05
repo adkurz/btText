@@ -435,6 +435,19 @@ class _RtfRenderer:
                         depth + 1,
                     )
                 )
+            elif (
+                child.tag in {"blockquote", "pre", "hr"}
+                or child.tag in self._HEADING_SIZES
+            ):
+                flush_inline()
+                if marker_pending:
+                    # A block-first item still needs its own list marker;
+                    # subsequent paragraphs must not acquire another one.
+                    parts.append(
+                        self._render_list_paragraph("", marker, item_layout)
+                    )
+                    marker_pending = False
+                parts.append(self._render_block(child, item_layout))
             else:
                 inline_parts.append(self._render_inline(child))
             inline_parts.append(_escape_rtf_text(child.tail or ""))

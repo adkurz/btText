@@ -356,6 +356,115 @@ class RichTextRenderingTestCase(unittest.TestCase):
         self.assertEqual(positions, tuple(sorted(positions)))
         self.assertNotIn(r"\bullet\tab Second paragraph", rtf)
 
+    def test_rtf_preserves_quote_paragraphs_inside_a_list_item(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "- First\n\n"
+                "    > Quote **bold**\n    >\n    > Other\n\n"
+                "    After\n\n- Next"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        blocks = (
+            r"\li360\ri0\fi-240 \bullet\tab First\par ",
+            r"\li1080\ri360\f0\fs22 Quote {\b bold}\par ",
+            r"\li1080\ri360\f0\fs22 Other\par ",
+            r"\li360\ri0 After\par ",
+            r"\li360\ri0\fi-240 \bullet\tab Next",
+        )
+        positions = tuple(rtf.index(block) for block in blocks)
+        self.assertEqual(positions, tuple(sorted(positions)))
+        self.assertEqual(rtf.count(r"\bullet\tab "), 2)
+
+    def test_rtf_preserves_multiline_code_in_a_quote_containing_a_list(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "> - First\n>\n"
+                ">         x = {1}\n>         y = 2\n>\n"
+                ">     After\n>\n> - Next"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        blocks = (
+            r"\li1080\ri360\fi-240 \bullet\tab First\par ",
+            r"\li1440\ri360\sa120\f1\fs20 x = \{1\}\line y = 2\line "
+            r"\f0\fs22\par ",
+            r"\li1080\ri360 After\par ",
+            r"\li1080\ri360\fi-240 \bullet\tab Next",
+        )
+        positions = tuple(rtf.index(block) for block in blocks)
+        self.assertEqual(positions, tuple(sorted(positions)))
+        self.assertEqual(rtf.count(r"\bullet\tab "), 2)
+
+    def test_rtf_preserves_headings_and_rules_inside_a_list_item(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "- First\n\n    ## Heading\n\n    ---\n\n"
+                "    After\n\n- Next"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        blocks = (
+            r"\li360\ri0\fi-240 \bullet\tab First\par ",
+            r"\li360\ri0\keepn\sb240\sa120\b\fs32 Heading\b0\fs22\par ",
+            r"\li360\ri0\brdrb\brdrs\brdrw10\brsp20\par ",
+            r"\li360\ri0 After\par ",
+            r"\li360\ri0\fi-240 \bullet\tab Next",
+        )
+        positions = tuple(rtf.index(block) for block in blocks)
+        self.assertEqual(positions, tuple(sorted(positions)))
+        self.assertEqual(rtf.count(r"\bullet\tab "), 2)
+
+    def test_rtf_keeps_numbering_when_a_list_item_starts_with_a_quote(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "1. > Quote\n\n    > Other\n\n    After\n\n2. Next"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        blocks = (
+            r"\li360\ri0\fi-240 1.\tab \par ",
+            r"\li1080\ri360\f0\fs22 Quote\par ",
+            r"\li1080\ri360\f0\fs22 Other\par ",
+            r"\li360\ri0 After\par ",
+            r"\li360\ri0\fi-240 2.\tab Next",
+        )
+        positions = tuple(rtf.index(block) for block in blocks)
+        self.assertEqual(positions, tuple(sorted(positions)))
+        self.assertEqual(rtf.count(r"1.\tab "), 1)
+        self.assertNotIn(r"1.\tab After", rtf)
+
+    def test_rtf_preserves_quote_indentation_inside_a_nested_list_item(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "- First\n    - Child\n\n"
+                "        > Quote\n        >\n        > Other\n\n"
+                "        After\n\n- Next"
+            ),
+            True,
+        )
+
+        rtf = result.rtf.decode("ascii")
+        blocks = (
+            r"\li360\ri0\fi-240 \bullet\tab First\par ",
+            r"\li720\ri0\fi-240 \bullet\tab Child\par ",
+            r"\li1440\ri360\f0\fs22 Quote\par ",
+            r"\li1440\ri360\f0\fs22 Other\par ",
+            r"\li720\ri0 After\par ",
+            r"\li360\ri0\fi-240 \bullet\tab Next",
+        )
+        positions = tuple(rtf.index(block) for block in blocks)
+        self.assertEqual(positions, tuple(sorted(positions)))
+        self.assertEqual(rtf.count(r"\bullet\tab "), 3)
+
     def test_rtf_encodes_diverse_unicode_as_utf16_code_units(self):
         result = render_clipboard_content(
             RenderedSnippet(
