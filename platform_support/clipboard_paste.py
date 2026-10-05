@@ -125,17 +125,12 @@ class PendingPaste:
 
     def restore_clipboard(self) -> None:
         """Restore every old format unless another app changed the clipboard."""
-        _open_clipboard()
-        try:
-            marker_matches = _read_clipboard_bytes(_MARKER_FORMAT) == self._marker
-        finally:
-            user32.CloseClipboard()
-        if marker_matches:
-            self._snapshot.restore()
-        else:
-            # Missing or changed markers prove that another application wrote
-            # the clipboard. Even identical text is a new value that must win.
-            self._snapshot.close()
+        # The snapshot checks the private marker while holding the clipboard
+        # open through restoration. A missing or changed marker preserves even
+        # an identical new copy and releases the saved snapshot instead.
+        self._snapshot.restore(
+            is_owner=lambda: _read_clipboard_bytes(_MARKER_FORMAT) == self._marker,
+        )
 
     def discard_snapshot(self) -> None:
         """Release the saved clipboard data without attempting another restore."""

@@ -89,7 +89,7 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
         ) as restore_copied_formats:
             snapshot.restore()
 
-        restore_copied_formats.assert_called_once_with(copied_formats)
+        restore_copied_formats.assert_called_once_with(copied_formats, is_owner=None)
         snapshot.close.assert_called_once_with()
 
     def test_discard_releases_copied_bitmap(self):
@@ -104,6 +104,30 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
             snapshot.close()
 
         delete.assert_called_once_with(123)
+
+    def test_ownership_check_failure_preserves_snapshot_and_releases_attempt(self):
+        copied_format = _ClipboardFormatCopy(
+            clipboard_snapshot.CF_BITMAP, "bitmap", 101,
+        )
+        snapshot = ClipboardSnapshot([copied_format])
+        is_owner = Mock(side_effect=clipboard.ClipboardError("marker unavailable"))
+
+        with (
+            patch.object(clipboard_snapshot, "_open_clipboard"),
+            patch.object(clipboard_snapshot.user32, "CopyImage", return_value=201),
+            patch.object(clipboard_snapshot.user32, "EmptyClipboard") as empty,
+            patch.object(clipboard_snapshot.user32, "CloseClipboard") as close,
+            patch.object(clipboard_snapshot.gdi32, "DeleteObject") as delete,
+        ):
+            with self.assertRaisesRegex(clipboard.ClipboardError, "marker unavailable"):
+                snapshot.restore(is_owner=is_owner)
+
+            self.assertFalse(snapshot._closed)
+            self.assertEqual(copied_format.value, 101)
+            delete.assert_called_once_with(201)
+            empty.assert_not_called()
+            close.assert_called_once_with()
+            snapshot.close()
 
     def test_successful_restore_transfers_bitmap_ownership(self):
         copied_format = _ClipboardFormatCopy(

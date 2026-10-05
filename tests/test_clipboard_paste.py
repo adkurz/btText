@@ -1,8 +1,9 @@
 import unittest
 from unittest.mock import Mock, patch
 
-from platform_support import clipboard, clipboard_paste, windows
+from platform_support import clipboard, clipboard_paste, clipboard_snapshot, windows
 from platform_support.clipboard_paste import ClipboardRestoreError, PendingPaste
+from platform_support.clipboard_snapshot import ClipboardSnapshot, _ClipboardFormatCopy
 
 
 TARGET = windows.WindowIdentity(handle=123, thread_id=7, process_id=9)
@@ -16,11 +17,112 @@ class RecordingClipboardSnapshot:
     def close(self):
         self.close_calls += 1
 
-    def restore(self):
+    def restore(self, *, is_owner=None):
+        if is_owner is not None and not is_owner():
+            self.close()
+            return
         self.restore_calls += 1
 
 
 class PendingPasteTestCase(unittest.TestCase):
+    def test_restore_cannot_overwrite_a_copy_after_marker_validation(self):
+        state = {
+            "locked": False,
+            "marker": b"marker",
+            "text": "snippet",
+            "external_copy": False,
+        }
+        events = []
+        original = "original\0".encode("utf-16-le")
+        snapshot = ClipboardSnapshot([
+            _ClipboardFormatCopy(clipboard.CF_UNICODETEXT, "hglobal", original),
+        ])
+        pending = PendingPaste(snapshot, b"marker")
+
+        def open_clipboard():
+            self.assertFalse(state["locked"])
+            state["locked"] = True
+            events.append("open")
+
+        def read_marker(format_id):
+            self.assertTrue(state["locked"])
+            self.assertEqual(format_id, clipboard_paste._MARKER_FORMAT)
+            events.append("check")
+            return state["marker"]
+
+        def empty_clipboard():
+            self.assertTrue(state["locked"])
+            state.update(marker=None, text="")
+            events.append("empty")
+            return True
+
+        def set_data(format_id, data):
+            self.assertTrue(state["locked"])
+            self.assertEqual(format_id, clipboard.CF_UNICODETEXT)
+            self.assertEqual(data, original)
+            state["text"] = "original"
+            events.append("write")
+
+        def close_clipboard():
+            self.assertTrue(state["locked"])
+            state["locked"] = False
+            events.append("close")
+            # A waiting external writer can only publish once the lock is
+            # released. The former check/close/restore sequence overwrote it.
+            if not state["external_copy"]:
+                state.update(marker=None, text="new external copy", external_copy=True)
+                events.append("external copy")
+
+        with (
+            patch.object(clipboard_paste, "_open_clipboard", side_effect=open_clipboard),
+            patch.object(clipboard_snapshot, "_open_clipboard", side_effect=open_clipboard),
+            patch.object(clipboard_paste, "_read_clipboard_bytes", side_effect=read_marker),
+            patch.object(clipboard_snapshot.user32, "EmptyClipboard", side_effect=empty_clipboard),
+            patch.object(clipboard_snapshot, "_set_clipboard_data", side_effect=set_data),
+            patch.object(clipboard_snapshot.user32, "CloseClipboard", side_effect=close_clipboard),
+        ):
+            pending.restore_clipboard()
+
+        self.assertEqual(events, ["open", "check", "empty", "write", "close", "external copy"])
+        self.assertEqual(state["text"], "new external copy")
+        self.assertFalse(state["locked"])
+        self.assertTrue(snapshot._closed)
+
+    def test_restore_preserves_changes_during_native_copy_preparation(self):
+        for newer_marker in (None, b"another marker"):
+            with self.subTest(marker=newer_marker):
+                state = {"marker": b"marker", "text": "snippet"}
+                snapshot = ClipboardSnapshot([
+                    _ClipboardFormatCopy(clipboard_snapshot.CF_BITMAP, "bitmap", 101),
+                ])
+                pending = PendingPaste(snapshot, b"marker")
+
+                def copy_image(*_arguments):
+                    state.update(marker=newer_marker, text="new external copy")
+                    return 201
+
+                with (
+                    patch.object(clipboard_snapshot, "_open_clipboard"),
+                    patch.object(clipboard_snapshot.user32, "CopyImage", side_effect=copy_image),
+                    patch.object(
+                        clipboard_paste,
+                        "_read_clipboard_bytes",
+                        side_effect=lambda _format: state["marker"],
+                    ),
+                    patch.object(clipboard_snapshot.user32, "EmptyClipboard") as empty,
+                    patch.object(clipboard_snapshot.user32, "SetClipboardData") as write,
+                    patch.object(clipboard_snapshot.user32, "CloseClipboard") as close,
+                    patch.object(clipboard_snapshot.gdi32, "DeleteObject") as delete,
+                ):
+                    pending.restore_clipboard()
+
+                self.assertEqual(state["text"], "new external copy")
+                empty.assert_not_called()
+                write.assert_not_called()
+                close.assert_called_once_with()
+                self.assertEqual([call.args for call in delete.call_args_list], [(201,), (101,)])
+                self.assertTrue(snapshot._closed)
+
     def test_prepare_excludes_temporary_text_from_history_and_cloud(self):
         snapshot = RecordingClipboardSnapshot()
 

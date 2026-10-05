@@ -1,5 +1,6 @@
 """Capture and restore independently owned Windows clipboard formats."""
 
+from collections.abc import Callable
 import ctypes
 from ctypes import wintypes
 from dataclasses import dataclass
@@ -201,11 +202,15 @@ class ClipboardSnapshot:
                 time.sleep(CAPTURE_RETRY_DELAY)
         return cls(_copy_clipboard_formats(skip_unavailable=True))
 
-    def restore(self) -> None:
-        """Replace the clipboard with this snapshot and close it."""
+    def restore(self, *, is_owner: Callable[[], bool] | None = None) -> None:
+        """Restore and close, checking optional ownership under the same lock.
+
+        ``is_owner`` reads the open clipboard. If it rejects restoration, the
+        current contents are preserved and this snapshot is discarded.
+        """
         if self._closed:
             return
-        _restore_copied_formats(self._copied_formats)
+        _restore_copied_formats(self._copied_formats, is_owner=is_owner)
         self.close()
 
     def close(self) -> None:
@@ -371,6 +376,8 @@ def _set_metafile_picture(value: tuple[int, int, int, int]) -> wintypes.HGLOBAL:
 
 def _restore_copied_formats(
     copied_formats: list[_ClipboardFormatCopy],
+    *,
+    is_owner: Callable[[], bool] | None = None,
 ) -> None:
     """Restore formats through disposable copies so a failed attempt is retryable."""
     attempt_formats: list[_ClipboardFormatCopy] = []
@@ -380,6 +387,10 @@ def _restore_copied_formats(
             attempt_formats.append(copied_format.duplicate())
         _open_clipboard()
         clipboard_open = True
+        # Keep the clipboard locked from ownership validation through the last
+        # write so another application's newer copy can never be overwritten.
+        if is_owner is not None and not is_owner():
+            return
         if not user32.EmptyClipboard():
             raise ClipboardError("The clipboard could not be restored.")
         for copied_format in attempt_formats:
