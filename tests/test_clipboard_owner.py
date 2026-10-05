@@ -65,6 +65,7 @@ class ClipboardOwnerTestCase(unittest.TestCase):
                         patch.object(clipboard.user32, "OpenClipboard", side_effect=open_clipboard),
                         patch.object(clipboard.user32, "EmptyClipboard", side_effect=empty),
                         patch.object(clipboard.user32, "CloseClipboard", side_effect=close),
+                        patch.object(clipboard.user32, "GetClipboardSequenceNumber", return_value=100),
                         patch.object(clipboard.time, "sleep"),
                         patch.object(clipboard, "_set_clipboard_data", side_effect=write),
                         patch.object(clipboard_paste, "_set_clipboard_data", side_effect=write),

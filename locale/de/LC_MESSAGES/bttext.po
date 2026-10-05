@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-09-08 18:07+0200\n"
+"POT-Creation-Date: 2026-10-05 23:37+0200\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -1572,7 +1572,7 @@ msgstr "Textbausteine löschen?"
 # | msgid "Delete snippet?"
 #. Translators: Status after selected snippets were permanently deleted.
 #. {count} is the number deleted.
-#: ui/snippet_list.py:558
+#: ui/snippet_list.py:551
 #, python-brace-format
 msgid "Deleted {count} snippet."
 msgid_plural "Deleted {count} snippets."

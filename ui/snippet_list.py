@@ -542,13 +542,6 @@ class SnippetList(wx.ListView):
             )
             self.update(self.selected_category_id, force=True)
             return
-        transfer = self._transfer_buffer.value
-        if (
-            transfer is not None
-            and transfer.kind == "snippet"
-            and set(transfer.entity_ids).intersection(snippet_ids)
-        ):
-            self._transfer_buffer.clear()
         if focus_id is not None:
             self.focus_id(focus_id)
         self.SetFocus()

@@ -44,9 +44,12 @@ class Transfer:
 class TransferBuffer:
     """Hold one pending entity transfer without touching the OS clipboard."""
 
-    def __init__(self):
-        """Create an empty transfer buffer."""
+    def __init__(self, model: datamodel.DataModel):
+        """Create a buffer whose sources are invalidated by model deletions."""
         self.value: Transfer | None = None
+        self._model = model
+        model.ee.on("category.deleted", self._on_category_deleted)
+        model.ee.on("snippet.deleted", self._on_snippet_deleted)
 
     def set(
         self,
@@ -60,6 +63,37 @@ class TransferBuffer:
     def clear(self) -> None:
         """Discard the pending transfer."""
         self.value = None
+
+    def _on_category_deleted(self, category_id: int) -> None:
+        """Discard sources removed anywhere in a deleted category subtree."""
+        transfer = self.value
+        if transfer is None:
+            return
+        exists = (
+            self._model.category_exist
+            if transfer.kind == "category"
+            else self._model.snippet_exist
+        )
+        try:
+            # Deletion events run synchronously after commit, before a later
+            # insertion can reuse an ID. A missing member invalidates the
+            # entire transfer instead of silently transferring a partial batch.
+            if any(exists(entity_id) is None for entity_id in transfer.entity_ids):
+                self.clear()
+        except datamodel.DataModelError:
+            # A failed lookup cannot establish that the sources survived.
+            self.clear()
+            raise
+
+    def _on_snippet_deleted(self, snippet: datamodel.Snippet) -> None:
+        """Discard the whole transfer when one staged snippet was deleted."""
+        transfer = self.value
+        if (
+            transfer is not None
+            and transfer.kind == "snippet"
+            and snippet.id in transfer.entity_ids
+        ):
+            self.clear()
 
 
 @dataclass(frozen=True)

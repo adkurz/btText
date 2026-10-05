@@ -155,7 +155,7 @@ class MainFrame(sc.SizedFrame):
     ) -> None:
         """Create and lay out the category and snippet views."""
         self.pane = self.GetContentsPane()
-        self.transfer_buffer = TransferBuffer()
+        self.transfer_buffer = TransferBuffer(model)
         layout_panel = wx.Panel(self.pane)
         layout_panel.SetSizerProps(expand=True, proportion=1)  # type: ignore
 

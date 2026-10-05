@@ -1,6 +1,6 @@
 import unittest
 from contextlib import contextmanager
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from core.rich_text import ClipboardContent
 from platform_support import clipboard, clipboard_paste, clipboard_snapshot, windows
@@ -30,6 +30,7 @@ class PendingPasteTestCase(unittest.TestCase):
     def setUp(self):
         self.enterContext(patch.object(clipboard.user32, "CreateWindowExW", return_value=123))
         self.enterContext(patch.object(clipboard.user32, "DestroyWindow", return_value=True))
+        self.enterContext(patch.object(clipboard.user32, "GetClipboardSequenceNumber", return_value=100))
 
     @contextmanager
     def _restore_retry_scenario(self, *, fail_writes=()):
@@ -362,7 +363,7 @@ class PendingPasteTestCase(unittest.TestCase):
                     snapshot.restore.assert_not_called()
                     self.assertEqual(set(published), set(privacy_formats + content_formats))
                 else:
-                    snapshot.restore.assert_called_once_with()
+                    snapshot.restore.assert_called_once_with(is_owner=ANY)
                     if failed_format in privacy_formats:
                         self.assertTrue(set(published).isdisjoint(content_formats))
                     else:
@@ -459,6 +460,7 @@ class PasteTextTestCase(unittest.TestCase):
     def setUp(self):
         self.enterContext(patch.object(clipboard.user32, "CreateWindowExW", return_value=123))
         self.enterContext(patch.object(clipboard.user32, "DestroyWindow", return_value=True))
+        self.enterContext(patch.object(clipboard.user32, "GetClipboardSequenceNumber", return_value=100))
 
     def test_invalid_target_is_rejected_before_clipboard_replacement(self):
         with (
@@ -608,6 +610,176 @@ class PasteTextTestCase(unittest.TestCase):
         self.assertIs(raised.exception.operation_error, operation_error)
         self.assertIs(raised.exception.restore_error, restore_error)
         self.assertIs(raised.exception.__cause__, operation_error)
+
+
+class ClipboardReplacementFailureTestCase(unittest.TestCase):
+    @contextmanager
+    def _replacement_scenario(
+        self,
+        failure,
+        *,
+        external_copy=False,
+        change_on_recovery=False,
+        sequence_available=True,
+    ):
+        original_formats = {
+            clipboard.CF_UNICODETEXT: "original\0".encode("utf-16-le"),
+            clipboard._HTML_FORMAT: b"original HTML\0",
+            clipboard._RTF_FORMAT: b"original RTF\0",
+        }
+        external_formats = {
+            clipboard.CF_UNICODETEXT: "new user copy\0".encode("utf-16-le"),
+            clipboard._HTML_FORMAT: b"new user HTML\0",
+        }
+        snapshot = ClipboardSnapshot([
+            _ClipboardFormatCopy(format_id, "hglobal", data)
+            for format_id, data in original_formats.items()
+        ])
+        state = {
+            "locked": False,
+            "formats": dict(original_formats),
+            "sequence": 100,
+            "opens": 0,
+            "empties": 0,
+            "failed_write": False,
+        }
+
+        def publish_external_copy():
+            state["formats"] = dict(external_formats)
+            state["sequence"] += 1
+
+        def open_clipboard(*, owner):
+            self.assertEqual(owner, 123)
+            self.assertFalse(state["locked"])
+            state["opens"] += 1
+            if state["opens"] == 1 and failure == "open":
+                publish_external_copy()
+                raise clipboard.ClipboardError("open failed")
+            if state["opens"] == 2 and change_on_recovery:
+                publish_external_copy()
+            state["locked"] = True
+
+        def close_clipboard():
+            self.assertTrue(state["locked"])
+            state["locked"] = False
+            if state["opens"] == 1 and external_copy:
+                publish_external_copy()
+
+        def get_sequence():
+            self.assertTrue(state["locked"])
+            return state["sequence"] if sequence_available else 0
+
+        def empty_clipboard():
+            self.assertTrue(state["locked"])
+            if failure == "empty":
+                return False
+            state["empties"] += 1
+            state["formats"].clear()
+            state["sequence"] += 1
+            return True
+
+        def set_data(format_id, data):
+            self.assertTrue(state["locked"])
+            if format_id == failure and not state["failed_write"]:
+                state["failed_write"] = True
+                raise clipboard.ClipboardError("write failed")
+            state["formats"][format_id] = data
+            state["sequence"] += 1
+
+        with (
+            patch.object(clipboard.user32, "CreateWindowExW", return_value=123),
+            patch.object(clipboard.user32, "DestroyWindow", return_value=True),
+            patch.object(ClipboardSnapshot, "capture", return_value=snapshot),
+            patch.object(clipboard_paste, "_open_clipboard", side_effect=open_clipboard),
+            patch.object(clipboard_snapshot, "_open_clipboard", side_effect=open_clipboard),
+            patch.object(clipboard.user32, "CloseClipboard", side_effect=close_clipboard),
+            patch.object(clipboard.user32, "EmptyClipboard", side_effect=empty_clipboard),
+            patch.object(clipboard.user32, "GetClipboardSequenceNumber", side_effect=get_sequence),
+            patch.object(clipboard, "_set_clipboard_data", side_effect=set_data),
+            patch.object(clipboard_paste, "_set_clipboard_data", side_effect=set_data),
+            patch.object(clipboard_snapshot, "_set_clipboard_data", side_effect=set_data),
+        ):
+            try:
+                yield snapshot, state, original_formats, external_formats
+            finally:
+                snapshot.close()
+
+    def _replace(self):
+        content = ClipboardContent("snippet", "<p>snippet</p>", rtf=b"{\\rtf1 snippet}")
+        clipboard_paste._replace_clipboard(content, b"marker")
+
+    def test_failed_open_preserves_new_copy_without_attempting_restore(self):
+        with self._replacement_scenario("open") as scenario:
+            snapshot, state, _original, external = scenario
+            with self.assertRaisesRegex(clipboard.ClipboardError, "open failed"):
+                self._replace()
+
+            self.assertEqual(state["formats"], external)
+            self.assertEqual(state["opens"], 1)
+            self.assertEqual(state["empties"], 0)
+            self.assertTrue(snapshot._closed)
+
+    def test_failed_empty_preserves_new_copy_without_attempting_restore(self):
+        with self._replacement_scenario("empty", external_copy=True) as scenario:
+            snapshot, state, _original, external = scenario
+            with self.assertRaisesRegex(clipboard.ClipboardError, "could not be cleared"):
+                self._replace()
+
+            self.assertEqual(state["formats"], external)
+            self.assertEqual(state["opens"], 1)
+            self.assertEqual(state["empties"], 0)
+            self.assertTrue(snapshot._closed)
+
+    def test_failed_write_restores_all_original_formats_when_version_is_unchanged(self):
+        for format_id in (
+            clipboard._CLIPBOARD_HISTORY_FORMAT,
+            clipboard._CLOUD_CLIPBOARD_FORMAT,
+            clipboard.CF_UNICODETEXT,
+            clipboard._HTML_FORMAT,
+            clipboard._RTF_FORMAT,
+            clipboard_paste._MARKER_FORMAT,
+        ):
+            with self.subTest(format_id=format_id):
+                with self._replacement_scenario(format_id) as scenario:
+                    snapshot, state, original, _external = scenario
+                    with self.assertRaisesRegex(clipboard.ClipboardError, "write failed"):
+                        self._replace()
+
+                    self.assertEqual(state["formats"], original)
+                    self.assertEqual(state["empties"], 2)
+                    self.assertTrue(snapshot._closed)
+
+    def test_failed_write_preserves_copy_published_after_unlock(self):
+        with self._replacement_scenario(clipboard._HTML_FORMAT, external_copy=True) as scenario:
+            snapshot, state, _original, external = scenario
+            with self.assertRaisesRegex(clipboard.ClipboardError, "write failed"):
+                self._replace()
+
+            self.assertEqual(state["formats"], external)
+            self.assertEqual(state["empties"], 1)
+            self.assertTrue(snapshot._closed)
+
+    def test_failed_write_checks_version_after_reopening_for_restore(self):
+        with self._replacement_scenario(clipboard._HTML_FORMAT, change_on_recovery=True) as scenario:
+            snapshot, state, _original, external = scenario
+            with self.assertRaisesRegex(clipboard.ClipboardError, "write failed"):
+                self._replace()
+
+            self.assertEqual(state["formats"], external)
+            self.assertEqual(state["empties"], 1)
+            self.assertTrue(snapshot._closed)
+
+    def test_missing_sequence_reports_recovery_failure_without_another_write(self):
+        with self._replacement_scenario(clipboard._HTML_FORMAT, sequence_available=False) as scenario:
+            snapshot, state, _original, _external = scenario
+            with self.assertRaises(ClipboardRestoreError) as raised:
+                self._replace()
+
+            self.assertEqual(str(raised.exception.operation_error), "write failed")
+            self.assertEqual(str(raised.exception.restore_error), "The clipboard could not be restored.")
+            self.assertEqual(state["empties"], 1)
+            self.assertIn(clipboard.CF_UNICODETEXT, state["formats"])
+            self.assertTrue(snapshot._closed)
 
 
 if __name__ == "__main__":

@@ -90,21 +90,47 @@ def _replace_clipboard(
         content = ClipboardContent(content)
     with _clipboard_owner_window() as owner:
         snapshot = ClipboardSnapshot.capture()
+        clipboard_emptied = False
+        failed_sequence = None
         try:
             _open_clipboard(owner=owner)
             try:
                 if not user32.EmptyClipboard():
                     raise ClipboardError("The clipboard could not be cleared.")
+                clipboard_emptied = True
                 # Even partial content must stay private if writing or recovery fails.
                 _exclude_current_item_from_history_and_cloud()
                 _set_clipboard_content(content)
                 _set_clipboard_data(_MARKER_FORMAT, marker)
+            except Exception:
+                if clipboard_emptied:
+                    # Record our failed write while the clipboard is still locked.
+                    # The marker may not have been published yet.
+                    failed_sequence = user32.GetClipboardSequenceNumber()
+                raise
             finally:
                 user32.CloseClipboard()
             return snapshot
         except Exception as operation_error:
-            # EmptyClipboard may already have discarded the original contents.
-            restore_after_failure(snapshot.restore, operation_error)
+            if not clipboard_emptied:
+                # Failed access or clearing did not change the clipboard.
+                snapshot.close()
+                raise
+
+            def owns_failed_replacement() -> bool:
+                # Snapshot restoration checks this under its own clipboard lock.
+                current_sequence = user32.GetClipboardSequenceNumber()
+                if not failed_sequence or not current_sequence:
+                    raise ClipboardError("The clipboard could not be restored.")
+                return current_sequence == failed_sequence
+
+            try:
+                restore_after_failure(
+                    lambda: snapshot.restore(is_owner=owns_failed_replacement),
+                    operation_error,
+                )
+            finally:
+                snapshot.close()
             raise
 
 
