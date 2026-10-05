@@ -44,7 +44,7 @@ class AppSettings:
 
 
 class SettingsStore:
-    """Load and atomically replace settings in the active data directory."""
+    """Load literal settings and atomically replace the active INI file."""
 
     def __init__(
         self,
@@ -60,7 +60,7 @@ class SettingsStore:
     def load(self) -> AppSettings:
         """Load settings, using defaults when the file or key is absent."""
         defaults = AppSettings()
-        parser = ConfigParser()
+        parser = ConfigParser(interpolation=None)
         try:
             parser.read(self.settings_file, encoding="utf-8")
             value = parser.get(
@@ -152,7 +152,7 @@ class SettingsStore:
             self.settings_file.suffix + ".tmp"
         )
         try:
-            parser = ConfigParser()
+            parser = ConfigParser(interpolation=None)
             parser["general"] = {
                 "language": i18n.validate_language(
                     settings.language,

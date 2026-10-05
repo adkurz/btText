@@ -183,6 +183,63 @@ class SettingsStoreTestCase(unittest.TestCase):
                 str(database_file.resolve()),
             )
 
+    def test_portable_database_paths_with_percent_signs_round_trip(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            settings_file = directory / "settings.ini"
+            store = SettingsStore(settings_file)
+            for name in ("100%.db", "100%%.db", "%(language)s.db", "%APPDATA%.db"):
+                with self.subTest(name=name):
+                    settings = AppSettings(database_file=str(directory / name))
+
+                    store.save(settings)
+
+                    self.assertIn(
+                        f"database_file = {name}\n",
+                        settings_file.read_text(encoding="utf-8"),
+                    )
+                    self.assertEqual(store.load(), settings)
+
+    def test_external_database_paths_with_percent_signs_round_trip(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            settings_file = directory / "settings.ini"
+            store = SettingsStore(settings_file)
+            for name in ("100%", "100%%", "%(language)s", "%APPDATA%"):
+                with self.subTest(name=name):
+                    database_file = directory / name / "snippets.db"
+                    settings = AppSettings(database_file=str(database_file))
+
+                    store.save(settings)
+
+                    self.assertIn(
+                        f"database_file = {database_file.resolve()}\n",
+                        settings_file.read_text(encoding="utf-8"),
+                    )
+                    self.assertEqual(store.load(), settings)
+
+    def test_existing_database_paths_with_percent_signs_are_loaded_literally(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            settings_file = directory / "settings.ini"
+            store = SettingsStore(settings_file)
+            for name in ("100%.db", "100%%.db", "%(language)s.db", "%APPDATA%.db"):
+                for absolute in (False, True):
+                    with self.subTest(name=name, absolute=absolute):
+                        database_file = directory / name
+                        saved_path = str(database_file.resolve()) if absolute else name
+                        settings_file.write_text(
+                            "[general]\n"
+                            "language = en\n"
+                            f"database_file = {saved_path}\n",
+                            encoding="utf-8",
+                        )
+
+                        self.assertEqual(
+                            store.load().database_file,
+                            str(database_file.resolve()),
+                        )
+
     def test_obsolete_general_hotstring_keys_are_not_migrated(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             settings_file = Path(temporary_directory) / "settings.ini"
