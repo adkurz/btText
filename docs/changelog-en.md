@@ -6,6 +6,8 @@
 
 - Changed: UPX is no longer used to compress the program files in order to achieve faster performance.
 
+- Fixed: Privacy settings for Windows clipboard history and cloud synchronization are now respected even when copying or pasting fails.
+
 ## [v1.2.1] 2026-08-23
 
 - Improved: The installer now ensures that btText is not installed into an existing folder that does not contain btText itself. New installations and updates are still possible without any problems.

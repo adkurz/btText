@@ -6,6 +6,108 @@ from platform_support import clipboard
 
 
 class CopyTextTestCase(unittest.TestCase):
+    def test_privacy_controls_protect_content_even_when_a_format_write_fails(self):
+        content = ClipboardContent("Private", "<p>Private</p>", rtf=b"{\\rtf1 Private}")
+        content_formats = (
+            clipboard.CF_UNICODETEXT,
+            clipboard._HTML_FORMAT,
+            clipboard._RTF_FORMAT,
+        )
+        for include_in_history, allow_cloud_upload in (
+            (True, True), (False, True), (True, False), (False, False),
+        ):
+            for failed_format in (None, *content_formats):
+                with self.subTest(
+                    history=include_in_history,
+                    cloud=allow_cloud_upload,
+                    failed_format=failed_format,
+                ):
+                    published = {}
+                    exclusions = {
+                        clipboard._CLIPBOARD_HISTORY_FORMAT: not include_in_history,
+                        clipboard._CLOUD_CLIPBOARD_FORMAT: not allow_cloud_upload,
+                    }
+
+                    def set_data(format_id, data):
+                        if format_id in content_formats:
+                            for privacy_format, excluded in exclusions.items():
+                                if excluded:
+                                    self.assertEqual(
+                                        published.get(privacy_format), b"\0" * 4,
+                                    )
+                                else:
+                                    self.assertNotIn(privacy_format, published)
+                        if format_id == failed_format:
+                            raise clipboard.ClipboardError("format write failed")
+                        published[format_id] = data
+
+                    with (
+                        patch.object(clipboard, "_open_clipboard"),
+                        patch.object(clipboard.user32, "EmptyClipboard", return_value=True),
+                        patch.object(clipboard, "_set_clipboard_data", side_effect=set_data),
+                        patch.object(clipboard.user32, "CloseClipboard") as close_clipboard,
+                    ):
+                        if failed_format is None:
+                            clipboard.copy_content(
+                                content, include_in_history, allow_cloud_upload,
+                            )
+                        else:
+                            with self.assertRaisesRegex(
+                                clipboard.ClipboardError, "format write failed",
+                            ):
+                                clipboard.copy_content(
+                                    content, include_in_history, allow_cloud_upload,
+                                )
+
+                    close_clipboard.assert_called_once_with()
+                    successful_formats = (
+                        content_formats[:content_formats.index(failed_format)]
+                        if failed_format is not None else content_formats
+                    )
+                    self.assertEqual(
+                        set(published),
+                        set(successful_formats) | {
+                            format_id for format_id, excluded in exclusions.items() if excluded
+                        },
+                    )
+
+    def test_failed_privacy_control_prevents_all_content_publication(self):
+        privacy_formats = (
+            clipboard._CLIPBOARD_HISTORY_FORMAT,
+            clipboard._CLOUD_CLIPBOARD_FORMAT,
+        )
+        for failed_format in privacy_formats:
+            with self.subTest(failed_format=failed_format):
+                attempted_formats = []
+
+                def set_data(format_id, data):
+                    attempted_formats.append(format_id)
+                    if format_id == failed_format:
+                        raise clipboard.ClipboardError("privacy write failed")
+
+                with (
+                    patch.object(clipboard, "_open_clipboard"),
+                    patch.object(clipboard.user32, "EmptyClipboard", return_value=True),
+                    patch.object(clipboard, "_set_clipboard_data", side_effect=set_data),
+                    patch.object(clipboard.user32, "CloseClipboard") as close_clipboard,
+                ):
+                    with self.assertRaisesRegex(
+                        clipboard.ClipboardError, "privacy write failed",
+                    ):
+                        clipboard.copy_content(
+                            ClipboardContent(
+                                "Private", "<p>Private</p>", rtf=b"{\\rtf1 Private}",
+                            ),
+                            include_in_history=False,
+                            allow_cloud_upload=False,
+                        )
+
+                self.assertEqual(
+                    attempted_formats,
+                    list(privacy_formats[:privacy_formats.index(failed_format) + 1]),
+                )
+                close_clipboard.assert_called_once_with()
+
     def test_copy_content_sets_plain_text_and_html(self):
         content = ClipboardContent(
             "Hello",

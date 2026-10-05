@@ -93,9 +93,10 @@ def _replace_clipboard(
         try:
             if not user32.EmptyClipboard():
                 raise ClipboardError("The clipboard could not be cleared.")
+            # Even partial content must stay private if writing or recovery fails.
+            _exclude_current_item_from_history_and_cloud()
             _set_clipboard_content(content)
             _set_clipboard_data(_MARKER_FORMAT, marker)
-            _exclude_current_item_from_history_and_cloud()
         finally:
             user32.CloseClipboard()
         return snapshot

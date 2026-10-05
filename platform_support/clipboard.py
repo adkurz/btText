@@ -189,7 +189,8 @@ def copy_content(
     try:
         if not user32.EmptyClipboard():
             raise ClipboardError("The clipboard could not be cleared.")
-        _set_clipboard_content(content)
+        # Apply every requested exclusion before publishing any content. If a
+        # later format fails, partial content must retain its privacy controls.
         if not include_in_history:
             # Windows recognizes a serialized DWORD of zero in this registered
             # format as a request to omit the item from clipboard history.
@@ -198,5 +199,6 @@ def copy_content(
             # This registered format controls cross-device synchronization
             # independently from the local clipboard-history setting.
             _set_clipboard_data(_CLOUD_CLIPBOARD_FORMAT, b"\0\0\0\0")
+        _set_clipboard_content(content)
     finally:
         user32.CloseClipboard()

@@ -2,6 +2,7 @@ import unittest
 from contextlib import contextmanager
 from unittest.mock import Mock, patch
 
+from core.rich_text import ClipboardContent
 from platform_support import clipboard, clipboard_paste, clipboard_snapshot, windows
 from platform_support.clipboard_paste import ClipboardRestoreError, PendingPaste
 from platform_support.clipboard_snapshot import ClipboardSnapshot, _ClipboardFormatCopy
@@ -304,6 +305,65 @@ class PendingPasteTestCase(unittest.TestCase):
 
         exclude_from_storage.assert_called_once_with()
 
+    def test_temporary_content_stays_private_when_writing_and_recovery_fail(self):
+        privacy_formats = (
+            clipboard._CLIPBOARD_HISTORY_FORMAT,
+            clipboard._CLOUD_CLIPBOARD_FORMAT,
+        )
+        content_formats = (
+            clipboard.CF_UNICODETEXT,
+            clipboard._HTML_FORMAT,
+            clipboard._RTF_FORMAT,
+            clipboard_paste._MARKER_FORMAT,
+        )
+        content = ClipboardContent("Private", "<p>Private</p>", rtf=b"{\\rtf1 Private}")
+        for failed_format in (None, *privacy_formats, *content_formats):
+            with self.subTest(failed_format=failed_format):
+                published = {}
+                snapshot = Mock()
+                operation_error = clipboard.ClipboardError("format write failed")
+                restore_error = clipboard.ClipboardError("recovery failed")
+                snapshot.restore.side_effect = restore_error
+
+                def set_data(format_id, data):
+                    if format_id in content_formats:
+                        for privacy_format in privacy_formats:
+                            self.assertEqual(published.get(privacy_format), b"\0" * 4)
+                    if format_id == failed_format:
+                        raise operation_error
+                    published[format_id] = data
+
+                with (
+                    patch.object(clipboard_paste.ClipboardSnapshot, "capture", return_value=snapshot),
+                    patch.object(clipboard_paste, "_open_clipboard"),
+                    patch.object(clipboard_paste.user32, "EmptyClipboard", return_value=True),
+                    patch.object(clipboard, "_set_clipboard_data", side_effect=set_data),
+                    patch.object(clipboard_paste, "_set_clipboard_data", side_effect=set_data),
+                    patch.object(clipboard_paste.user32, "CloseClipboard") as close_clipboard,
+                ):
+                    if failed_format is None:
+                        self.assertIs(
+                            clipboard_paste._replace_clipboard(content, b"marker"),
+                            snapshot,
+                        )
+                    else:
+                        with self.assertRaises(ClipboardRestoreError) as raised:
+                            clipboard_paste._replace_clipboard(content, b"marker")
+                        self.assertIs(raised.exception.operation_error, operation_error)
+                        self.assertIs(raised.exception.restore_error, restore_error)
+
+                if failed_format is None:
+                    snapshot.restore.assert_not_called()
+                    self.assertEqual(set(published), set(privacy_formats + content_formats))
+                else:
+                    snapshot.restore.assert_called_once_with()
+                    if failed_format in privacy_formats:
+                        self.assertTrue(set(published).isdisjoint(content_formats))
+                    else:
+                        for privacy_format in privacy_formats:
+                            self.assertEqual(published[privacy_format], b"\0" * 4)
+                close_clipboard.assert_called_once_with()
+
     def test_prepare_replaces_clipboard_with_generated_marker(self):
         snapshot = RecordingClipboardSnapshot()
         marker = b"generated marker"
@@ -493,6 +553,7 @@ class PasteTextTestCase(unittest.TestCase):
                 "_set_clipboard_content",
                 side_effect=clipboard.ClipboardError("write failed"),
             ),
+            patch.object(clipboard_paste, "_exclude_current_item_from_history_and_cloud"),
             patch.object(
                 clipboard_paste.user32,
                 "CloseClipboard",
@@ -528,6 +589,7 @@ class PasteTextTestCase(unittest.TestCase):
                 "_set_clipboard_content",
                 side_effect=operation_error,
             ),
+            patch.object(clipboard_paste, "_exclude_current_item_from_history_and_cloud"),
             patch.object(clipboard_paste.user32, "CloseClipboard"),
         ):
             with self.assertRaises(ClipboardRestoreError) as raised:

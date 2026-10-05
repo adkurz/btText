@@ -6,6 +6,8 @@
 
 - Geändert: Auf UPX zur Kompression der Programmdateien wird zu Gunsten einer höheren Geschwindigkeit verzichtet.
 
+- Behoben: Die Datenschutzeinstellungen für den Windows-Zwischenablageverlauf und die Cloud-Synchronisierung werden jetzt auch bei Fehlern beim Kopieren oder Einfügen eingehalten.
+
 ## [v1.2.1] 23.08.2026
 
 - Verbessert: Der Installer achtet nun darauf, das btText nicht in einen bereits vorhandenen Ordner installiert wird, welcher nicht btText selbst enthält. Neuinstallation und Aktualisierungen sind weiterhin problemlos möglich.
