@@ -1,6 +1,8 @@
 import unittest
 import ctypes
 import threading
+from concurrent.futures import ThreadPoolExecutor
+from ctypes import wintypes
 from types import SimpleNamespace
 from unittest.mock import patch
 
@@ -9,6 +11,102 @@ from platform_support.hotstrings import KeyboardHook
 
 
 class KeyboardHookSmokeTestCase(unittest.TestCase):
+    def test_translation_observes_text_without_changing_keyboard_state(self):
+        for native_count, native_text, expected in (
+            (-1, "´", None),
+            (0, "", None),
+            (1, "é", "é"),
+            (2, "´x", None),
+        ):
+            with self.subTest(native_count=native_count):
+                def translate_key(key, scan, state, buffer, size, flags, layout):
+                    self.assertEqual(flags, 0x04)
+                    buffer.value = native_text
+                    return native_count
+
+                with (
+                    patch.object(
+                        hotstrings.user32, "GetKeyboardState", return_value=True
+                    ),
+                    patch.object(
+                        hotstrings.user32, "ToUnicodeEx", side_effect=translate_key
+                    ),
+                ):
+                    self.assertEqual(
+                        KeyboardHook._translate(0xDD, 0x0D, keyboard_layout=456),
+                        expected,
+                    )
+
+    def test_native_german_dead_keys_survive_hook_translation(self):
+        get_layouts = hotstrings.user32.GetKeyboardLayoutList
+        get_layouts.argtypes = (ctypes.c_int, ctypes.POINTER(wintypes.HKL))
+        get_layouts.restype = ctypes.c_int
+        layouts = (wintypes.HKL * get_layouts(0, None))()
+        count = get_layouts(len(layouts), layouts)
+        layout = next(
+            (layouts[index] for index in range(count)
+             if layouts[index] & 0xFFFFFFFF == 0x04070407),
+            None,
+        )
+        if layout is None:
+            self.skipTest("The standard German keyboard layout is not loaded")
+        map_key = hotstrings.user32.MapVirtualKeyExW
+        map_key.argtypes = (wintypes.UINT, wintypes.UINT, wintypes.HKL)
+        map_key.restype = wintypes.UINT
+
+        def translate_sequence(sequence, observe):
+            # Keep all state-changing target translations on a disposable
+            # thread; do not inject keys or alter the active keyboard layout.
+            state = (ctypes.c_ubyte * 256)()
+            buffer = ctypes.create_unicode_buffer(8)
+
+            def target_translation(key, scan):
+                result = hotstrings.user32.ToUnicodeEx(
+                    key, scan, state, buffer, len(buffer), 0, layout
+                )
+                return result, buffer[:abs(result)]
+
+            results = []
+            try:
+                with patch.object(
+                    hotstrings.user32, "GetKeyboardState", return_value=True
+                ):
+                    for scan, shift in sequence:
+                        key = map_key(scan, 1, layout)
+                        self.assertNotEqual(key, 0)
+                        state[hotstrings.VK_SHIFT] = 0x80 if shift else 0
+                        if observe:
+                            KeyboardHook._translate(
+                                key, scan, shift_down=shift, keyboard_layout=layout
+                            )
+                        results.append(target_translation(key, scan))
+            finally:
+                state[hotstrings.VK_SHIFT] = 0
+                # Flush any pending test accent before this thread exits.
+                for _attempt in range(4):
+                    if target_translation(hotstrings.VK_SPACE, 0x39)[0] >= 0:
+                        break
+            return results
+
+        for sequence, expected in (
+            (((0x0D, False), (0x12, False)), "é"),
+            (((0x0D, True), (0x12, False)), "è"),
+            (((0x29, False), (0x12, False)), "ê"),
+            (((0x0D, False), (0x39, False)), "´"),
+            (((0x0D, False), (0x2D, False)), "´x"),
+        ):
+            with self.subTest(expected=expected):
+                with ThreadPoolExecutor(max_workers=1) as executor:
+                    baseline = executor.submit(
+                        translate_sequence, sequence, False
+                    ).result()
+                    observed = executor.submit(
+                        translate_sequence, sequence, True
+                    ).result()
+                self.assertLess(baseline[0][0], 0)
+                self.assertEqual(baseline[-1][1], expected)
+                self.assertEqual(observed, baseline)
+
     def test_native_hook_can_be_installed_and_removed(self):
         hook = KeyboardHook(lambda snippet, key: False)
         hook.start()

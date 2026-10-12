@@ -10,6 +10,8 @@
 
 - Fixed: Percent signs in database paths no longer cause unexpected issues.
 
+- Fixed: With hotstrings enabled, accents such as ´ were inserted twice instead of combining with the following letter (e.g. to produce é).
+
 ## [v1.2.1] 2026-08-23
 
 - Improved: The installer now ensures that btText is not installed into an existing folder that does not contain btText itself. New installations and updates are still possible without any problems.

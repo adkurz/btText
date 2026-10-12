@@ -25,6 +25,7 @@ HOOK_REFRESH_INTERVAL_SECONDS = 60
 HOOK_REFRESH_IDLE_SECONDS = 1
 LLKHF_INJECTED = 0x10
 LLKHF_ALTDOWN = 0x20
+TO_UNICODE_NO_STATE_CHANGE = 0x04
 VK_BACK = 0x08
 VK_TAB = 0x09
 VK_RETURN = 0x0D
@@ -488,7 +489,16 @@ class KeyboardHook:
             state[VK_RMENU] = 0x80
         buffer = ctypes.create_unicode_buffer(8)
         layout = keyboard_layout or user32.GetKeyboardLayout(0)
+        # Observation must not change Windows' pending dead-key state before
+        # the target application's TranslateMessage processes the same key.
+        # Bit 2 preserves that state on Windows 10 1607 and newer.
         count = user32.ToUnicodeEx(
-            virtual_key, scan_code, state, buffer, len(buffer), 0, layout
+            virtual_key,
+            scan_code,
+            state,
+            buffer,
+            len(buffer),
+            TO_UNICODE_NO_STATE_CHANGE,
+            layout,
         )
         return buffer.value[:count] if count == 1 else None

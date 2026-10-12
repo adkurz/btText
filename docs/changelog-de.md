@@ -10,6 +10,8 @@
 
 - Behoben: Prozentzeichen im Datenbankpfaden lösen keine unerwarteten Probleme mehr aus.
 
+- Behoben: Bei aktivierten Hotstrings wurden Akzentzeichen wie ´ doppelt eingefügt, statt mit dem folgenden Buchstaben kombiniert zu werden (z. B. zu é).
+
 ## [v1.2.1] 23.08.2026
 
 - Verbessert: Der Installer achtet nun darauf, das btText nicht in einen bereits vorhandenen Ordner installiert wird, welcher nicht btText selbst enthält. Neuinstallation und Aktualisierungen sind weiterhin problemlos möglich.
