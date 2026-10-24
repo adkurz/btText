@@ -4,6 +4,10 @@
 
 - Hinzugefügt: Textbausteine können nun optional mit einfachem Markdown formatiert werden. Beim Einfügen werden sie nicht nur als Reintext, sondern auch als HTML und RTF ausgegeben, sodass die Formatierung beibehalten wird, sofern sie vom Zielprogramm unterstützt wird. Dies ermöglicht einfache Formatierungen (Fettdruck, Kursivschrift usw.), Links und Zitate.
 
+- Geändert: Update auf Python 3.15.
+
+- Geändert: Update der Abhängigkeiten.
+
 - Geändert: Auf UPX zur Kompression der Programmdateien wird zu Gunsten einer höheren Geschwindigkeit verzichtet.
 
 - Behoben: Die Datenschutzeinstellungen für den Windows-Zwischenablageverlauf und die Cloud-Synchronisierung werden jetzt auch bei Fehlern beim Kopieren oder Einfügen eingehalten.

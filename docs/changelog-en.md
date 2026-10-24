@@ -4,6 +4,10 @@
 
 - Added: Text snippets can now optionally be formatted using simple Markdown. When inserted, they are output not only as plain text but also as HTML and RTF, so that the formatting is preserved if supported by the target program. This allows for simple formatting (bold, italics, etc.), links, and citations.
 
+- Changed: Updated to Python 3.15.
+
+- Changed: Dependencies updated.
+
 - Changed: UPX is no longer used to compress the program files in order to achieve faster performance.
 
 - Fixed: Privacy settings for Windows clipboard history and cloud synchronization are now respected even when copying or pasting fails.
