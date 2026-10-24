@@ -65,6 +65,24 @@ class BuildScriptTests(unittest.TestCase):
             self.script,
         )
 
+    def test_runtime_is_checked_before_installation_and_packaging(self):
+        python_check = self.script.index(
+            "& $VirtualEnvironmentPython tools/check_build_runtime.py"
+        )
+        dependency_installation = self.script.index(
+            "& $VirtualEnvironmentPython -m pip install"
+        )
+        wx_check = self.script.index("tools/check_build_runtime.py --with-wx")
+        packaging = self.script.index("& $VirtualEnvironmentPython -m PyInstaller")
+        self.assertLess(python_check, dependency_installation)
+        self.assertLess(dependency_installation, wx_check)
+        self.assertLess(wx_check, packaging)
+        self.assertIn("& $Python tools/check_build_runtime.py", self.script)
+
+    def test_bundle_requires_python_315_and_matching_wx_abi(self):
+        self.assertIn("_internal\\python315.dll", self.script)
+        self.assertIn("_internal\\wx\\_core.cp315-win_amd64.pyd", self.script)
+
     def test_build_generates_and_checks_all_markdown_documentation(self):
         self.assertIn("tools/build_documentation.py", self.script)
         self.assertIn("BTTEXT_DOCUMENTATION_DIRECTORY", self.script)

@@ -123,15 +123,16 @@ that directory, so back up the database first.
 
 ## Run from source
 
-Running from source is intended for development. It requires 64-bit Python
-3.14. Earlier Python versions are not supported. The project targets the
+Running from source is intended for development. It requires standard CPython
+3.15 for Windows x64 and wxPython 4.3.2. Other Python versions and free-threaded
+builds are not supported. The project targets the
 current Python version as soon as its dependencies support it and does not add
 compatibility layers for older interpreters.
 
 Create a virtual environment and install the runtime dependencies:
 
 ```powershell
-python -m venv .venv
+py -3.15 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe btText.py
 ```
@@ -160,12 +161,12 @@ build\btText-<version>-setup-windows.exe
 
 The build script:
 
-1. creates or reuses the project `.venv`;
+1. creates or reuses the project `.venv` and checks for CPython 3.15 x64;
 2. installs the declared build dependencies;
 3. validates and compiles translation catalogs;
 4. runs the complete test suite;
 5. creates the PyInstaller onedir application;
-6. verifies that the payload contains no user data;
+6. verifies the Python 3.15/wxPython runtime files and absence of user data;
 7. creates the portable ZIP;
 8. locates and invokes the NSIS compiler;
 9. creates the per-user x64 installer.
@@ -189,5 +190,8 @@ Select the Python interpreter used when creating a missing `.venv`:
 .\build.ps1 -Python "C:\Path\To\python.exe"
 ```
 
-An existing `.venv` is reused. Recreate it before using `-Python` to switch the
-build environment to Python 3.14.
+An existing `.venv` is reused only if it contains standard CPython 3.15 for
+Windows x64. The build stops before installing dependencies if the interpreter
+is unsupported. Recreate an older `.venv` with Python 3.15 before building;
+`-Python` selects the interpreter only when `.venv` is missing. The build also
+checks for wxPython 4.3.2 after installing dependencies.

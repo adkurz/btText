@@ -11,7 +11,7 @@ Keep platform-independent behavior out of `ui/` and `platform_support/` where pr
 Run these commands from PowerShell at the repository root:
 
 ```powershell
-python -m venv .venv
+py -3.15 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 .\.venv\Scripts\python.exe btText.py
 .\.venv\Scripts\python.exe -m unittest discover -s tests -v

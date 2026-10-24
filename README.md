@@ -75,8 +75,8 @@ The end-user manuals are available in
 ## Requirements
 
 - Windows 11 x64. May also work with older versions of Windows, but this has not been tested.
-- Python 3.14 or newer when running from source.
-- wxPython 4.3.1 or newer and the dependencies in
+- Standard CPython 3.15 for Windows x64 when running from source.
+- wxPython 4.3.2 and the dependencies in
   [`requirements.txt`](requirements.txt).
 
 Packaged releases include the Python runtime and do not require Python to be
@@ -85,7 +85,7 @@ installed separately.
 ## Run from source
 
 ```powershell
-python -m venv .venv
+py -3.15 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements.txt
 .\.venv\Scripts\python.exe btText.py
 ```

@@ -68,11 +68,21 @@ try {
         if (Test-Path -LiteralPath $VirtualEnvironmentDirectory) {
             throw "The .venv directory is incomplete. Remove or repair it."
         }
+        & $Python tools/check_build_runtime.py
+        if ($LASTEXITCODE -ne 0) {
+            throw "The selected Python interpreter is unsupported."
+        }
         Write-Host "Creating project virtual environment..."
         & $Python -m venv $VirtualEnvironmentDirectory
         if ($LASTEXITCODE -ne 0) {
             throw "Virtual environment creation failed: $LASTEXITCODE."
         }
+    }
+
+    Write-Host "Validating the project Python runtime..."
+    & $VirtualEnvironmentPython tools/check_build_runtime.py
+    if ($LASTEXITCODE -ne 0) {
+        throw "The project .venv uses an unsupported Python interpreter."
     }
 
     Write-Host "Installing build dependencies in .venv..."
@@ -81,6 +91,11 @@ try {
         -r requirements-dev.txt
     if ($LASTEXITCODE -ne 0) {
         throw "Dependency installation failed with exit code $LASTEXITCODE."
+    }
+
+    & $VirtualEnvironmentPython tools/check_build_runtime.py --with-wx
+    if ($LASTEXITCODE -ne 0) {
+        throw "The project .venv uses an unsupported wxPython runtime."
     }
 
     Write-Host "Validating translation sources..."
@@ -127,6 +142,17 @@ try {
     $Executable = Join-Path $ApplicationDirectory "btText.exe"
     if (-not (Test-Path -LiteralPath $Executable -PathType Leaf)) {
         throw "PyInstaller did not create btText.exe."
+    }
+
+    $RequiredRuntimeFiles = @(
+        "_internal\python315.dll",
+        "_internal\wx\_core.cp315-win_amd64.pyd"
+    )
+    foreach ($RuntimeFile in $RequiredRuntimeFiles) {
+        $BundledRuntimeFile = Join-Path $ApplicationDirectory $RuntimeFile
+        if (-not (Test-Path -LiteralPath $BundledRuntimeFile -PathType Leaf)) {
+            throw "The application bundle is missing a runtime file: $RuntimeFile"
+        }
     }
 
     $SourceDocuments = Get-ChildItem `

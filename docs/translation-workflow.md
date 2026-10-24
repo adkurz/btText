@@ -10,11 +10,11 @@ time, the PO file is compiled into an MO file that btText can load.
 ## 1. Prepare the repository
 
 From the repository root, create a virtual environment and install the
-development dependencies. This requires Python 3.14; earlier Python versions
-are not supported:
+development dependencies. This requires standard CPython 3.15 for Windows x64
+and wxPython 4.3.2:
 
 ```powershell
-python -m venv .venv
+py -3.15 -m venv .venv
 .\.venv\Scripts\python.exe -m pip install -r requirements-dev.txt
 ```
 
@@ -287,8 +287,9 @@ The repository provides a PowerShell build script:
 The script creates `.venv` automatically when necessary, installs
 `requirements-dev.txt` into it, and uses that environment exclusively for all
 checks and packaging. The `python` command, or the interpreter passed with
-`-Python`, must be Python 3.14 and is used only to create the virtual
-environment.
+`-Python`, must be standard CPython 3.15 for Windows x64 and is used only to
+create the virtual environment. Existing environments are checked before any
+dependency installation. Recreate an older `.venv` with Python 3.15 first.
 
 It performs the required checks and packaging steps in order:
 
