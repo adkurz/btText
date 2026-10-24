@@ -135,7 +135,7 @@ class NativeNsisCleanupTests(unittest.TestCase):
             raise AssertionError(compilation.stdout + compilation.stderr)
 
     def setUp(self):
-        self.fixture = tempfile.TemporaryDirectory(dir=self.root, prefix="fixture-")
+        self.fixture = tempfile.TemporaryDirectory(dir=self.root, prefix="fixture with spaces-")
         self.addCleanup(self.fixture.cleanup)
         self.install = Path(self.fixture.name) / "btText"
 
@@ -150,8 +150,10 @@ class NativeNsisCleanupTests(unittest.TestCase):
             command.append("/validate")
         if upgrade:
             command.append("/upgrade")
-        command.append(f"/D={self.install}")
-        return subprocess.run(command, timeout=15, creationflags=subprocess.CREATE_NO_WINDOW).returncode
+        # NSIS requires /D= last and unquoted, even when its path has spaces.
+        # Passing it in an argument list would let subprocess quote the switch.
+        command_line = subprocess.list2cmdline(command) + f" /D={self.install}"
+        return subprocess.run(command_line, timeout=15, creationflags=subprocess.CREATE_NO_WINDOW).returncode
 
     def test_rejects_portable_and_partially_marked_directories(self):
         self.write("btText.exe")
