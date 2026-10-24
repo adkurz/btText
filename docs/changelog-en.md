@@ -14,6 +14,8 @@
 
 - Fixed: A timing issue when pasting snippets could cause newly copied clipboard contents from other applications to be lost and replaced with older contents.
 
+- Fixed: The installer can no longer accidentally update portable versions of btText, which could lead to data loss.
+
 ## [v1.2.1] 2026-08-23
 
 - Improved: The installer now ensures that btText is not installed into an existing folder that does not contain btText itself. New installations and updates are still possible without any problems.

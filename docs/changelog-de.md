@@ -14,6 +14,8 @@
 
 - Behoben: Ein Timing-Fehler beim Einfügen von Textbausteinen konnte dazu führen, dass neue Zwischenablageinhalte anderer Anwendungen verloren gingen und durch ältere Inhalte ersetzt wurden.
 
+- Behoben: Der Installer kann nun nicht mehr versehentlich portable Versionen von btText aktualisieren, was zu Datenverlust führen konnte.
+
 ## [v1.2.1] 23.08.2026
 
 - Verbessert: Der Installer achtet nun darauf, das btText nicht in einen bereits vorhandenen Ordner installiert wird, welcher nicht btText selbst enthält. Neuinstallation und Aktualisierungen sind weiterhin problemlos möglich.
