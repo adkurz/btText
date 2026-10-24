@@ -19,6 +19,10 @@ program for the current user in:
 
 It also creates a Start menu entry and a standard Windows uninstaller.
 
+Choose an empty folder or an existing installed btText folder. The installer
+rejects portable btText folders; install separately and open the portable
+database from the installed application instead.
+
 On first start, btText asks whether to create a new snippet database or open an
 existing one. Settings and the default database of the installed version are
 stored separately from the program files:
@@ -72,6 +76,10 @@ For an installed version, close btText and run the newer setup executable. The
 installer updates the program files in place. User settings and databases under
 `%APPDATA%\btText` remain unchanged.
 
+NSIS upgrades remove only known application files, without running the old
+NSIS uninstaller. Additional files are preserved. Obsolete program files from
+older releases may remain when they are not part of the new release payload.
+
 For a portable version:
 
 1. Close btText.
@@ -86,7 +94,9 @@ For a portable version:
 Uninstall btText from Windows **Installed apps** or from its Start menu
 uninstaller.
 
-The uninstaller always removes the program files and shortcuts. It then offers
+The uninstaller removes the files supplied by its release and the shortcuts.
+Additional files in the program folder are preserved, including databases,
+settings, and logs. Only empty program directories are removed. It then offers
 to delete the user data in:
 
 ```text

@@ -19,6 +19,12 @@ The prebuilt packages include the required runtime. Python does not need to be i
 
 ### Installable version
 
+Choose an empty folder or an existing installed btText folder. Portable btText
+folders cannot be used as installation targets. Install separately and then
+open the portable database in the installed application. Updates and the new
+uninstaller preserve additional files in the program folder; only known
+application files and empty program directories are removed.
+
 1. Run `btText-<Version>-setup-windows.exe`.
 2. Optionally enable the creation of a desktop shortcut.
 3. Complete the installation and start btText via the Start menu or the desktop shortcut if created.

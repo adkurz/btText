@@ -1,5 +1,5 @@
 ; Per-user NSIS installer for the PyInstaller onedir build.
-; build.ps1 supplies VERSION, SOURCE_DIR, OUTPUT_DIR, and MARKER_FILE.
+; build.ps1 supplies version, payload, marker, and exact cleanup instructions.
 
 Unicode true
 RequestExecutionLevel user
@@ -21,6 +21,9 @@ SetCompressor /SOLID lzma
 !endif
 !ifndef FILE_VERSION
   !error "FILE_VERSION must be supplied by build.ps1"
+!endif
+!ifndef UNINSTALL_INCLUDE
+  !error "UNINSTALL_INCLUDE must be supplied by build.ps1"
 !endif
 !define APP_NAME "btText"
 !define APP_PUBLISHER "Adrian Kurz"
@@ -51,6 +54,7 @@ VIAddVersionKey /LANG=1033 "ProductVersion" "${VERSION}"
 !include "x64.nsh"
 !include "Sections.nsh"
 !include "nsDialogs.nsh"
+!include "${UNINSTALL_INCLUDE}"
 
 !define MUI_ABORTWARNING
 !define MUI_FINISHPAGE_RUN "$INSTDIR\${APP_EXE}"
@@ -103,13 +107,20 @@ LangString BrowseDialogTitle ${LANG_ENGLISH} "Select the btText install location
 LangString BrowseDialogTitle ${LANG_GERMAN} "Installationsordner für btText auswählen"
 LangString InstallLocationRequired ${LANG_ENGLISH} "Enter an install location."
 LangString InstallLocationRequired ${LANG_GERMAN} "Geben Sie einen Installationsordner ein."
-LangString InstallLocationNotOwned ${LANG_ENGLISH} "The selected folder is not empty and does not contain btText.exe. Choose an empty folder or the folder of an existing btText installation. Existing files will not be overwritten."
-LangString InstallLocationNotOwned ${LANG_GERMAN} "Der ausgewählte Ordner ist nicht leer und enthält keine btText.exe. Wählen Sie einen leeren Ordner oder den Ordner einer bestehenden btText-Installation. Vorhandene Dateien werden nicht überschrieben."
+LangString InstallLocationNotOwned ${LANG_ENGLISH} "Choose an empty folder or an existing installed btText folder. Portable btText folders cannot be used. To keep using a portable database, install in a separate folder and open that database in btText."
+LangString InstallLocationNotOwned ${LANG_GERMAN} "Wählen Sie einen leeren Ordner oder eine bestehende installierte btText-Version. Portable btText-Ordner können nicht verwendet werden. Installieren Sie in einen separaten Ordner und öffnen Sie Ihre portable Datenbank anschließend in btText."
 
 Var PreviousUninstaller
 Var PreviousInstallDir
 Var DirectoryDialog
 Var DirectoryInput
+
+!macro RemoveApplicationShortcuts
+  Delete "$DESKTOP\${APP_NAME}.lnk"
+  Delete "$SMSTARTUP\${APP_NAME}.lnk"
+  Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
+  RMDir "$SMPROGRAMS\${APP_NAME}"
+!macroend
 
 Function ShowDirectoryPage
   !insertmacro MUI_HEADER_TEXT "$(DirectoryPageTitle)" "$(DirectoryPageSubtitle)"
@@ -201,7 +212,9 @@ Function ValidateInstallDirectory
   FindClose $1
   Goto directory_validation_done
   directory_has_contents:
-  IfFileExists "$INSTDIR\${APP_EXE}" directory_validation_done directory_not_owned
+  IfFileExists "$INSTDIR\${APP_EXE}" 0 directory_not_owned
+  IfFileExists "$INSTDIR\_internal\${INSTALL_MARKER}" 0 directory_not_owned
+  IfFileExists "$INSTDIR\uninstall.exe" directory_validation_done directory_not_owned
   directory_not_owned:
   StrCpy $0 0
   directory_validation_done:
@@ -296,12 +309,30 @@ Function RemovePreviousInstallations
   ReadRegStr $PreviousUninstaller HKCU "${NSIS_UNINSTALL_KEY}" "UninstallString"
   ReadRegStr $PreviousInstallDir HKCU "${NSIS_UNINSTALL_KEY}" "InstallLocation"
   ${If} $PreviousUninstaller != ""
-    ExecWait '$PreviousUninstaller /S _?=$PreviousInstallDir' $0
-    ${If} $0 != 0
+    ; Never execute a legacy NSIS uninstaller: it can recursively remove user
+    ; files. Validate the registered folder, then remove only known payload
+    ; files. Obsolete files from older releases are deliberately preserved.
+    StrCpy $0 $PreviousInstallDir
+    Call NormalizeInstallDirectory
+    StrCpy $PreviousInstallDir $0
+    ${If} $PreviousInstallDir == ""
+      StrCpy $0 2
       MessageBox MB_OK|MB_ICONSTOP "$(OldUpgradeFailed)" /SD IDOK
       SetErrorLevel 2
       Abort
     ${EndIf}
+    IfFileExists "$PreviousInstallDir\${APP_EXE}" 0 old_install_not_owned
+    IfFileExists "$PreviousInstallDir\_internal\${INSTALL_MARKER}" 0 old_install_not_owned
+    IfFileExists "$PreviousInstallDir\uninstall.exe" old_install_owned old_install_not_owned
+    old_install_not_owned:
+    StrCpy $0 2
+    MessageBox MB_OK|MB_ICONSTOP "$(OldUpgradeFailed)" /SD IDOK
+    SetErrorLevel 2
+    Abort
+    old_install_owned:
+    SetOutPath "$TEMP"
+    !insertmacro RemoveApplicationShortcuts
+    !insertmacro RemoveApplicationFiles "$PreviousInstallDir"
   ${EndIf}
 FunctionEnd
 
@@ -421,13 +452,10 @@ Function un.WaitForApplication
 FunctionEnd
 
 Section "Uninstall"
-  Delete "$DESKTOP\${APP_NAME}.lnk"
-  Delete "$SMSTARTUP\${APP_NAME}.lnk"
-  Delete "$SMPROGRAMS\${APP_NAME}\${APP_NAME}.lnk"
-  RMDir "$SMPROGRAMS\${APP_NAME}"
+  !insertmacro RemoveApplicationShortcuts
   DeleteRegKey HKCU "${NSIS_UNINSTALL_KEY}"
   SetOutPath "$TEMP"
-  RMDir /r "$INSTDIR"
+  !insertmacro RemoveApplicationFiles "$INSTDIR"
 
   IfSilent keep_user_data
   MessageBox MB_YESNO|MB_DEFBUTTON2|MB_ICONQUESTION "$(RemoveUserDataPrompt)" IDNO keep_user_data

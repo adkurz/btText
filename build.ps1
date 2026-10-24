@@ -219,6 +219,12 @@ try {
     $Installer = $null
     if (-not $PortableOnly) {
         Write-Host "Creating per-user Windows installer..."
+        $UninstallInclude = Join-Path $TemporaryRoot "uninstall-files.nsh"
+        & $VirtualEnvironmentPython tools/build_nsis_uninstall_include.py `
+            $ApplicationDirectory $UninstallInclude
+        if ($LASTEXITCODE -ne 0) {
+            throw "Installer cleanup generation failed with exit code $LASTEXITCODE."
+        }
         & $ResolvedNsisCompiler `
             "/INPUTCHARSET" `
             "UTF8" `
@@ -227,6 +233,7 @@ try {
             "/DSOURCE_DIR=$ApplicationDirectory" `
             "/DOUTPUT_DIR=$BuildDirectory" `
             "/DMARKER_FILE=$(Join-Path $ProjectRoot 'installer\bttext-install-mode.json')" `
+            "/DUNINSTALL_INCLUDE=$UninstallInclude" `
             (Join-Path $ProjectRoot "installer\btText.nsi")
         if ($LASTEXITCODE -ne 0) {
             throw "NSIS failed with exit code $LASTEXITCODE."

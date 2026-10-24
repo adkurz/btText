@@ -19,6 +19,13 @@ Die vorgefertigten Pakete enthalten die benötigte Laufzeit. Python muss nicht i
 
 ### Installierbare Version
 
+Wählen Sie einen leeren Ordner oder eine bestehende installierte btText-Version.
+Portable btText-Ordner können nicht als Installationsziel verwendet werden.
+Installieren Sie in einen separaten Ordner und öffnen Sie die portable
+Datenbank anschließend in der installierten Anwendung. Updates und der neue
+Uninstaller erhalten zusätzliche Dateien im Programmordner; entfernt werden
+nur bekannte Programmdateien und leere Programmordner.
+
 1. Starten Sie `btText-<Version>-setup-windows.exe`.
 2. Aktivieren Sie optional die Erstellung einer Desktopverknüpfung.
 3. Schließen Sie die Installation ab und starten Sie btText über das Startmenü oder die ggf. erstellte Desktopverknüpfung.

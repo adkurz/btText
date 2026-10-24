@@ -61,7 +61,7 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
         self.assertIn("kernel32::GetFullPathNameW", normalize)
         self.assertIn("StrCpy $0 $1", normalize)
 
-    def test_nonempty_directory_requires_bttext_executable(self):
+    def test_nonempty_directory_requires_an_installed_application(self):
         leave = SCRIPT.split("Function LeaveDirectoryPage", 1)[1].split(
             "FunctionEnd", 1
         )[0]
@@ -80,8 +80,8 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
         self.assertIn("FindClose $1", validation)
         self.assertNotIn('IfFileExists "$INSTDIR\\*.*"', validation)
         self.assertIn('IfFileExists "$INSTDIR\\${APP_EXE}"', validation)
-        self.assertNotIn("INSTALL_MARKER", validation)
-        self.assertNotIn("uninstall.exe", validation)
+        self.assertIn('IfFileExists "$INSTDIR\\_internal\\${INSTALL_MARKER}" 0 directory_not_owned', validation)
+        self.assertIn('IfFileExists "$INSTDIR\\uninstall.exe"', validation)
         self.assertIn("InstallLocationNotOwned", leave)
         self.assertIn("Abort", leave)
         self.assertIn("Call RequireSafeInstallDirectory", main)
@@ -116,6 +116,15 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
         self.assertNotIn("0 +2", on_init)
         self.assertIn("desktop_shortcut_exists desktop_shortcut_done", on_init)
         self.assertIn("startup_shortcut_exists startup_shortcut_done", on_init)
+        upgrade = SCRIPT.split("Function RemovePreviousInstallations", 1)[1].split(
+            "FunctionEnd", 1
+        )[0]
+        self.assertIn("!insertmacro RemoveApplicationShortcuts", upgrade)
+        cleanup = SCRIPT.split("!macro RemoveApplicationShortcuts", 1)[1].split(
+            "!macroend", 1
+        )[0]
+        for location in ("$DESKTOP", "$SMSTARTUP", "$SMPROGRAMS\\${APP_NAME}"):
+            self.assertIn(f'Delete "{location}\\${{APP_NAME}}.lnk"', cleanup)
 
     def test_upgrade_removes_inno_installation_without_user_data(self):
         self.assertIn(r'${APP_ID}_is1', SCRIPT)
@@ -152,13 +161,25 @@ class NsisInstallerDefinitionTests(unittest.TestCase):
         self.assertIn("IfErrors 0 keep_user_data", uninstall)
         self.assertIn("RemoveUserDataFailed", uninstall)
 
-    def test_uninstaller_recursively_deletes_install_directory(self):
+    def test_uninstaller_removes_only_explicit_payload_files(self):
         uninstall = SCRIPT.split('Section "Uninstall"', 1)[1]
-        self.assertIn('RMDir /r "$INSTDIR"', uninstall)
+        self.assertIn('!insertmacro RemoveApplicationFiles "$INSTDIR"', uninstall)
+        self.assertNotIn('RMDir /r "$INSTDIR"', SCRIPT)
         self.assertNotIn('RMDir /r "$SMPROGRAMS', uninstall)
         self.assertNotIn('RMDir /r "$INSTDIR\\_internal"', uninstall)
-        self.assertNotIn("UNINSTALL_INCLUDE", uninstall)
-        self.assertNotIn('Delete "$INSTDIR\\', uninstall)
+        self.assertIn('!include "${UNINSTALL_INCLUDE}"', SCRIPT)
+
+    def test_upgrade_never_runs_the_legacy_recursive_nsis_uninstaller(self):
+        upgrade = SCRIPT.split("Function RemovePreviousInstallations", 1)[1].split(
+            "FunctionEnd", 1
+        )[0]
+        self.assertNotIn("/S _?=", upgrade)
+        self.assertIn('!insertmacro RemoveApplicationFiles "$PreviousInstallDir"', upgrade)
+        self.assertIn("Call NormalizeInstallDirectory", upgrade)
+        for filename in ("${APP_EXE}", "_internal\\${INSTALL_MARKER}", "uninstall.exe"):
+            self.assertIn(f'IfFileExists "$PreviousInstallDir\\{filename}"', upgrade)
+        self.assertIn("old_install_not_owned:", upgrade)
+        self.assertIn("Abort", upgrade)
 
     def test_silent_failure_messages_have_defaults_and_error_codes(self):
         self.assertIn('"$(InnoUpgradeFailed)" /SD IDOK', SCRIPT)
