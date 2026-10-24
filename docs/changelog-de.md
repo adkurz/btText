@@ -1,6 +1,6 @@
 # Änderungsprotokoll für btText
 
-## [v1.3.0] 
+## [v1.3.0] 25.10.2026
 
 - Hinzugefügt: Textbausteine können nun optional mit einfachem Markdown formatiert werden. Beim Einfügen werden sie nicht nur als Reintext, sondern auch als HTML und RTF ausgegeben, sodass die Formatierung beibehalten wird, sofern sie vom Zielprogramm unterstützt wird. Dies ermöglicht einfache Formatierungen (Fettdruck, Kursivschrift usw.), Links und Zitate.
 
@@ -11,6 +11,8 @@
 - Behoben: Prozentzeichen im Datenbankpfaden lösen keine unerwarteten Probleme mehr aus.
 
 - Behoben: Bei aktivierten Hotstrings wurden Akzentzeichen wie ´ doppelt eingefügt, statt mit dem folgenden Buchstaben kombiniert zu werden (z. B. zu é).
+
+- Behoben: Ein Timing-Fehler beim Einfügen von Textbausteinen konnte dazu führen, dass neue Zwischenablageinhalte anderer Anwendungen verloren gingen und durch ältere Inhalte ersetzt wurden.
 
 ## [v1.2.1] 23.08.2026
 

@@ -612,6 +612,127 @@ class PasteTextTestCase(unittest.TestCase):
         self.assertIs(raised.exception.__cause__, operation_error)
 
 
+class ClipboardReplacementCaptureTestCase(unittest.TestCase):
+    @contextmanager
+    def _clipboard(self, *, copy_on_unlock=False, unavailable_attempts=0,
+                   capture_error=None):
+        original = {
+            clipboard.CF_UNICODETEXT: "original\0".encode("utf-16-le"),
+            clipboard._HTML_FORMAT: b"original HTML\0",
+        }
+        external = {
+            clipboard.CF_UNICODETEXT: "new external copy\0".encode("utf-16-le"),
+        }
+        state = {"locked": False, "formats": dict(original), "opens": 0,
+                 "closes": 0, "empties": 0, "unavailable_attempts": unavailable_attempts}
+
+        def open_clipboard(*, owner=None):
+            self.assertFalse(state["locked"])
+            state["locked"] = True
+            state["opens"] += 1
+
+        def close_clipboard():
+            self.assertTrue(state["locked"])
+            state["locked"] = False
+            state["closes"] += 1
+            if copy_on_unlock and state["closes"] == 1:
+                state["formats"] = dict(external)
+
+        def enumerate_formats(previous):
+            self.assertTrue(state["locked"])
+            formats = list(state["formats"])
+            index = formats.index(previous) + 1 if previous else 0
+            return formats[index] if index < len(formats) else 0
+
+        def copy_format(format_id):
+            self.assertTrue(state["locked"])
+            if capture_error is not None:
+                raise capture_error
+            if format_id == clipboard._HTML_FORMAT and state["unavailable_attempts"]:
+                state["unavailable_attempts"] -= 1
+                raise clipboard_snapshot._ClipboardFormatError(format_id, "unavailable")
+            return _ClipboardFormatCopy(format_id, "hglobal", state["formats"][format_id])
+
+        def empty_clipboard():
+            self.assertTrue(state["locked"])
+            state["formats"].clear()
+            state["empties"] += 1
+            return True
+
+        def set_data(format_id, data):
+            self.assertTrue(state["locked"])
+            state["formats"][format_id] = data
+
+        def read_marker(format_id):
+            self.assertTrue(state["locked"])
+            return state["formats"].get(format_id)
+
+        with (
+            patch.object(clipboard.user32, "CreateWindowExW", return_value=123),
+            patch.object(clipboard.user32, "DestroyWindow", return_value=True),
+            patch.object(clipboard_paste, "_open_clipboard", side_effect=open_clipboard),
+            patch.object(clipboard_snapshot, "_open_clipboard", side_effect=open_clipboard),
+            patch.object(clipboard.user32, "CloseClipboard", side_effect=close_clipboard),
+            patch.object(clipboard.user32, "EnumClipboardFormats", side_effect=enumerate_formats),
+            patch.object(clipboard_snapshot, "_copy_clipboard_format", side_effect=copy_format),
+            patch.object(clipboard_snapshot.time, "sleep"),
+            patch.object(clipboard.user32, "EmptyClipboard", side_effect=empty_clipboard),
+            patch.object(clipboard, "_set_clipboard_data", side_effect=set_data),
+            patch.object(clipboard_paste, "_set_clipboard_data", side_effect=set_data),
+            patch.object(clipboard_snapshot, "_set_clipboard_data", side_effect=set_data),
+            patch.object(clipboard_paste, "_read_clipboard_bytes", side_effect=read_marker),
+        ):
+            yield state, original, external
+
+    def test_external_copy_at_first_unlock_is_preserved(self):
+        # An external writer can copy as soon as btText releases its first lock.
+        # Capturing and then reopening used to overwrite this copy and restore
+        # the stale snapshot instead.
+        with self._clipboard(copy_on_unlock=True) as (state, _original, external):
+            pending = PendingPaste.prepare("snippet")
+            try:
+                pending.restore_clipboard()
+                self.assertEqual(state["formats"], external)
+                self.assertFalse(state["locked"])
+                self.assertEqual(state["empties"], 1)
+            finally:
+                pending.discard_snapshot()
+
+    def test_capture_retries_keep_same_lock_until_replacement_is_complete(self):
+        for unavailable_attempts in (0, 1, clipboard_snapshot.CAPTURE_ATTEMPTS):
+            with self.subTest(unavailable_attempts=unavailable_attempts):
+                with self._clipboard(unavailable_attempts=unavailable_attempts) as (state, original, _external):
+                    pending = PendingPaste.prepare("snippet")
+                    try:
+                        self.assertEqual(state["opens"], 1)
+                        self.assertEqual(state["closes"], 1)
+                        self.assertEqual(state["unavailable_attempts"], 0)
+                        pending.restore_clipboard()
+                        self.assertEqual(state["formats"], original)
+                    finally:
+                        pending.discard_snapshot()
+
+    def test_copy_available_before_capture_is_restored(self):
+        with self._clipboard() as (state, _original, external):
+            state["formats"] = dict(external)
+            pending = PendingPaste.prepare("snippet")
+            try:
+                pending.restore_clipboard()
+                self.assertEqual(state["formats"], external)
+                self.assertFalse(state["locked"])
+            finally:
+                pending.discard_snapshot()
+
+    def test_capture_failure_does_not_clear_clipboard_and_releases_lock(self):
+        with self._clipboard(capture_error=clipboard.ClipboardError("capture failed")) as (state, original, _external):
+            with self.assertRaisesRegex(clipboard.ClipboardError, "capture failed"):
+                PendingPaste.prepare("snippet")
+            self.assertEqual(state["formats"], original)
+            self.assertEqual(state["empties"], 0)
+            self.assertEqual(state["closes"], 1)
+            self.assertFalse(state["locked"])
+
+
 class ClipboardReplacementFailureTestCase(unittest.TestCase):
     @contextmanager
     def _replacement_scenario(
@@ -710,14 +831,16 @@ class ClipboardReplacementFailureTestCase(unittest.TestCase):
 
     def test_failed_open_preserves_new_copy_without_attempting_restore(self):
         with self._replacement_scenario("open") as scenario:
-            snapshot, state, _original, external = scenario
-            with self.assertRaisesRegex(clipboard.ClipboardError, "open failed"):
-                self._replace()
+            _snapshot, state, _original, external = scenario
+            with patch.object(ClipboardSnapshot, "capture") as capture:
+                with self.assertRaisesRegex(clipboard.ClipboardError, "open failed"):
+                    self._replace()
+                capture.assert_not_called()
 
             self.assertEqual(state["formats"], external)
             self.assertEqual(state["opens"], 1)
             self.assertEqual(state["empties"], 0)
-            self.assertTrue(snapshot._closed)
+            self.assertFalse(state["locked"])
 
     def test_failed_empty_preserves_new_copy_without_attempting_restore(self):
         with self._replacement_scenario("empty", external_copy=True) as scenario:

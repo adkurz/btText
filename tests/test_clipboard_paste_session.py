@@ -33,7 +33,7 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
         self.enterContext(patch.object(clipboard.user32, "GetClipboardSequenceNumber", side_effect=self._sequence))
         self.enterContext(patch.object(clipboard_paste, "_open_clipboard", side_effect=self._open))
         self.enterContext(patch.object(clipboard_snapshot, "_open_clipboard", side_effect=self._open))
-        self.enterContext(patch.object(clipboard_snapshot, "_copy_clipboard_formats", side_effect=self._capture))
+        self.enterContext(patch.object(clipboard_snapshot, "_copy_open_clipboard_formats", side_effect=self._capture))
         self.enterContext(patch.object(clipboard, "_set_clipboard_data", side_effect=self._write))
         self.enterContext(patch.object(clipboard_paste, "_set_clipboard_data", side_effect=self._write))
         self.enterContext(patch.object(clipboard_snapshot, "_set_clipboard_data", side_effect=self._write))
@@ -74,14 +74,11 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
         return self.formats.get(format_id)
 
     def _capture(self):
-        self._open()
-        try:
-            return [
-                _ClipboardFormatCopy(format_id, "hglobal", data)
-                for format_id, data in self.formats.items()
-            ]
-        finally:
-            self._close()
+        self.assertTrue(self.locked)
+        return [
+            _ClipboardFormatCopy(format_id, "hglobal", data)
+            for format_id, data in self.formats.items()
+        ]
 
     def _paste(self, kind, text):
         content = ClipboardContent(text, f"<p>{text}</p>", rtf=b"{\\rtf1 snippet}")

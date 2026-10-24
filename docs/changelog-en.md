@@ -1,6 +1,6 @@
 # Changelog for btText
 
-## [v1.3.0] 
+## [v1.3.0] 25.10.2026
 
 - Added: Text snippets can now optionally be formatted using simple Markdown. When inserted, they are output not only as plain text but also as HTML and RTF, so that the formatting is preserved if supported by the target program. This allows for simple formatting (bold, italics, etc.), links, and citations.
 
@@ -11,6 +11,8 @@
 - Fixed: Percent signs in database paths no longer cause unexpected issues.
 
 - Fixed: With hotstrings enabled, accents such as ´ were inserted twice instead of combining with the following letter (e.g. to produce é).
+
+- Fixed: A timing issue when pasting snippets could cause newly copied clipboard contents from other applications to be lost and replaced with older contents.
 
 ## [v1.2.1] 2026-08-23
 

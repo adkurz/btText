@@ -195,16 +195,24 @@ class ClipboardSnapshot:
         self._failed_restore_sequence: int | None = None
 
     @classmethod
-    def capture(cls) -> ClipboardSnapshot:
-        """Capture all transferable formats from the current clipboard."""
+    def capture(cls, *, clipboard_open: bool = False) -> ClipboardSnapshot:
+        """Capture transferable formats, optionally under the caller's lock.
+
+        When ``clipboard_open`` is true, the caller must keep the clipboard
+        open throughout capture and any subsequent replacement. Capture retries
+        then retain that same lock and never open or close it themselves.
+        """
+        copy_formats = (
+            _copy_open_clipboard_formats if clipboard_open else _copy_clipboard_formats
+        )
         for attempt in range(CAPTURE_ATTEMPTS):
             try:
-                return cls(_copy_clipboard_formats())
+                return cls(copy_formats())
             except _ClipboardFormatError:
                 if attempt + 1 == CAPTURE_ATTEMPTS:
                     break
                 time.sleep(CAPTURE_RETRY_DELAY)
-        return cls(_copy_clipboard_formats(skip_unavailable=True))
+        return cls(copy_formats(skip_unavailable=True))
 
     def restore(self, *, is_owner: Callable[[], bool] | None = None) -> None:
         """Restore and close, checking optional ownership under the same lock.
@@ -335,10 +343,21 @@ def _copy_clipboard_formats(
     *,
     skip_unavailable: bool = False,
 ) -> list[_ClipboardFormatCopy]:
-    """Deep-copy every transferable clipboard format by its storage type."""
+    """Open the clipboard and deep-copy its transferable formats."""
+    _open_clipboard()
+    try:
+        return _copy_open_clipboard_formats(skip_unavailable=skip_unavailable)
+    finally:
+        user32.CloseClipboard()
+
+
+def _copy_open_clipboard_formats(
+    *,
+    skip_unavailable: bool = False,
+) -> list[_ClipboardFormatCopy]:
+    """Deep-copy formats while the caller retains the open clipboard."""
     copied_formats: list[_ClipboardFormatCopy] = []
     skipped_formats: list[_ClipboardFormatError] = []
-    _open_clipboard()
     try:
         format_id = 0
         while True:
@@ -377,8 +396,6 @@ def _copy_clipboard_formats(
         for copied_format in copied_formats:
             copied_format.release()
         raise
-    finally:
-        user32.CloseClipboard()
     return copied_formats
 
 

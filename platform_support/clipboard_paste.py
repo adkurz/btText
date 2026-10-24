@@ -89,12 +89,16 @@ def _replace_clipboard(
     if isinstance(content, str):
         content = ClipboardContent(content)
     with _clipboard_owner_window() as owner:
-        snapshot = ClipboardSnapshot.capture()
+        snapshot = None
         clipboard_emptied = False
         failed_sequence = None
         try:
             _open_clipboard(owner=owner)
             try:
+                # Hold one lock from capture through the last write. Reopening
+                # after capture could discard a newer copy from another app
+                # and later restore a stale snapshot over it.
+                snapshot = ClipboardSnapshot.capture(clipboard_open=True)
                 if not user32.EmptyClipboard():
                     raise ClipboardError("The clipboard could not be cleared.")
                 clipboard_emptied = True
@@ -112,6 +116,9 @@ def _replace_clipboard(
                 user32.CloseClipboard()
             return snapshot
         except Exception as operation_error:
+            if snapshot is None:
+                # Opening or capture failed before any replacement was made.
+                raise
             if not clipboard_emptied:
                 # Failed access or clearing did not change the clipboard.
                 snapshot.close()
