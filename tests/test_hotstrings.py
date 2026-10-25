@@ -108,16 +108,18 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
                 self.assertEqual(observed, baseline)
 
     def test_native_hook_can_be_installed_and_removed(self):
-        hook = KeyboardHook(lambda snippet, key: False)
+        hook = KeyboardHook(lambda snippet, key, checkpoint: False)
         hook.start()
         self.addCleanup(hook.stop)
         self.assertIsNotNone(hook._handle)
+        self.assertIsNotNone(hook._mouse_handle)
         self.assertNotEqual(hook._thread_id, threading.get_native_id())
         hook.stop()
         self.assertIsNone(hook._handle)
+        self.assertIsNone(hook._mouse_handle)
 
     def test_hook_can_be_started_again_after_stop(self):
-        hook = KeyboardHook(lambda snippet, key: False)
+        hook = KeyboardHook(lambda snippet, key, checkpoint: False)
         self.addCleanup(hook.stop)
 
         hook.start()
@@ -129,7 +131,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
         self.assertTrue(hook._thread.is_alive())
 
     def test_aging_hook_is_replaced_after_user_input_settles(self):
-        hook = KeyboardHook(lambda snippet, key: False)
+        hook = KeyboardHook(lambda snippet, key, checkpoint: False)
         hook._handle = 123
         hook._hook_installed_at = 10
         hook._observed_foreground_window = 100
@@ -154,7 +156,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
         self.assertIn("refreshed (scheduled)", logs.output[0])
 
     def test_foreground_change_immediately_replaces_hook(self):
-        hook = KeyboardHook(lambda snippet, key: False)
+        hook = KeyboardHook(lambda snippet, key, checkpoint: False)
         hook._handle = 123
         hook._hook_installed_at = 10
         hook._observed_foreground_window = 100
@@ -179,7 +181,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
         self.assertIn("refreshed (foreground window changed)", logs.output[0])
 
     def test_active_input_defers_hook_replacement(self):
-        hook = KeyboardHook(lambda snippet, key: False)
+        hook = KeyboardHook(lambda snippet, key, checkpoint: False)
         hook._handle = 123
         hook._hook_installed_at = 10
         hook._observed_foreground_window = 100
@@ -196,7 +198,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
         install.assert_not_called()
 
     def test_failed_replacement_keeps_existing_hook_for_retry(self):
-        hook = KeyboardHook(lambda snippet, key: False)
+        hook = KeyboardHook(lambda snippet, key, checkpoint: False)
         hook._handle = 123
         hook._hook_installed_at = 10
         hook._observed_foreground_window = 100
@@ -237,7 +239,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
             self.assertTrue(KeyboardHook._is_user_input_idle())
 
     def test_focused_child_change_discards_partial_hotstring(self):
-        hook = KeyboardHook(lambda snippet, key: False)
+        hook = KeyboardHook(lambda snippet, key, checkpoint: False)
         hook.update({"hello": object()})
         hook._matcher.character("h")
         hook._input_context = (123, 456, 1)
@@ -262,7 +264,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
         self.assertEqual(hook._matcher._buffer, "e")
 
     def test_callback_failure_is_contained_and_chained(self):
-        hook = KeyboardHook(lambda snippet, key: False)
+        hook = KeyboardHook(lambda snippet, key, checkpoint: False)
 
         with (
             patch.object(hook, "_process_hook_event", side_effect=RuntimeError),
@@ -285,7 +287,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
             hotstrings.VK_RSHIFT,
         ):
             with self.subTest(shift_key=shift_key):
-                hook = KeyboardHook(lambda snippet, key: False)
+                hook = KeyboardHook(lambda snippet, key, checkpoint: False)
                 snippet = SimpleNamespace(hotstring="MfG")
                 hook.update({"MfG": snippet})
                 hook._matcher.character("M")
@@ -320,7 +322,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
     def test_shift_state_is_applied_to_following_character(self):
         matches = []
         hook = KeyboardHook(
-            lambda snippet, key: matches.append((snippet, key)) or True
+            lambda snippet, key, checkpoint: matches.append((snippet, key)) or True
         )
         snippet = SimpleNamespace(hotstring="M")
         hook.update({"M": snippet})
@@ -423,7 +425,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
         for modifier_key in modifier_keys:
             for message in messages:
                 with self.subTest(modifier_key=modifier_key, message=message):
-                    hook = KeyboardHook(lambda snippet, key: False)
+                    hook = KeyboardHook(lambda snippet, key, checkpoint: False)
                     event = hotstrings.KBDLLHOOKSTRUCT(
                         modifier_key, 0, 0, 0, 0
                     )
@@ -460,7 +462,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
             hotstrings.VK_LWIN,
         ):
             with self.subTest(modifier_key=modifier_key):
-                hook = KeyboardHook(lambda snippet, key: False)
+                hook = KeyboardHook(lambda snippet, key, checkpoint: False)
                 hook.update({"hello": object()})
                 hook._matcher.character("h")
                 hook._input_context = (123, None, None)
@@ -521,7 +523,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
             (hotstrings.VK_RCONTROL, hotstrings.VK_CONTROL),
         ):
             with self.subTest(down_key=down_key, up_key=up_key):
-                hook = KeyboardHook(lambda snippet, key: False)
+                hook = KeyboardHook(lambda snippet, key, checkpoint: False)
                 hook.update({"e": object()})
                 hook._input_context = (123, None, None)
                 control_down = hotstrings.KBDLLHOOKSTRUCT(
@@ -583,7 +585,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
                 )
 
     def test_right_control_copy_discards_partial_input_and_is_forwarded(self):
-        hook = KeyboardHook(lambda snippet, key: False)
+        hook = KeyboardHook(lambda snippet, key, checkpoint: False)
         hook.update({"hello": object()})
         hook._matcher.character("h")
         hook._input_context = (123, None, None)
@@ -637,7 +639,7 @@ class KeyboardHookSmokeTestCase(unittest.TestCase):
         translate.assert_not_called()
 
     def test_altgr_remains_available_for_layout_dependent_text(self):
-        hook = KeyboardHook(lambda snippet, key: False)
+        hook = KeyboardHook(lambda snippet, key, checkpoint: False)
         hook.update({"a@": object()})
         hook._matcher.character("a")
         hook._input_context = (123, None, 456)

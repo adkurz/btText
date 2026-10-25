@@ -2,16 +2,20 @@
 
 import ctypes
 import logging
+import os
 import threading
 import time
 from collections.abc import Mapping
 from ctypes import wintypes
+from dataclasses import dataclass, field
 from typing import Callable
 
 from core.hotstrings import HotstringMatcher
+from platform_support import keyboard_input, windows
 
 
 WH_KEYBOARD_LL = 13
+WH_MOUSE_LL = 14
 HC_ACTION = 0
 WM_KEYDOWN = 0x0100
 WM_KEYUP = 0x0101
@@ -19,6 +23,11 @@ WM_SYSKEYDOWN = 0x0104
 WM_SYSKEYUP = 0x0105
 WM_TIMER = 0x0113
 WM_QUIT = 0x0012
+MOUSE_ACTION_MESSAGES = frozenset((
+    0x0201, 0x0202, 0x0204, 0x0205,  # Left/right button down and up.
+    0x0207, 0x0208, 0x020B, 0x020C,  # Middle/X button down and up.
+    0x020A, 0x020E,  # Vertical and horizontal wheel.
+))
 HOOK_THREAD_SHUTDOWN_TIMEOUT_SECONDS = 2
 HOOK_HEALTH_CHECK_INTERVAL_MS = 500
 HOOK_REFRESH_INTERVAL_SECONDS = 60
@@ -90,6 +99,26 @@ class LASTINPUTINFO(ctypes.Structure):
     )
 
 
+class MSLLHOOKSTRUCT(ctypes.Structure):
+    """Payload delivered to a low-level mouse callback."""
+
+    _fields_ = (
+        ("pt", wintypes.POINT),
+        ("mouseData", wintypes.DWORD),
+        ("flags", wintypes.DWORD),
+        ("time", wintypes.DWORD),
+        ("dwExtraInfo", ctypes.c_size_t),
+    )
+
+
+@dataclass(frozen=True)
+class InputCheckpoint:
+    """Bind one queued expansion to its focus and subsequent user input."""
+
+    context: tuple[int | None, int | None, int | None]
+    cancelled: threading.Event = field(default_factory=threading.Event)
+
+
 HOOKPROC = ctypes.WINFUNCTYPE(
     ctypes.c_ssize_t, ctypes.c_int, wintypes.WPARAM, wintypes.LPARAM
 )
@@ -136,6 +165,8 @@ user32.GetGUIThreadInfo.argtypes = (
     ctypes.POINTER(GUITHREADINFO),
 )
 user32.GetGUIThreadInfo.restype = wintypes.BOOL
+user32.WindowFromPoint.argtypes = (wintypes.POINT,)
+user32.WindowFromPoint.restype = wintypes.HWND
 kernel32.GetModuleHandleW.argtypes = (wintypes.LPCWSTR,)
 kernel32.GetModuleHandleW.restype = wintypes.HMODULE
 kernel32.GetCurrentThreadId.restype = wintypes.DWORD
@@ -175,13 +206,15 @@ class KeyboardHook:
 
     def __init__(
         self,
-        on_match: Callable[[object, int], bool],
+        on_match: Callable[[object, int, InputCheckpoint], bool],
         should_monitor: Callable[[], bool] = lambda: True,
     ):
         self._on_match = on_match
         self._should_monitor = should_monitor
         self._matcher = HotstringMatcher()
         self._handle = None
+        self._mouse_handle = None
+        self._pending_checkpoint: InputCheckpoint | None = None
         self._thread: threading.Thread | None = None
         self._thread_id: int | None = None
         self._timer_id: int | None = None
@@ -194,9 +227,41 @@ class KeyboardHook:
             tuple[int | None, int | None, int | None] | None
         ) = None
         self._callback = HOOKPROC(self._hook_callback)
+        self._mouse_callback_ref = HOOKPROC(self._mouse_callback)
+
+    def _cancel_pending(self) -> None:
+        """Invalidate without acquiring the matcher lock or consuming input."""
+        checkpoint = self._pending_checkpoint
+        if checkpoint is not None:
+            checkpoint.cancelled.set()
+
+    def is_current(
+        self,
+        checkpoint: InputCheckpoint,
+        *,
+        allow_own_foreground: bool = False,
+    ) -> bool:
+        """Recheck the original focused child, including after variable prompts."""
+        if checkpoint.cancelled.is_set() or checkpoint.context[1] is None:
+            return False
+        foreground = self._get_foreground_window()
+        if foreground != checkpoint.context[0]:
+            identity = windows.get_window_identity(foreground)
+            if not (
+                allow_own_foreground
+                and identity is not None
+                and identity.process_id == os.getpid()
+            ):
+                checkpoint.cancelled.set()
+                return False
+        if self._get_input_context(checkpoint.context[0]) != checkpoint.context:
+            checkpoint.cancelled.set()
+            return False
+        return not checkpoint.cancelled.is_set()
 
     def update(self, hotstrings: Mapping[str, object]) -> None:
         """Replace active hotstrings without reinstalling the hook."""
+        self._cancel_pending()
         with self._state_lock:
             self._matcher.update(hotstrings)
 
@@ -221,6 +286,7 @@ class KeyboardHook:
 
     def stop(self) -> None:
         """Remove the hook; repeated calls are harmless."""
+        self._cancel_pending()
         thread = self._thread
         thread_id = self._thread_id
         if thread is not None and thread.is_alive() and thread_id is not None:
@@ -239,6 +305,7 @@ class KeyboardHook:
         try:
             self._thread_id = int(kernel32.GetCurrentThreadId())
             self._handle = self._install_native_hook()
+            self._mouse_handle = self._install_mouse_hook()
             self._hook_installed_at = time.monotonic()
             self._observed_foreground_window = self._get_foreground_window()
             self._timer_id = int(
@@ -252,6 +319,9 @@ class KeyboardHook:
             if not self._timer_id:
                 raise ctypes.WinError(ctypes.get_last_error())
         except Exception as error:
+            if self._mouse_handle:
+                user32.UnhookWindowsHookEx(self._mouse_handle)
+                self._mouse_handle = None
             if self._handle:
                 user32.UnhookWindowsHookEx(self._handle)
                 self._handle = None
@@ -280,12 +350,16 @@ class KeyboardHook:
                 if message.message == WM_TIMER and message.wParam == self._timer_id:
                     self._monitor_hook()
         finally:
+            self._cancel_pending()
             if self._timer_id and not user32.KillTimer(None, self._timer_id):
                 logger.warning("Could not remove hotstring hook health timer")
             self._timer_id = None
             if self._handle and not user32.UnhookWindowsHookEx(self._handle):
                 logger.warning("Could not remove hotstring keyboard hook")
             self._handle = None
+            if self._mouse_handle and not user32.UnhookWindowsHookEx(self._mouse_handle):
+                logger.warning("Could not remove hotstring mouse observer")
+            self._mouse_handle = None
             self._thread_id = None
             logger.info("Hotstring keyboard hook stopped")
 
@@ -299,11 +373,45 @@ class KeyboardHook:
             raise ctypes.WinError(ctypes.get_last_error())
         return handle
 
+    def _install_mouse_hook(self):
+        """Observe caret-changing mouse actions without consuming them."""
+        handle = user32.SetWindowsHookExW(
+            WH_MOUSE_LL, self._mouse_callback_ref,
+            kernel32.GetModuleHandleW(None), 0,
+        )
+        if not handle:
+            raise ctypes.WinError(ctypes.get_last_error())
+        return handle
+
+    def _mouse_callback(self, code, message, data):
+        """Invalidate external clicks/wheels, including clicks from a prompt."""
+        try:
+            if code == HC_ACTION and message in MOUSE_ACTION_MESSAGES:
+                event = ctypes.cast(data, ctypes.POINTER(MSLLHOOKSTRUCT)).contents
+                handle = user32.WindowFromPoint(event.pt)
+                identity = windows.get_window_identity(handle)
+                if identity is None or identity.process_id != os.getpid():
+                    self._cancel_pending()
+                    with self._state_lock:
+                        self._matcher.reset()
+        except Exception:
+            self._cancel_pending()
+            logger.exception("Hotstring mouse observer failed")
+        return user32.CallNextHookEx(self._mouse_handle, code, message, data)
+
     def _monitor_hook(self) -> None:
         """Renew the hook after window changes or when it has aged."""
         foreground = self._get_foreground_window()
         foreground_changed = foreground != self._observed_foreground_window
         self._observed_foreground_window = foreground
+        if (
+            foreground_changed
+            and self._pending_checkpoint is not None
+            and foreground != self._pending_checkpoint.context[0]
+        ):
+            identity = windows.get_window_identity(foreground)
+            if identity is None or identity.process_id != os.getpid():
+                self._cancel_pending()
         age = time.monotonic() - self._hook_installed_at
         periodic_refresh_due = (
             age >= HOOK_REFRESH_INTERVAL_SECONDS
@@ -324,6 +432,17 @@ class KeyboardHook:
         self._hook_installed_at = time.monotonic()
         if previous and not user32.UnhookWindowsHookEx(previous):
             logger.warning("Could not remove replaced hotstring keyboard hook")
+        if self._mouse_handle is not None:
+            try:
+                replacement_mouse = self._install_mouse_hook()
+            except OSError:
+                self._cancel_pending()
+                logger.exception("Could not refresh hotstring mouse observer")
+            else:
+                previous_mouse = self._mouse_handle
+                self._mouse_handle = replacement_mouse
+                if not user32.UnhookWindowsHookEx(previous_mouse):
+                    logger.warning("Could not remove replaced hotstring mouse observer")
         logger.info("Hotstring keyboard hook refreshed (%s)", reason)
 
     @staticmethod
@@ -348,6 +467,7 @@ class KeyboardHook:
         try:
             return self._process_hook_event(code, message, data)
         except Exception:
+            self._cancel_pending()
             logger.exception("Hotstring keyboard hook callback failed")
             return user32.CallNextHookEx(self._handle, code, message, data)
 
@@ -362,7 +482,27 @@ class KeyboardHook:
         if code != HC_ACTION or message not in keyboard_messages:
             return user32.CallNextHookEx(self._handle, code, message, data)
         event = ctypes.cast(data, ctypes.POINTER(KBDLLHOOKSTRUCT)).contents
-        if event.flags & LLKHF_INJECTED or event.vkCode in MODIFIER_KEYS:
+        owned_input = (
+            event.flags & LLKHF_INJECTED
+            and event.dwExtraInfo == keyboard_input.INPUT_MARKER
+        )
+        key_down = message in (WM_KEYDOWN, WM_SYSKEYDOWN)
+        injected_modifier = (
+            event.flags & LLKHF_INJECTED and event.vkCode in MODIFIER_KEYS
+        )
+        if (
+            key_down
+            and not owned_input
+            and not injected_modifier
+            and self._should_monitor()
+        ):
+            self._cancel_pending()
+        if event.flags & LLKHF_INJECTED:
+            # Keep the original observational behavior: input helpers can
+            # replay physical keys. Feeding or clearing those duplicates would
+            # corrupt the trigger assembled from the physical events.
+            return user32.CallNextHookEx(self._handle, code, message, data)
+        if event.vkCode in MODIFIER_KEYS:
             # A low-level hook must never delay or consume a modifier. In
             # particular, Alt arrives as a system-key message and Windows
             # cannot activate menus or Alt-based shortcuts until it returns.
@@ -412,8 +552,11 @@ class KeyboardHook:
                 self._handle, HC_ACTION, message, data
             )
         snippet = self._matcher.character(character)
-        if snippet is not None and self._on_match(snippet, event.vkCode):
-            return 1
+        if snippet is not None:
+            checkpoint = InputCheckpoint(input_context)
+            self._pending_checkpoint = checkpoint
+            if self._on_match(snippet, event.vkCode, checkpoint):
+                return 1
         return user32.CallNextHookEx(self._handle, HC_ACTION, message, data)
 
     @staticmethod
@@ -444,9 +587,11 @@ class KeyboardHook:
         return (control_down or alt_down) and not altgr_down
 
     @staticmethod
-    def _get_input_context() -> tuple[int | None, int | None, int | None]:
+    def _get_input_context(
+        window: int | None = None,
+    ) -> tuple[int | None, int | None, int | None]:
         """Identify foreground, focused child, and active keyboard layout."""
-        foreground = user32.GetForegroundWindow()
+        foreground = window if window is not None else user32.GetForegroundWindow()
         if not foreground:
             return None, None, None
         thread_id = user32.GetWindowThreadProcessId(foreground, None)

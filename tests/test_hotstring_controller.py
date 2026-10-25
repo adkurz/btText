@@ -1,5 +1,5 @@
 import unittest
-from unittest.mock import Mock, patch
+from unittest.mock import ANY, Mock, patch
 
 from core import datamodel
 from core.app_settings import AppSettings
@@ -11,7 +11,7 @@ from core.variables import (
     VariableRenderingCancelled,
 )
 from core.rich_text import ClipboardContent
-from platform_support import windows
+from platform_support import hotstrings, windows
 from ui.hotstring_controller import HotstringController
 
 
@@ -20,6 +20,7 @@ def render_unchanged(text, target_window=None, markdown_enabled=False):
 
 
 TARGET = windows.WindowIdentity(handle=42, thread_id=7, process_id=9)
+CHECKPOINT = hotstrings.InputCheckpoint((42, 43, 44))
 
 
 class HotstringControllerTestCase(unittest.TestCase):
@@ -159,14 +160,15 @@ class HotstringControllerTestCase(unittest.TestCase):
         )
         snippet = Mock()
 
-        queued = controller._queue_expansion(snippet, 32)
+        queued = controller._queue_expansion(snippet, 32, CHECKPOINT)
 
         self.assertTrue(queued)
         call_after.assert_called_once_with(
-            controller._expand,
+            controller._run_queued_expansion,
             TARGET,
             snippet,
             32,
+            CHECKPOINT,
         )
 
     @patch("ui.hotstring_controller.sounds.play_sound")
@@ -202,11 +204,12 @@ class HotstringControllerTestCase(unittest.TestCase):
             hotstring="hello",
         )
 
-        controller._expand(TARGET, snippet, 32)
+        controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
         expand_hotstring.assert_called_once_with(
             TARGET, ClipboardContent("Hello"), 5, 32,
             session=controller._clipboard_session,
+            is_current=ANY,
         )
         schedule_restore.assert_called_once_with(pending)
         notify.assert_called_once_with(snippet)
@@ -238,7 +241,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             hotstring="hello",
         )
 
-        controller._expand(TARGET, snippet, 32)
+        controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
         play_sound.assert_not_called()
 
@@ -270,7 +273,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             hotstring="dated",
         )
 
-        controller._expand(TARGET, snippet, 32)
+        controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
         render_snippet.assert_called_once_with(
             "Today is {{date:long}}.",
@@ -283,6 +286,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             5,
             32,
             session=controller._clipboard_session,
+            is_current=ANY,
         )
 
     @patch("ui.hotstring_controller.keyboard_input.move_cursor_left")
@@ -311,7 +315,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             hotstring="cursor",
         )
 
-        controller._expand(TARGET, snippet, 32)
+        controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
         move_cursor_left.assert_called_once_with(3)
 
@@ -350,10 +354,10 @@ class HotstringControllerTestCase(unittest.TestCase):
             hotstring="broken",
         )
 
-        controller._expand(TARGET, snippet, 32)
+        controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
         expand_hotstring.assert_not_called()
-        replay_boundary.assert_called_once_with(TARGET, 32)
+        replay_boundary.assert_called_once_with(TARGET, 32, is_current=ANY)
         show_error.assert_called_once()
 
     @patch("ui.hotstring_controller.show_variable_error")
@@ -383,10 +387,10 @@ class HotstringControllerTestCase(unittest.TestCase):
             hotstring="customer",
         )
 
-        controller._expand(TARGET, snippet, 32)
+        controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
         expand_hotstring.assert_not_called()
-        replay_boundary.assert_called_once_with(TARGET, 32)
+        replay_boundary.assert_called_once_with(TARGET, 32, is_current=ANY)
         show_error.assert_not_called()
 
     @patch("ui.hotstring_controller.wx.MessageBox")
@@ -424,9 +428,9 @@ class HotstringControllerTestCase(unittest.TestCase):
             hotstring="customer",
         )
 
-        controller._expand(TARGET, snippet, 32)
+        controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
-        replay_boundary.assert_called_once_with(TARGET, 32)
+        replay_boundary.assert_called_once_with(TARGET, 32, is_current=ANY)
         format_user_error.assert_called_once_with(error)
         message_box.assert_called_once()
 
@@ -466,7 +470,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             hotstring="hello",
         )
 
-        controller._expand(TARGET, snippet, 32)
+        controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
         schedule_restore.assert_not_called()
         format_user_error.assert_called_once_with(error)

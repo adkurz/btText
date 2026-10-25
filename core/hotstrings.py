@@ -12,6 +12,10 @@ class HotstringExpansionError(UserFacingError):
     """Raised when a recognized hotstring cannot be expanded in its target."""
 
 
+class HotstringExpansionCancelled(Exception):
+    """Discard an expansion whose original input context is no longer current."""
+
+
 Payload = TypeVar("Payload")
 
 

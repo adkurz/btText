@@ -6,6 +6,33 @@ from platform_support import clipboard, keyboard_input
 
 
 class KeyboardInputTestCase(unittest.TestCase):
+    def test_hotstring_replacement_is_one_tagged_balanced_batch(self):
+        for boundary in (None, 0x20):
+            with self.subTest(boundary=boundary):
+                captured = []
+                def record(count, inputs, size):
+                    captured.extend(
+                        (item.ki.wVk, item.ki.dwFlags, item.ki.dwExtraInfo)
+                        for item in inputs
+                    )
+                    return count
+                with patch.object(keyboard_input.user32, "SendInput", side_effect=record) as send:
+                    keyboard_input.send_hotstring_replacement(2, boundary)
+                expected = [
+                    (8, 0), (8, 2), (8, 0), (8, 2),
+                    (0x11, 0), (0x56, 0), (0x56, 2), (0x11, 2),
+                ]
+                if boundary is not None:
+                    expected += [(boundary, 0), (boundary, 2)]
+                self.assertEqual([(key, flags) for key, flags, _ in captured], expected)
+                self.assertTrue(all(marker == keyboard_input.INPUT_MARKER for _, _, marker in captured))
+                send.assert_called_once()
+
+    def test_partial_hotstring_batch_reports_failure(self):
+        with patch.object(keyboard_input.user32, "SendInput", return_value=1):
+            with self.assertRaises(clipboard.ClipboardError):
+                keyboard_input.send_hotstring_replacement(4, 0x20)
+
     def test_input_structure_has_required_64_bit_windows_size(self):
         self.assertEqual(ctypes.sizeof(keyboard_input.INPUT), 40)
 

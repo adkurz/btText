@@ -1,6 +1,7 @@
 """Send balanced virtual-key input sequences through the Windows API."""
 
 import ctypes
+import secrets
 from ctypes import wintypes
 
 from platform_support.clipboard import ClipboardError, user32
@@ -11,6 +12,7 @@ KEYEVENTF_KEYUP = 0x0002
 VK_CONTROL = 0x11
 VK_LEFT = 0x25
 VK_V = 0x56
+INPUT_MARKER = secrets.randbits(ctypes.sizeof(ctypes.c_size_t) * 8) or 1
 
 
 class KEYBDINPUT(ctypes.Structure):
@@ -69,7 +71,7 @@ def _keyboard_input(key: int, flags: int = 0) -> INPUT:
     """Build one native virtual-key input event."""
     value = INPUT()
     value.type = INPUT_KEYBOARD
-    value.ki = KEYBDINPUT(key, 0, flags, 0, 0)
+    value.ki = KEYBDINPUT(key, 0, flags, 0, INPUT_MARKER)
     return value
 
 
@@ -102,6 +104,31 @@ def send_virtual_key(key: int, repetitions: int = 1) -> None:
         inputs,
         ctypes.sizeof(INPUT),
     ) != len(inputs):
+        raise ClipboardError("A keyboard input could not be sent.")
+
+
+def send_hotstring_replacement(length: int, boundary_key: int | None) -> None:
+    """Submit deletion, paste and boundary as one uninterrupted input batch."""
+    if length < 0:
+        raise ValueError("The hotstring length cannot be negative.")
+    values = [
+        _keyboard_input(0x08, flags)
+        for _ in range(length)
+        for flags in (0, KEYEVENTF_KEYUP)
+    ]
+    values.extend((
+        _keyboard_input(VK_CONTROL),
+        _keyboard_input(VK_V),
+        _keyboard_input(VK_V, KEYEVENTF_KEYUP),
+        _keyboard_input(VK_CONTROL, KEYEVENTF_KEYUP),
+    ))
+    if boundary_key is not None:
+        values.extend((
+            _keyboard_input(boundary_key),
+            _keyboard_input(boundary_key, KEYEVENTF_KEYUP),
+        ))
+    inputs = (INPUT * len(values))(*values)
+    if user32.SendInput(len(inputs), inputs, ctypes.sizeof(INPUT)) != len(inputs):
         raise ClipboardError("A keyboard input could not be sent.")
 
 

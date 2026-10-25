@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import Mock, call, patch
 
-from core.hotstrings import HotstringExpansionError
+from core.hotstrings import HotstringExpansionCancelled, HotstringExpansionError
 from platform_support import clipboard, hotstring_expansion
 from platform_support.windows import WindowIdentity
 from platform_support.clipboard_paste import ClipboardRestoreError, PendingPaste
@@ -11,6 +11,37 @@ TARGET = WindowIdentity(handle=123, thread_id=7, process_id=9)
 
 
 class HotstringExpansionTestCase(unittest.TestCase):
+    def test_stale_context_is_checked_before_clipboard_and_after_activation(self):
+        for valid_checks, prepared in (([False], False), ([True, False], True), ([True, True, False], True)):
+            with self.subTest(valid_checks=valid_checks):
+                pending = Mock(spec=PendingPaste)
+                with (
+                    patch.object(hotstring_expansion.windows, "matches_window_identity", return_value=True),
+                    patch.object(hotstring_expansion.windows, "activate_window_identity", return_value=True) as activate,
+                    patch.object(PendingPaste, "prepare", return_value=pending) as prepare,
+                    patch.object(hotstring_expansion.keyboard_input, "send_hotstring_replacement") as replace,
+                ):
+                    with self.assertRaises(HotstringExpansionCancelled):
+                        hotstring_expansion.expand_hotstring(
+                            TARGET, "Expanded", 3, 32, is_current=Mock(side_effect=valid_checks),
+                        )
+                self.assertEqual(prepare.called, prepared)
+                self.assertEqual(pending.restore_clipboard.called, prepared)
+                self.assertEqual(activate.called, len(valid_checks) == 3)
+                replace.assert_not_called()
+
+    def test_stale_boundary_replay_sends_no_keys(self):
+        for checks in ([False], [True, False]):
+            with (
+                self.subTest(checks=checks),
+                patch.object(hotstring_expansion.windows, "matches_window_identity", return_value=True),
+                patch.object(hotstring_expansion.windows, "activate_window_identity", return_value=True),
+                patch.object(hotstring_expansion.keyboard_input, "send_virtual_key") as send,
+            ):
+                with self.assertRaises(HotstringExpansionCancelled):
+                    hotstring_expansion.replay_suppressed_boundary(TARGET, 32, is_current=Mock(side_effect=checks))
+                send.assert_not_called()
+
     def test_suppressed_boundary_is_replayed_in_original_window(self):
         with (
             patch.object(
@@ -97,12 +128,8 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ),
             patch.object(
                 hotstring_expansion.keyboard_input,
-                "send_ctrl_v",
-            ) as send_ctrl_v,
-            patch.object(
-                hotstring_expansion.keyboard_input,
-                "send_virtual_key",
-            ) as send_virtual_key,
+                "send_hotstring_replacement",
+            ) as replace,
         ):
             result = hotstring_expansion.expand_hotstring(
                 TARGET,
@@ -110,24 +137,19 @@ class HotstringExpansionTestCase(unittest.TestCase):
                 3,
                 boundary_key,
             )
-        return result, pending, prepare, send_ctrl_v, send_virtual_key
+        return result, pending, prepare, replace
 
     def test_boundary_key_is_replayed_when_requested(self):
-        result, pending, prepare, send_ctrl_v, send_virtual_key = self._expand(0x20)
+        result, pending, prepare, replace = self._expand(0x20)
 
         self.assertIs(result, pending)
         prepare.assert_called_once_with("Expanded")
-        send_ctrl_v.assert_called_once_with()
-        self.assertEqual(
-            send_virtual_key.call_args_list,
-            [call(0x08, 3), call(0x20)],
-        )
+        replace.assert_called_once_with(3, 0x20)
 
     def test_boundary_key_can_be_discarded(self):
-        _result, _pending, _prepare, send_ctrl_v, send_virtual_key = self._expand(None)
+        _result, _pending, _prepare, replace = self._expand(None)
 
-        send_ctrl_v.assert_called_once_with()
-        send_virtual_key.assert_called_once_with(0x08, 3)
+        replace.assert_called_once_with(3, None)
 
     def test_invalid_target_is_rejected_before_preparing_clipboard(self):
         with (
@@ -185,7 +207,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ),
             patch.object(
                 hotstring_expansion.keyboard_input,
-                "send_virtual_key",
+                "send_hotstring_replacement",
                 side_effect=clipboard.ClipboardError("input failed"),
             ),
         ):
@@ -216,7 +238,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ),
             patch.object(
                 hotstring_expansion.keyboard_input,
-                "send_virtual_key",
+                "send_hotstring_replacement",
                 side_effect=operation_error,
             ),
         ):

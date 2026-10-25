@@ -1,6 +1,8 @@
 """Coordinate global hotstring monitoring and expansion."""
 
 from collections.abc import Callable
+from functools import partial
+import threading
 
 import wx
 
@@ -8,7 +10,7 @@ from core import datamodel
 from core.app_settings import AppSettings
 from core.error_messages import format_user_error
 from core.events import EventEmitter
-from core.hotstrings import HotstringExpansionError
+from core.hotstrings import HotstringExpansionCancelled, HotstringExpansionError
 from core.rich_text import render_clipboard_content
 from core.variables import (
     RenderedSnippet,
@@ -53,6 +55,7 @@ class HotstringController:
         self._schedule_clipboard_restore = schedule_clipboard_restore
         self._notify_expansion = notify_expansion
         self._render_snippet = render_snippet
+        self._queue_lock = threading.Lock()
         self._clipboard_session = (
             clipboard_session
             if clipboard_session is not None
@@ -99,30 +102,63 @@ class HotstringController:
         self,
         snippet: datamodel.Snippet,
         boundary_key: int,
+        checkpoint: hotstrings.InputCheckpoint,
     ) -> bool:
         """Queue expansion only when the foreground window is external."""
-        target_window = windows.get_foreground_window()
+        if checkpoint.cancelled.is_set() or checkpoint.context[1] is None:
+            return False
+        target_window = checkpoint.context[0]
         if not windows.is_external_window(target_window):
             return False
         target_identity = windows.get_window_identity(target_window)
         if target_identity is None:
             return False
-        wx.CallAfter(
-            self._expand,
-            target_identity,
-            snippet,
-            boundary_key,
-        )
+        # A modal variable prompt can pump CallAfter callbacks. Keep later
+        # matches native instead of nesting expansion dialogs or deleting text.
+        if not self._queue_lock.acquire(blocking=False):
+            return False
+        try:
+            wx.CallAfter(
+                self._run_queued_expansion,
+                target_identity,
+                snippet,
+                boundary_key,
+                checkpoint,
+            )
+        except Exception:
+            self._queue_lock.release()
+            raise
         return True
+
+    def _run_queued_expansion(
+        self,
+        target: windows.WindowIdentity,
+        snippet: datamodel.Snippet,
+        boundary_key: int,
+        checkpoint: hotstrings.InputCheckpoint,
+    ) -> None:
+        """Release the queue reservation even after rendering or native errors."""
+        try:
+            self._expand(target, snippet, boundary_key, checkpoint)
+        finally:
+            self._queue_lock.release()
 
     def _expand(
         self,
         target: windows.WindowIdentity,
         snippet: datamodel.Snippet,
         boundary_key: int,
+        checkpoint: hotstrings.InputCheckpoint,
     ) -> None:
         """Replace a recognized hotstring through the clipboard paste path."""
+        if not self._hook.is_current(checkpoint):
+            return
         settings = self._get_settings()
+        if not settings.hotstrings_enabled:
+            return
+        is_current = partial(
+            self._hook.is_current, checkpoint, allow_own_foreground=True,
+        )
         try:
             rendered = self._render_snippet(
                 snippet.content,
@@ -130,10 +166,10 @@ class HotstringController:
                 snippet.markdown_enabled,
             )
         except VariableRenderingCancelled:
-            self._replay_suppressed_boundary(target, boundary_key)
+            self._replay_suppressed_boundary(target, boundary_key, is_current)
             return
         except VariableError as error:
-            self._replay_suppressed_boundary(target, boundary_key)
+            self._replay_suppressed_boundary(target, boundary_key, is_current)
             show_variable_error(self._parent, error)
             return
         pending = None
@@ -145,8 +181,9 @@ class HotstringController:
                 len(snippet.hotstring or ""),
                 boundary_key if settings.preserve_hotstring_boundary else None,
                 session=self._clipboard_session,
+                is_current=is_current,
             )
-            if content.cursor_offset_from_end is not None:
+            if content.cursor_offset_from_end is not None and is_current():
                 boundary_offset = int(
                     settings.preserve_hotstring_boundary
                     and boundary_key is not None
@@ -154,6 +191,8 @@ class HotstringController:
                 keyboard_input.move_cursor_left(
                     content.cursor_offset_from_end + boundary_offset
                 )
+        except HotstringExpansionCancelled:
+            return
         except (clipboard.ClipboardError, HotstringExpansionError) as error:
             if pending is not None:
                 self._schedule_clipboard_restore(pending)
@@ -169,13 +208,17 @@ class HotstringController:
         self,
         target: windows.WindowIdentity,
         boundary_key: int,
+        is_current: Callable[[], bool],
     ) -> None:
         """Restore a boundary consumed before variable rendering completed."""
         try:
             hotstring_expansion.replay_suppressed_boundary(
                 target,
                 boundary_key,
+                is_current=is_current,
             )
+        except HotstringExpansionCancelled:
+            return
         except (clipboard.ClipboardError, HotstringExpansionError) as error:
             self._show_hotstring_error(error)
 

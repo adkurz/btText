@@ -1,6 +1,8 @@
 """Replace typed hotstrings with temporary multi-format clipboard content."""
 
-from core.hotstrings import HotstringExpansionError
+from collections.abc import Callable
+
+from core.hotstrings import HotstringExpansionCancelled, HotstringExpansionError
 from core.rich_text import ClipboardContent
 from platform_support import keyboard_input, windows
 from platform_support.clipboard import ClipboardError
@@ -14,8 +16,11 @@ from platform_support.clipboard_paste import (
 def replay_suppressed_boundary(
     target: windows.WindowIdentity,
     boundary_key: int,
+    *,
+    is_current: Callable[[], bool] | None = None,
 ) -> None:
     """Return a hook-suppressed boundary key to its original target window."""
+    _require_current(is_current)
     if not windows.matches_window_identity(target):
         raise HotstringExpansionError(
             "hotstring_target_window_missing",
@@ -26,7 +31,14 @@ def replay_suppressed_boundary(
             "hotstring_target_window_activation_failed",
             "The active window could not be activated.",
         )
+    _require_current(is_current)
     keyboard_input.send_virtual_key(boundary_key)
+
+
+def _require_current(is_current: Callable[[], bool] | None) -> None:
+    """Refuse stale work before activation, clipboard writes, or text deletion."""
+    if is_current is not None and not is_current():
+        raise HotstringExpansionCancelled
 
 
 def expand_hotstring(
@@ -36,8 +48,10 @@ def expand_hotstring(
     boundary_key: int | None,
     *,
     session: ClipboardPasteSession | None = None,
+    is_current: Callable[[], bool] | None = None,
 ) -> PendingPaste:
     """Replace a typed hotstring and optionally replay its boundary key."""
+    _require_current(is_current)
     if not windows.matches_window_identity(target):
         raise HotstringExpansionError(
             "hotstring_target_window_missing",
@@ -48,18 +62,15 @@ def expand_hotstring(
         if session is not None
         else PendingPaste.prepare(content)
     )
-    if not windows.activate_window_identity(target):
-        operation_error = HotstringExpansionError(
-            "hotstring_target_window_activation_failed",
-            "The active window could not be activated.",
-        )
-        restore_after_failure(pending.restore_clipboard, operation_error)
-        raise operation_error
     try:
-        keyboard_input.send_virtual_key(0x08, hotstring_length)  # VK_BACK
-        keyboard_input.send_ctrl_v()
-        if boundary_key is not None:
-            keyboard_input.send_virtual_key(boundary_key)
+        _require_current(is_current)
+        if not windows.activate_window_identity(target):
+            raise HotstringExpansionError(
+                "hotstring_target_window_activation_failed",
+                "The active window could not be activated.",
+            )
+        _require_current(is_current)
+        keyboard_input.send_hotstring_replacement(hotstring_length, boundary_key)
     except Exception as operation_error:
         restore_after_failure(pending.restore_clipboard, operation_error)
         raise
