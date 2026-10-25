@@ -8,6 +8,9 @@ from typing import Generic, TypeVar
 from core.user_errors import UserFacingError
 
 
+MAX_HOTSTRING_LENGTH = 256
+
+
 class HotstringExpansionError(UserFacingError):
     """Raised when a recognized hotstring cannot be expanded in its target."""
 
@@ -67,5 +70,5 @@ class HotstringMatcher(Generic[Payload]):
                 return None
         # Keep enough recent word text for Backspace to reveal a valid trigger
         # again without allowing an unbounded buffer.
-        self._buffer = (self._buffer + character)[-256:]
+        self._buffer = (self._buffer + character)[-MAX_HOTSTRING_LENGTH:]
         return None

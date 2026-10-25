@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.3.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-25 19:55+0100\n"
+"POT-Creation-Date: 2026-10-25 20:01+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -316,142 +316,149 @@ msgstr ""
 msgid "The hotstring must not contain whitespace."
 msgstr ""
 
+#. Translators: Validation error for a hotstring exceeding the supported
+#. length. {maximum} is the maximum number of characters.
+#: core/error_messages.py:258
+#, python-brace-format
+msgid "The hotstring must not exceed {maximum} characters."
+msgstr ""
+
 #. Translators: Validation error when another snippet already uses the same
 #. global hotstring.
-#: core/error_messages.py:258
+#: core/error_messages.py:263
 msgid "This hotstring is already assigned to another snippet."
 msgstr ""
 
 #. Translators: Internal error for an unsaved snippet without a database ID.
-#: core/error_messages.py:262
+#: core/error_messages.py:267
 msgid "The snippet has no ID."
 msgstr ""
 
 #. Translators: Error when braces or another part of a snippet variable are
 #. malformed. {position} is a zero-based character position in the snippet.
-#: core/error_messages.py:267
+#: core/error_messages.py:272
 #, python-brace-format
 msgid "The snippet contains invalid variable syntax at position {position}."
 msgstr ""
 
 #. Translators: Error when a snippet variable has an invalid technical name.
 #. {position} is a zero-based character position in the snippet.
-#: core/error_messages.py:272
+#: core/error_messages.py:277
 #, python-brace-format
 msgid "The snippet contains an invalid variable name at position {position}."
 msgstr ""
 
 #. Translators: Error when a snippet refers to a variable that btText does not
 #. provide. {name} is the language-independent technical variable name.
-#: core/error_messages.py:277
+#: core/error_messages.py:282
 #, python-brace-format
 msgid "The variable '{name}' is not available."
 msgstr ""
 
 #. Translators: Error when a known snippet variable fails while resolving.
 #. {name} is the language-independent technical variable name.
-#: core/error_messages.py:282
+#: core/error_messages.py:287
 #, python-brace-format
 msgid "The variable '{name}' could not be resolved."
 msgstr ""
 
 #. Translators: Error when a variable receives more format arguments than it
 #. supports. {name} is the language-independent technical variable name.
-#: core/error_messages.py:287
+#: core/error_messages.py:292
 #, python-brace-format
 msgid "The variable '{name}' accepts at most one format."
 msgstr ""
 
 #. Translators: Error when a context variable receives an argument although
 #. it supports only its parameterless form. {name} is its technical name.
-#: core/error_messages.py:292
+#: core/error_messages.py:297
 #, python-brace-format
 msgid "The variable '{name}' does not accept arguments."
 msgstr ""
 
 #. Translators: Error for an unsupported date or time variable format.
 #. {format} and {name} are language-independent technical identifiers.
-#: core/error_messages.py:297
+#: core/error_messages.py:302
 #, python-brace-format
 msgid "The format '{format}' is not supported for the variable '{name}'."
 msgstr ""
 
 #. Translators: Error when a contextual variable is previewed or resolved
 #. where its source is unavailable. {name} is its technical name.
-#: core/error_messages.py:302
+#: core/error_messages.py:307
 #, python-brace-format
 msgid "The context required by the variable '{name}' is not available."
 msgstr ""
 
 #. Translators: Error when {{app}} cannot identify the target executable.
-#: core/error_messages.py:306
+#: core/error_messages.py:311
 msgid "The target application could not be identified."
 msgstr ""
 
 #. Translators: Validation error for {{input:Label}}. The technical variable
 #. name remains English in every user-interface language.
-#: core/error_messages.py:311
+#: core/error_messages.py:316
 msgid "The variable 'input' requires exactly one non-empty label."
 msgstr ""
 
 #. Translators: Validation error when a snippet contains {{cursor}} more
 #. than once. The technical variable name remains English.
-#: core/error_messages.py:316
+#: core/error_messages.py:321
 #, python-brace-format
 msgid "The variable '{name}' may occur only once in a snippet."
 msgstr ""
 
 #. Translators: Validation error when {{cursor}} is combined with Markdown.
 #. The technical variable name remains English in every interface language.
-#: core/error_messages.py:321
+#: core/error_messages.py:326
 msgid "The variable 'cursor' cannot be used when Markdown formatting is enabled. Disable Markdown formatting or remove the variable."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut contains an
 #. unsupported keyboard key.
-#: core/error_messages.py:327
+#: core/error_messages.py:332
 msgid "The shortcut contains an unsupported key."
 msgstr ""
 
 #. Translators: Validation error when a global shortcut has no Ctrl, Shift,
 #. Alt, or Windows modifier.
-#: core/error_messages.py:332
+#: core/error_messages.py:337
 msgid "The shortcut requires at least one modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut from settings cannot be
 #. parsed.
-#: core/error_messages.py:336
+#: core/error_messages.py:341
 msgid "The shortcut has an invalid format."
 msgstr ""
 
 #. Translators: Validation error when a shortcut repeats the same modifier.
-#: core/error_messages.py:340
+#: core/error_messages.py:345
 msgid "The shortcut contains a duplicate modifier."
 msgstr ""
 
 #. Translators: Validation error when a shortcut has zero or multiple main
 #. keys.
-#: core/error_messages.py:344
+#: core/error_messages.py:349
 msgid "The shortcut must contain exactly one key."
 msgstr ""
 
 #. Translators: Validation error when a key cannot be used for a global
 #. shortcut.
-#: core/error_messages.py:348
+#: core/error_messages.py:353
 msgid "This key cannot be used as a shortcut."
 msgstr ""
 
 #. Translators: Settings error when the selected UI language has no installed
 #. gettext catalog.
-#: core/error_messages.py:353
+#: core/error_messages.py:358
 msgid "No translation catalog is available for the selected language."
 msgstr ""
 
 #. Translators: Startup warning after a damaged translation catalog forced
 #. btText to continue in English. {language} is a locale code such as de;
 #. {reason} is a technical catalog-loading error.
-#: core/error_messages.py:359
+#: core/error_messages.py:364
 #, python-brace-format
 msgid ""
 "The translation catalog for {language} could not be loaded. btText will continue in English.\n"
@@ -460,13 +467,13 @@ msgid ""
 msgstr ""
 
 #. Translators: Settings error when the saved UI language code is malformed.
-#: core/error_messages.py:367
+#: core/error_messages.py:372
 msgid "The language setting has an invalid format."
 msgstr ""
 
 #. Translators: Safe fallback when no specific localized application-error
 #. message is available.
-#: core/error_messages.py:382
+#: core/error_messages.py:387
 msgid "An unexpected application error occurred."
 msgstr ""
 

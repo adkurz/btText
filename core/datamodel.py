@@ -12,6 +12,7 @@ from core.database_schema import (
     get_missing_current_columns,
 )
 from core.events import EventEmitter
+from core.hotstrings import MAX_HOTSTRING_LENGTH
 from core.model_errors import (
     CategoryValidationError,
     DataModelError,
@@ -709,6 +710,12 @@ class DataModel:
             snippet.hotstring = snippet.hotstring.strip()
             if not snippet.hotstring:
                 snippet.hotstring = None
+            elif len(snippet.hotstring) > MAX_HOTSTRING_LENGTH:
+                raise SnippetValidationError(
+                    "snippet_hotstring_too_long",
+                    "The hotstring must not exceed {maximum} characters",
+                    maximum=MAX_HOTSTRING_LENGTH,
+                )
             elif any(character.isspace() for character in snippet.hotstring):
                 raise SnippetValidationError(
                     "snippet_hotstring_whitespace",

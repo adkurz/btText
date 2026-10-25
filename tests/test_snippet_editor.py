@@ -232,6 +232,70 @@ class SnippetEditorConstructionTestCase(unittest.TestCase):
     def setUpClass(cls):
         cls.app = wx.GetApp() or wx.App(False)
 
+    def test_overlong_hotstring_keeps_modal_editor_draft_and_database_unchanged(self):
+        for editing in (False, True):
+            with self.subTest(editing=editing):
+                model = datamodel.DataModel(EventEmitter(), ":memory:")
+                dialog = None
+                try:
+                    category = model.add_category(datamodel.Category("General"))
+                    original = (
+                        model.add_snippet(
+                            datamodel.Snippet(
+                                "Original", "Original content", category.id,
+                                hotstring="short",
+                            )
+                        )
+                        if editing else None
+                    )
+                    dialog = SnippetEditor(
+                        None, model.ee, model, category.id,
+                        lambda text, markdown: RenderedSnippet(text),
+                        lambda text, markdown: None, (), original,
+                    )
+                    dialog.name_input.SetValue("Draft name")
+                    dialog.content_input.SetValue("Draft content")
+                    dialog.hotstring_input.SetValue("a" * 257)
+                    attempted = []
+                    errors = []
+
+                    def attempt_save():
+                        attempted.append(True)
+                        try:
+                            dialog.save(None)
+                        except Exception as error:
+                            errors.append(error)
+                        finally:
+                            if dialog.IsModal():
+                                dialog.EndModal(wx.ID_CANCEL)
+
+                    with patch("ui.snippet_editor.wx.MessageBox") as message_box:
+                        timer = wx.CallLater(40, attempt_save)
+                        timeout = wx.CallLater(1500, dialog.EndModal, wx.ID_CANCEL)
+                        try:
+                            dialog.ShowModal()
+                        finally:
+                            timer.Stop()
+                            timeout.Stop()
+                    self.assertTrue(attempted)
+                    if errors:
+                        raise errors[0]
+                    message_box.assert_called_once()
+                    self.assertIn("256", message_box.call_args.args[0])
+                    self.assertFalse(dialog._closing_allowed)
+                    self.assertEqual(dialog.name_input.GetValue(), "Draft name")
+                    self.assertEqual(dialog.content_input.GetValue(), "Draft content")
+                    self.assertEqual(dialog.hotstring_input.GetValue(), "a" * 257)
+                    self.assertIs(dialog._snippet, original)
+                    self.assertEqual(
+                        list(model.get_snippets(category.id)),
+                        [original] if editing else [],
+                    )
+                finally:
+                    if dialog is not None:
+                        dialog.Destroy()
+                    model.close()
+
     def test_real_editor_constructs_variable_actions(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             model = datamodel.DataModel(

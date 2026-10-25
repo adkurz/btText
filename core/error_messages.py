@@ -252,6 +252,11 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
     "snippet_hotstring_whitespace": lambda parameters: _(
         "The hotstring must not contain whitespace."
     ),
+    # Translators: Validation error for a hotstring exceeding the supported
+    # length. {maximum} is the maximum number of characters.
+    "snippet_hotstring_too_long": lambda parameters: _(
+        "The hotstring must not exceed {maximum} characters."
+    ).format(**parameters),
     # Translators: Validation error when another snippet already uses the same
     # global hotstring.
     "snippet_hotstring_duplicate": lambda parameters: _(

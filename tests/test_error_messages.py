@@ -6,7 +6,10 @@ from pathlib import Path
 
 import i18n
 from core.app_settings import SettingsError, SettingsStore
-from core.datamodel import CategoryValidationError, DataModelError, EntityNotFoundError
+from core.datamodel import (
+    CategoryValidationError, DataModelError, EntityNotFoundError,
+    SnippetValidationError,
+)
 from core.error_messages import _FORMATTERS, format_user_error
 from core.hotstrings import HotstringExpansionError
 from core.user_errors import UserFacingError
@@ -99,6 +102,20 @@ class ErrorMessagesTestCase(unittest.TestCase):
             format_user_error(error),
             "Das Datenbankschema ist unvollständig. Fehlende Spalte(n): "
             "category.parent_id, snippet.content.",
+        )
+
+    def test_hotstring_length_error_is_localized_with_its_limit(self):
+        source = "The hotstring must not exceed {maximum} characters."
+        i18n._translation = MappingTranslations(
+            {source: "Der Hotstring darf höchstens {maximum} Zeichen lang sein."}
+        )
+        error = SnippetValidationError(
+            "snippet_hotstring_too_long", source, maximum=256,
+        )
+
+        self.assertEqual(
+            format_user_error(error),
+            "Der Hotstring darf höchstens 256 Zeichen lang sein.",
         )
 
     def test_unknown_structured_error_uses_safe_fallback(self):

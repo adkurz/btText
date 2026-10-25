@@ -17,6 +17,7 @@ from core.datamodel import (
     SnippetValidationError,
 )
 from core.events import EventEmitter
+from core.hotstrings import HotstringMatcher
 from core.model_errors import (
     CategoryValidationError as ExtractedCategoryValidationError,
     DataModelError as ExtractedDataModelError,
@@ -304,6 +305,69 @@ class DataModelTestCase(unittest.TestCase):
             Snippet("Disabled", "Content", category.id, hotstring="   ")
         )
         self.assertIsNone(self.model.get_snippet(snippet.id).hotstring)
+
+    def test_hotstring_at_length_limit_is_normalized_saved_and_matchable(self):
+        category = self.model.add_category(Category("Category"))
+        for character in ("a", "ä"):
+            with self.subTest(character=character):
+                trigger = character * 256
+                snippet = self.model.add_snippet(
+                    Snippet(
+                        character, "Content", category.id,
+                        hotstring=" \t" + trigger + "\n ",
+                    )
+                )
+                self.assertEqual(self.model.get_snippet(snippet.id).hotstring, trigger)
+                matcher = HotstringMatcher()
+                matcher.update({trigger: snippet.id})
+                for value in trigger:
+                    matcher.character(value)
+                self.assertEqual(matcher.character(" "), snippet.id)
+
+    def test_overlong_hotstring_is_rejected_without_inserting_or_publishing(self):
+        category = self.model.add_category(Category("Category"))
+        self.events.events.clear()
+        for character in ("a", "ä"):
+            with self.subTest(character=character):
+                trigger = character * 257
+                snippet = Snippet("Invalid", "Content", category.id, hotstring=trigger)
+                with self.assertRaises(SnippetValidationError) as context:
+                    self.model.add_snippet(snippet)
+                self.assertEqual(context.exception.code, "snippet_hotstring_too_long")
+                self.assertEqual(context.exception.parameters, {"maximum": 256})
+                self.assertIsNone(snippet.id)
+                self.assertEqual(snippet.hotstring, trigger)
+                self.assertEqual(list(self.model.get_snippets(category.id)), [])
+                self.assertEqual(self.events.events, [])
+
+    def test_overlong_hotstring_edit_preserves_stored_snippet(self):
+        category = self.model.add_category(Category("Category"))
+        original = self.model.add_snippet(
+            Snippet("Original", "Original content", category.id, hotstring="short")
+        )
+        self.events.events.clear()
+        edited = Snippet(
+            "Edited", "Edited content", category.id,
+            id=original.id, hotstring="a" * 257,
+        )
+
+        with self.assertRaises(SnippetValidationError) as context:
+            self.model.edit_snippet(edited)
+
+        self.assertEqual(context.exception.code, "snippet_hotstring_too_long")
+        self.assertEqual(self.model.get_snippet(original.id), original)
+        self.assertEqual(self.events.events, [])
+
+    def test_hotstring_edit_accepts_exact_length_limit(self):
+        category = self.model.add_category(Category("Category"))
+        snippet = self.model.add_snippet(
+            Snippet("Original", "Content", category.id, hotstring="short")
+        )
+        snippet.hotstring = "a" * 256
+
+        self.model.edit_snippet(snippet)
+
+        self.assertEqual(self.model.get_snippet(snippet.id).hotstring, "a" * 256)
 
     def test_copy_does_not_duplicate_hotstring(self):
         source_category = self.model.add_category(Category("Source"))
