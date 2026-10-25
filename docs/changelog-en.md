@@ -1,6 +1,6 @@
 # Changelog for btText
 
-## [Unreleased]
+## [v1.3.1] 
 
 - changed: Large snippet lists now sort faster by preparing weight and name sort keys once per operation. The existing sort order, selection, and focus are preserved.
 

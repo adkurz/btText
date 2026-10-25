@@ -1,6 +1,6 @@
 # Änderungsprotokoll für btText
 
-## [Unveröffentlicht]
+## [v1.3.1] 
 
 - Geändert: Große Textbausteinlisten werden jetzt schneller sortiert, indem die Sortierschlüssel für Gewicht und Name einmal pro Vorgang vorbereitet werden. Die bisherige Sortierreihenfolge, Auswahl und der Fokus bleiben erhalten.
 

@@ -2,6 +2,6 @@
 
 author = "Adrian Kurz"
 name = "btText"
-version = "1.3.0"
+version = "1.3.1"
 copyright = "Copyright (c) 2026 Adrian Kurz."
 license = "MIT License"
