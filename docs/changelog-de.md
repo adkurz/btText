@@ -2,9 +2,11 @@
 
 ## [Unveröffentlicht]
 
-- Behoben: Große Markdown-Textbausteine mit vielen Absätzen werden jetzt schneller in Form von reinem Text aufbereitet. Zeilenumbrüche und Einrückungen bleiben dabei erhalten.
+- Geändert: Große Textbausteinlisten werden jetzt schneller sortiert, indem die Sortierschlüssel für Gewicht und Name einmal pro Vorgang vorbereitet werden. Die bisherige Sortierreihenfolge, Auswahl und der Fokus bleiben erhalten.
 
-- Behoben: Beim Kopieren, Verschieben oder Löschen mehrerer Textbausteine werden der Kategorienbaum und die Hotstrings jetzt nur einmal pro Vorgang aktualisiert. Wiederholte vollständige Neuladungen für jeden einzelnen Textbaustein entfallen.
+- Geändert: Große Markdown-Textbausteine mit vielen Absätzen werden jetzt schneller in Form von reinem Text aufbereitet. Zeilenumbrüche und Einrückungen bleiben dabei erhalten.
+
+- Geändert: Beim Kopieren, Verschieben oder Löschen mehrerer Textbausteine werden der Kategorienbaum und die Hotstrings jetzt nur einmal pro Vorgang aktualisiert. Wiederholte vollständige Neuladungen für jeden einzelnen Textbaustein entfallen.
 
 - Behoben: Fehlerhafte oder nicht lesbare Einstellungen setzen die Datenbankauswahl und Datenschutzeinstellungen nicht mehr zurück. btText meldet den Fehler und beendet sich, ohne die Einstellungsdatei zu überschreiben.
 

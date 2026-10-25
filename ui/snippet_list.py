@@ -112,8 +112,21 @@ class SnippetList(wx.ListView):
         return True
 
     def sort(self):
-        """Sort rows by weight and name."""
-        self.SortItems(self._sort_compare)
+        """Sort by prepared keys without reading native rows during comparisons."""
+        sort_keys = {
+            self.GetItemData(index): (
+                -int(self.GetItemText(index, 2)),
+                self.GetItemText(index).casefold(),
+            )
+            for index in range(self.GetItemCount())
+        }
+
+        def compare(item1: int, item2: int) -> int:
+            key1 = sort_keys[item1]
+            key2 = sort_keys[item2]
+            return (key1 > key2) - (key1 < key2)
+
+        self.SortItems(compare)
 
     def category_deleted(self, category_id: int):
         """Clear rows when their selected category was deleted."""
@@ -621,14 +634,3 @@ class SnippetList(wx.ListView):
         with utils.frozen(self):
             for snippet in snippets:
                 self.delete_snippet_from_list(snippet)
-
-    def _sort_compare(self, item1, item2):
-        """Sort by descending weight and then by name."""
-        weight1 = int(self.GetItemText(self.FindItem(-1, item1), 2))
-        weight2 = int(self.GetItemText(self.FindItem(-1, item2), 2))
-        weight_result = (weight1 < weight2) - (weight1 > weight2)
-        if weight_result != 0:
-            return weight_result
-        name1 = self.GetItemText(self.FindItem(-1, item1)).casefold()
-        name2 = self.GetItemText(self.FindItem(-1, item2)).casefold()
-        return (name1 > name2) - (name1 < name2)
