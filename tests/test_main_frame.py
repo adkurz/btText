@@ -31,12 +31,23 @@ class ApplicationMenuTestCase(unittest.TestCase):
 
         MainFrame.on_settings(frame, Mock())
 
-        dialog_class.assert_called_once_with(
-            frame, settings, ("en",), controller.apply,
-            controller.suspend_hotkey, controller.resume_hotkey,
-        )
-        dialog_class.return_value.ShowModal.assert_called_once_with()
-        dialog_class.return_value.Destroy.assert_called_once_with()
+        dialog_class.assert_called_once()
+        args = dialog_class.call_args.args
+        self.assertEqual(args[:3], (frame, settings, ("en",)))
+        self.assertEqual(args[4], controller.suspend_hotkey)
+        dialog = dialog_class.return_value
+        draft = AppSettings(language="en")
+        args[3](draft)
+        controller.apply.assert_called_once_with(draft, parent=dialog)
+        dialog.IsShown.return_value = True
+        args[5]()
+        controller.resume_hotkey.assert_called_once_with(parent=dialog)
+        controller.resume_hotkey.reset_mock()
+        dialog.IsShown.return_value = False
+        args[5]()
+        controller.resume_hotkey.assert_called_once_with(parent=frame)
+        dialog.ShowModal.assert_called_once_with()
+        dialog.Destroy.assert_called_once_with()
 
     @patch("ui.main_frame.DatabaseLocationDialog")
     def test_database_location_command_shows_active_database(self, dialog_class):

@@ -136,6 +136,56 @@ class SettingsControllerTestCase(unittest.TestCase):
         message_box.assert_called_once()
 
     @patch("ui.settings_controller.wx.MessageBox")
+    def test_hotkey_conflict_errors_belong_to_the_settings_dialog(self, message_box):
+        dialog = Mock()
+        for hotkey_changed, restored in ((True, True), (True, False), (False, False)):
+            with self.subTest(hotkey_changed=hotkey_changed, restored=restored):
+                self.global_hotkey.registered_hotkey = None
+                self.global_hotkey.register.side_effect = (False, restored)
+                draft = dataclasses.replace(
+                    self.settings,
+                    toggle_window_hotkey=(
+                        Hotkey.parse("CTRL+ALT+F8") if hotkey_changed
+                        else self.settings.toggle_window_hotkey
+                    ),
+                )
+
+                self.assertFalse(self.controller.apply(draft, parent=dialog))
+
+                self.assertIs(message_box.call_args.args[3], dialog)
+                self.assertIs(self.controller.settings, self.settings)
+                self.store.save.assert_not_called()
+
+    @patch("ui.settings_controller.wx.MessageBox")
+    def test_save_and_rollback_errors_belong_to_the_settings_dialog(self, message_box):
+        dialog = Mock()
+        self.global_hotkey.register.side_effect = (True, False)
+        self.store.save.side_effect = SettingsError(
+            "settings_save_failed",
+            "The settings file could not be saved: {reason}",
+            reason=OSError("disk unavailable"),
+        )
+        draft = dataclasses.replace(
+            self.settings, toggle_window_hotkey=Hotkey.parse("CTRL+ALT+F8")
+        )
+
+        self.assertFalse(self.controller.apply(draft, parent=dialog))
+
+        self.assertEqual(message_box.call_count, 2)
+        for error_call in message_box.call_args_list:
+            self.assertIs(error_call.args[3], dialog)
+        self.assertIs(self.controller.settings, self.settings)
+
+    @patch("ui.settings_controller.wx.MessageBox")
+    def test_resume_error_belongs_to_the_settings_dialog(self, message_box):
+        dialog = Mock()
+        self.global_hotkey.resume.return_value = False
+
+        self.controller.resume_hotkey(parent=dialog)
+
+        self.assertIs(message_box.call_args.args[3], dialog)
+
+    @patch("ui.settings_controller.wx.MessageBox")
     def test_unchanged_inactive_hotkey_is_retried_and_reports_conflict(
         self,
         message_box,
@@ -181,6 +231,7 @@ class SettingsControllerTestCase(unittest.TestCase):
             DEFAULT_TOGGLE_HOTKEY
         )
         message_box.assert_called_once()
+        self.assertIs(message_box.call_args.args[3], self.parent)
 
     def test_database_file_is_saved_without_changing_other_settings(self):
         database_file = str(Path("selected.db").resolve())

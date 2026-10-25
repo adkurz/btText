@@ -594,9 +594,13 @@ class MainFrame(sc.SizedFrame):
                 self,
                 settings,
                 available_languages,
-                self._settings_controller.apply,
+                # Native error dialogs must be owned by the modal settings
+                # dialog so Windows restores activation to it on dismissal.
+                lambda draft: self._settings_controller.apply(draft, parent=dialog),
                 self._settings_controller.suspend_hotkey,
-                self._settings_controller.resume_hotkey,
+                lambda: self._settings_controller.resume_hotkey(
+                    parent=dialog if dialog.IsShown() else self
+                ),
             )
         ) as dialog:
             dialog.ShowModal()

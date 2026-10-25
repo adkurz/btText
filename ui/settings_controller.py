@@ -57,13 +57,15 @@ class SettingsController:
         """Temporarily release the hotkey while the dialog records."""
         self._global_hotkey.suspend()
 
-    def resume_hotkey(self) -> None:
+    def resume_hotkey(self, *, parent: wx.Window | None = None) -> None:
         """Re-register the configured hotkey after temporary suspension."""
         hotkey = self._settings.toggle_window_hotkey
         if not self._global_hotkey.resume(hotkey):
-            self.show_hotkey_registration_error(hotkey)
+            self.show_hotkey_registration_error(hotkey, parent=parent)
 
-    def show_hotkey_registration_error(self, hotkey: Hotkey) -> None:
+    def show_hotkey_registration_error(
+        self, hotkey: Hotkey, *, parent: wx.Window | None = None
+    ) -> None:
         """Show the standard global hotkey registration error."""
         wx.MessageBox(
             # Translators: Startup error shown when btText cannot claim its
@@ -75,11 +77,14 @@ class SettingsController:
             # Translators: Title of an error registering a global shortcut.
             _("Hotkey error"),
             wx.OK | wx.ICON_ERROR,
-            self._parent,
+            self._parent if parent is None else parent,
         )
 
-    def apply(self, settings: AppSettings) -> bool:
+    def apply(
+        self, settings: AppSettings, *, parent: wx.Window | None = None
+    ) -> bool:
         """Apply and persist settings, rolling runtime state back on failure."""
+        error_parent = self._parent if parent is None else parent
         # Database selection belongs to save_database_file(), so a dialog's
         # older snapshot cannot replace the controller's current database path.
         new_settings = dataclasses.replace(
@@ -133,7 +138,7 @@ class SettingsController:
                 # Translators: Title of an error changing the global shortcut.
                 _("Hotkey error"),
                 wx.OK | wx.ICON_ERROR,
-                self._parent,
+                error_parent,
             )
             if hotstrings_started:
                 self._hotstrings.stop()
@@ -163,9 +168,9 @@ class SettingsController:
                     # Translators: Title of an error restoring a global shortcut.
                     _("Hotkey error"),
                     wx.OK | wx.ICON_ERROR,
-                    self._parent,
+                    error_parent,
                 )
-            self._show_settings_error(error)
+            self._show_settings_error(error, parent=error_parent)
             return False
         self._settings = new_settings
         if not new_settings.hotstrings_enabled:
@@ -198,12 +203,14 @@ class SettingsController:
             self.show_hotkey_registration_error(hotkey)
         return success
 
-    def _show_settings_error(self, error: SettingsError) -> None:
+    def _show_settings_error(
+        self, error: SettingsError, *, parent: wx.Window | None = None
+    ) -> None:
         """Show a localized persistence error."""
         wx.MessageBox(
             format_user_error(error),
             # Translators: Title of an error saving or applying settings.
             _("Settings error"),
             wx.OK | wx.ICON_ERROR,
-            self._parent,
+            self._parent if parent is None else parent,
         )
