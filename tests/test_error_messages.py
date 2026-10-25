@@ -6,7 +6,7 @@ from pathlib import Path
 
 import i18n
 from core.app_settings import SettingsError, SettingsStore
-from core.datamodel import CategoryValidationError, EntityNotFoundError
+from core.datamodel import CategoryValidationError, DataModelError, EntityNotFoundError
 from core.error_messages import _FORMATTERS, format_user_error
 from core.hotstrings import HotstringExpansionError
 from core.user_errors import UserFacingError
@@ -81,6 +81,24 @@ class ErrorMessagesTestCase(unittest.TestCase):
             format_user_error(context.exception),
             "Die Einstellungsdatei konnte nicht gelesen werden: "
             "Das Tastenkürzel benötigt eine Modifikatortaste.",
+        )
+
+    def test_missing_database_columns_are_localized_with_technical_names(self):
+        source = (
+            "The database schema is incomplete. Missing column(s): {missing_columns}."
+        )
+        i18n._translation = MappingTranslations(
+            {source: "Das Datenbankschema ist unvollständig. Fehlende Spalte(n): {missing_columns}."}
+        )
+        error = DataModelError(
+            "database_columns_missing", source,
+            missing_columns="category.parent_id, snippet.content",
+        )
+
+        self.assertEqual(
+            format_user_error(error),
+            "Das Datenbankschema ist unvollständig. Fehlende Spalte(n): "
+            "category.parent_id, snippet.content.",
         )
 
     def test_unknown_structured_error_uses_safe_fallback(self):

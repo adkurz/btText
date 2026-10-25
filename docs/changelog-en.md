@@ -14,6 +14,8 @@
 
 - Fixed: If pasting a snippet or expanding a hotstring fails and the previous clipboard contents cannot be restored immediately, btText now retries restoration automatically. New clipboard contents copied by other applications are preserved.
 
+- Fixed: Databases with missing required columns are now rejected upon opening with an error message specifying the missing columns. This prevents btText from failing to load the main window. A different database can then be selected.
+
 ## [v1.3.0] 2026-10-25
 
 - Added: Text snippets can now optionally be formatted using simple Markdown. When inserted, they are output not only as plain text but also as HTML and RTF, so that the formatting is preserved if supported by the target program. This allows for simple formatting (bold, italics, etc.), links, and citations.

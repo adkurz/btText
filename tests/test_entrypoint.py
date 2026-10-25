@@ -2,11 +2,15 @@ import unittest
 import tempfile
 import os
 import sys
+import sqlite3
+from contextlib import closing
 from pathlib import Path
 from unittest.mock import Mock, patch
 
 import btText
 from core.app_settings import APPEARANCE_DARK, AppSettings, SettingsStore
+from core.datamodel import DataModel
+from core.events import EventEmitter
 from platform_support import app_paths
 from ui.database_selection import DatabaseSelection
 
@@ -205,6 +209,45 @@ class SettingsStartupTestCase(unittest.TestCase):
 
 
 class DatabaseStartupTestCase(unittest.TestCase):
+    @patch("btText.wx.MessageBox")
+    @patch("btText.select_database")
+    @patch("btText.app_paths.get_database_file")
+    def test_incomplete_columns_allow_selecting_a_valid_database(
+        self, get_database_file, select_database, message_box,
+    ):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            root = Path(temporary_directory)
+            invalid_file = root / "invalid.db"
+            valid_file = root / "valid.db"
+            with closing(sqlite3.connect(invalid_file)) as connection:
+                connection.executescript(
+                    "CREATE TABLE category (id INTEGER PRIMARY KEY, parent_id INTEGER, name TEXT);"
+                    "CREATE TABLE snippet (id INTEGER PRIMARY KEY);"
+                    f"PRAGMA user_version = {DataModel.SCHEMA_VERSION};"
+                )
+            valid_model = DataModel(EventEmitter(), valid_file)
+            valid_model.close()
+            original_bytes = invalid_file.read_bytes()
+            get_database_file.return_value = root / "unused.db"
+            select_database.return_value = DatabaseSelection(valid_file, False)
+            settings = AppSettings(database_file=str(invalid_file))
+            store = Mock()
+
+            model, updated = btText._open_database(EventEmitter(), store, settings)
+            try:
+                self.assertIsNotNone(model)
+                self.assertEqual(model.get_all_category_summaries(), ())
+                self.assertEqual(model.get_hotstring_snippets(), ())
+                self.assertEqual(updated.database_file, str(valid_file.resolve()))
+                select_database.assert_called_once_with(None, first_start=True)
+                message_box.assert_called_once()
+                self.assertIn("snippet.category_id", message_box.call_args.args[0])
+                store.save.assert_called_once_with(updated)
+                self.assertEqual(invalid_file.read_bytes(), original_bytes)
+            finally:
+                if model is not None:
+                    model.close()
+
     @patch("btText.DataModel")
     @patch("btText.app_paths.get_database_file")
     def test_legacy_database_is_adopted(

@@ -14,6 +14,8 @@
 
 - Behoben: Wenn das Einfügen eines Textbausteins oder eine Hotstring-Erweiterung fehlschlägt und sich der vorherige Zwischenablageinhalt nicht sofort wiederherstellen lässt, versucht btText die Wiederherstellung jetzt automatisch erneut. Neue Zwischenablageinhalte anderer Anwendungen bleiben dabei erhalten.
 
+- Behoben: Datenbanken mit fehlenden Pflichtspalten werden jetzt beim Öffnen mit einer Fehlermeldung abgewiesen, die die fehlenden Spalten nennt. Dadurch scheitert btText nicht mehr beim Aufbau des Hauptfensters. Anschließend kann eine andere Datenbank ausgewählt werden.
+
 ## [v1.3.0] 25.10.2026
 
 - Hinzugefügt: Textbausteine können nun optional mit einfachem Markdown formatiert werden. Beim Einfügen werden sie nicht nur als Reintext, sondern auch als HTML und RTF ausgegeben, sodass die Formatierung beibehalten wird, sofern sie vom Zielprogramm unterstützt wird. Dies ermöglicht einfache Formatierungen (Fettdruck, Kursivschrift usw.), Links und Zitate.

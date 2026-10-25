@@ -9,6 +9,7 @@ from pathlib import Path
 from core.database_schema import (
     SCHEMA_VERSION as DATABASE_SCHEMA_VERSION,
     create_current_schema,
+    get_missing_current_columns,
 )
 from core.events import EventEmitter
 from core.model_errors import (
@@ -169,7 +170,16 @@ class DataModel:
         return get_database_version(self._connection)
 
     def _validate_database_integrity(self) -> None:
-        """Reject broken foreign keys and cycles in the category hierarchy."""
+        """Reject missing columns, broken foreign keys, and category cycles."""
+        missing_columns = get_missing_current_columns(self._connection)
+        if missing_columns:
+            raise DataModelError(
+                "database_columns_missing",
+                "The database schema is incomplete. Missing column(s): "
+                "{missing_columns}.",
+                missing_columns=", ".join(missing_columns),
+            )
+
         foreign_key_violation = self._connection.execute(
             "PRAGMA foreign_key_check"
         ).fetchone()

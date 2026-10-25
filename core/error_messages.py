@@ -52,6 +52,15 @@ def _format_database_version_too_new(parameters: dict[str, Any]) -> str:
     ).format(**parameters)
 
 
+def _format_database_columns_missing(parameters: dict[str, Any]) -> str:
+    # Translators: Startup error for an incomplete snippet database.
+    # {missing_columns} lists technical table.column names, separated by commas.
+    return _(
+        "The database schema is incomplete. Missing column(s): "
+        "{missing_columns}."
+    ).format(**parameters)
+
+
 def _format_database_migration_unavailable(parameters: dict[str, Any]) -> str:
     # Translators: Startup error when btText cannot upgrade an older database.
     # {database_version} is its integer schema version.
@@ -142,6 +151,7 @@ _FORMATTERS: dict[str, ErrorFormatter] = {
         "The database contains a cycle in the category hierarchy."
     ),
     "database_schema_incomplete": _format_database_schema_incomplete,
+    "database_columns_missing": _format_database_columns_missing,
     "database_version_too_new": _format_database_version_too_new,
     "database_migration_unavailable": _format_database_migration_unavailable,
     "database_migration_failed": _format_database_migration_failed,

@@ -4,6 +4,36 @@ import sqlite3
 
 
 SCHEMA_VERSION = 6
+CURRENT_TABLE_COLUMNS = {
+    "category": frozenset(("id", "parent_id", "name")),
+    "snippet": frozenset(
+        (
+            "id", "category_id", "name", "content", "weight", "hotstring",
+            "markdown_enabled",
+        )
+    ),
+}
+
+
+def get_missing_current_columns(connection: sqlite3.Connection) -> tuple[str, ...]:
+    """Return missing columns required by current reads and writes.
+
+    Call after schema creation or migration. Inspect metadata without changing
+    the database, accepting additional columns and SQLite's case-insensitive
+    column names.
+    """
+    missing = []
+    for table, required_columns in CURRENT_TABLE_COLUMNS.items():
+        columns = {
+            row[0].casefold()
+            for row in connection.execute(
+                "SELECT name FROM pragma_table_info(?)", (table,)
+            )
+        }
+        missing.extend(
+            f"{table}.{column}" for column in required_columns - columns
+        )
+    return tuple(sorted(missing))
 
 
 def create_category_indexes(connection: sqlite3.Connection) -> None:

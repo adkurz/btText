@@ -1,7 +1,7 @@
 import sqlite3
 import tempfile
 import unittest
-from contextlib import ExitStack
+from contextlib import ExitStack, closing
 from pathlib import Path
 from unittest.mock import Mock
 
@@ -741,6 +741,79 @@ class DatabaseMigrationTestCase(unittest.TestCase):
                 context.exception.parameters["reason"],
                 sqlite3.DatabaseError,
             )
+
+    def test_each_missing_current_column_is_rejected_without_changing_database(self):
+        definitions = {
+            "category": (
+                "id INTEGER PRIMARY KEY", "parent_id INTEGER", "name TEXT",
+            ),
+            "snippet": (
+                "id INTEGER PRIMARY KEY", "category_id INTEGER", "name TEXT",
+                "content TEXT", "weight INTEGER", "hotstring TEXT",
+                "markdown_enabled INTEGER",
+            ),
+        }
+        for missing_table, fields in definitions.items():
+            for missing_field in fields:
+                missing_column = missing_field.split()[0]
+                with (
+                    self.subTest(table=missing_table, column=missing_column),
+                    tempfile.TemporaryDirectory() as temporary_directory,
+                ):
+                    database_file = Path(temporary_directory) / "missing-column.db"
+                    with closing(sqlite3.connect(database_file)) as connection:
+                        for table, table_fields in definitions.items():
+                            columns = ", ".join(
+                                field for field in table_fields
+                                if table != missing_table or field != missing_field
+                            )
+                            connection.execute(f"CREATE TABLE {table} ({columns})")
+                        connection.execute(
+                            f"PRAGMA user_version = {DataModel.SCHEMA_VERSION}"
+                        )
+                        connection.commit()
+                    original_bytes = database_file.read_bytes()
+
+                    for allow_create in (False, True):
+                        with self.assertRaises(DataModelError) as raised:
+                            model = DataModel(
+                                RecordingEventEmitter(), database_file,
+                                allow_create=allow_create,
+                            )
+                            model.close()
+                        self.assertEqual(raised.exception.code, "database_columns_missing")
+                        self.assertEqual(
+                            raised.exception.parameters,
+                            {"missing_columns": f"{missing_table}.{missing_column}"},
+                        )
+                        self.assertEqual(database_file.read_bytes(), original_bytes)
+                    # On Windows this also checks that failed opens release the file.
+                    database_file.unlink()
+
+    def test_current_database_with_extra_columns_keeps_data_when_reopened(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            database_file = Path(temporary_directory) / "extra-columns.db"
+            model = DataModel(RecordingEventEmitter(), database_file)
+            try:
+                category = model.add_category(Category("Retained category"))
+                snippet = model.add_snippet(
+                    Snippet("Retained snippet", "Retained content", category.id)
+                )
+                with model._connection as connection:
+                    connection.execute("ALTER TABLE category ADD COLUMN extra TEXT")
+                    connection.execute("ALTER TABLE snippet ADD COLUMN extra TEXT")
+            finally:
+                model.close()
+
+            reopened = DataModel(
+                RecordingEventEmitter(), database_file, allow_create=False
+            )
+            try:
+                self.assertEqual(reopened.get_category(category.id).name, category.name)
+                self.assertEqual(reopened.get_snippet(snippet.id).content, snippet.content)
+                self.assertEqual(reopened._get_database_version(), DataModel.SCHEMA_VERSION)
+            finally:
+                reopened.close()
 
     def test_database_with_foreign_key_violation_is_rejected(self):
         with tempfile.TemporaryDirectory() as temporary_directory:

@@ -39,6 +39,50 @@ class DatabaseSchemaTestCase(unittest.TestCase):
         self.assertEqual(version, database_schema.SCHEMA_VERSION)
         self.assertEqual(DataModel.SCHEMA_VERSION, database_schema.SCHEMA_VERSION)
 
+        for table, expected_columns in database_schema.CURRENT_TABLE_COLUMNS.items():
+            columns = {
+                row[0]
+                for row in self.connection.execute(
+                    "SELECT name FROM pragma_table_info(?)", (table,)
+                )
+            }
+            self.assertEqual(columns, expected_columns)
+        self.assertEqual(
+            database_schema.get_missing_current_columns(self.connection), ()
+        )
+
+    def test_missing_columns_are_reported_with_table_names_in_stable_order(self):
+        self.connection.execute("CREATE TABLE category (id INTEGER PRIMARY KEY)")
+        self.connection.execute("CREATE TABLE snippet (id INTEGER PRIMARY KEY)")
+
+        self.assertEqual(
+            database_schema.get_missing_current_columns(self.connection),
+            (
+                "category.name",
+                "category.parent_id",
+                "snippet.category_id",
+                "snippet.content",
+                "snippet.hotstring",
+                "snippet.markdown_enabled",
+                "snippet.name",
+                "snippet.weight",
+            ),
+        )
+
+    def test_column_validation_accepts_extra_and_case_insensitive_columns(self):
+        self.connection.execute(
+            "CREATE TABLE category (ID INTEGER, PARENT_ID INTEGER, NAME TEXT, extra TEXT)"
+        )
+        self.connection.execute(
+            "CREATE TABLE snippet (ID INTEGER, CATEGORY_ID INTEGER, NAME TEXT, "
+            "CONTENT TEXT, WEIGHT INTEGER, HOTSTRING TEXT, MARKDOWN_ENABLED INTEGER, "
+            "extra TEXT)"
+        )
+
+        self.assertEqual(
+            database_schema.get_missing_current_columns(self.connection), ()
+        )
+
 
 if __name__ == "__main__":
     unittest.main()
