@@ -7,29 +7,8 @@ from core.error_messages import format_user_error
 from core.events import EventEmitter
 from i18n import _
 from ui import utils
+from ui.drag_drop import CategoryDropTarget, start_internal_drag
 from ui.transfer import TransferBuffer, TransferService
-
-
-class _CategoryDropTarget(wx.TextDropTarget):
-    """Decode internal drag payloads and route them to the category tree."""
-
-    def __init__(self, tree):
-        """Attach the drop target to its owning category tree."""
-        super().__init__()
-        self._tree = tree
-
-    def OnDropText(self, x, y, data):
-        """Move an internal drag payload to the category under the pointer."""
-        item, _flags = self._tree.HitTest((x, y))
-        if not item.IsOk():
-            return False
-        category_id = self._tree.GetItemData(item)
-        try:
-            kind, value = data.split(":", 1)
-            entity_id = int(value)
-        except (ValueError, TypeError):
-            return False
-        return self._tree.transfer_to(kind, entity_id, category_id, copy=False)
 
 
 class CategoryTree(wx.TreeCtrl):
@@ -67,7 +46,7 @@ class CategoryTree(wx.TreeCtrl):
         self.AssignImageList(self._images)
         # Translators: Root label of the main window's category tree.
         self._root = self.AddRoot(_("Categories"))
-        self.SetDropTarget(_CategoryDropTarget(self))
+        self.SetDropTarget(CategoryDropTarget(self))
         self.Bind(wx.EVT_TREE_SEL_CHANGED, self.selection_changed)
         self.Bind(wx.EVT_TREE_BEGIN_DRAG, self.begin_drag)
         self.Bind(wx.EVT_CONTEXT_MENU, self.context_menu)
@@ -492,10 +471,7 @@ class CategoryTree(wx.TreeCtrl):
 
     def _start_drag(self, category_id):
         """Start an internal move drag for a category."""
-        data = wx.TextDataObject("category:{}".format(category_id))
-        source = wx.DropSource(self)
-        source.SetData(data)
-        source.DoDragDrop(wx.Drag_AllowMove)
+        start_internal_drag(self, self._transfer_buffer, "category", category_id)
 
     def _on_model_changed(self, value):
         """Refresh the tree after any relevant model event."""

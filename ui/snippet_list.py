@@ -16,6 +16,7 @@ from core.variables import (
 )
 from i18n import _, ngettext
 from ui import utils
+from ui.drag_drop import start_internal_drag
 from ui.snippet_editor import SnippetEditor
 from ui.transfer import TransferBuffer, TransferService
 from ui.variable_dialog import VariableSuggestion
@@ -434,10 +435,7 @@ class SnippetList(wx.ListView):
 
     def _start_drag(self, snippet_id):
         """Start an internal move drag for a snippet."""
-        data = wx.TextDataObject("snippet:{}".format(snippet_id))
-        source = wx.DropSource(self)
-        source.SetData(data)
-        source.DoDragDrop(wx.Drag_AllowMove)
+        start_internal_drag(self, self._transfer_buffer, "snippet", snippet_id)
 
     def insert_snippet(self, event: wx.CommandEvent | wx.KeyEvent):
         """Request insertion of the selected snippet into another window."""

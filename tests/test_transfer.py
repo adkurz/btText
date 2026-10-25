@@ -109,6 +109,90 @@ class TransferServiceTestCase(unittest.TestCase):
         self.assertIs(self.service.pending, pending)
 
 
+class DragTransferTestCase(unittest.TestCase):
+    """Keep drag authorization scoped and invalidate deleted source identities."""
+
+    def setUp(self):
+        self.model = datamodel.DataModel(EventEmitter(), ":memory:")
+        self.addCleanup(self.model.close)
+        self.buffer = TransferBuffer(self.model)
+        self.destination = self.model.add_category(datamodel.Category("Destination"))
+        self.root = self.model.add_category(datamodel.Category("Root"))
+        self.child = self.model.add_category(
+            datamodel.Category("Child", parent_id=self.root.id)
+        )
+        self.snippet = self.model.add_snippet(
+            datamodel.Snippet("Source", "Text", self.child.id)
+        )
+
+    def test_drag_scope_keeps_copy_buffer_and_rejects_replays(self):
+        self.buffer.set("category", self.root.id, copy=False)
+        pending = self.buffer.value
+        with self.buffer.dragging("snippet", self.snippet.id) as token:
+            self.assertIsNone(self.buffer.take_drag(b"wrong"))
+            transfer = self.buffer.take_drag(token)
+            self.assertEqual(transfer.kind, "snippet")
+            self.assertEqual(transfer.entity_ids, (self.snippet.id,))
+            self.assertFalse(transfer.copy)
+            self.assertIsNone(self.buffer.take_drag(token))
+        self.assertIsNone(self.buffer.take_drag(token))
+        self.assertFalse(self.buffer.has_drag)
+        self.assertIs(self.buffer.value, pending)
+
+    def test_category_deletion_invalidates_descendant_drag_before_id_reuse(self):
+        with self.buffer.dragging("category", self.child.id) as token:
+            self.model.delete_category(self.root.id)
+            self.model.add_category(datamodel.Category("New root"))
+            replacement = self.model.add_category(datamodel.Category("Replacement"))
+            self.assertEqual(replacement.id, self.child.id)
+            self.assertIsNone(self.buffer.take_drag(token))
+
+    def test_category_deletion_invalidates_cascaded_snippet_drag(self):
+        with self.buffer.dragging("snippet", self.snippet.id) as token:
+            self.model.delete_category(self.root.id)
+            replacement = self.model.add_snippet(
+                datamodel.Snippet("Replacement", "New", self.destination.id)
+            )
+            self.assertEqual(replacement.id, self.snippet.id)
+            self.assertIsNone(self.buffer.take_drag(token))
+
+    def test_direct_snippet_deletion_invalidates_drag_before_id_reuse(self):
+        with self.buffer.dragging("snippet", self.snippet.id) as token:
+            self.model.delete_snippets([self.snippet.id])
+            replacement = self.model.add_snippet(
+                datamodel.Snippet("Replacement", "New", self.child.id)
+            )
+            self.assertEqual(replacement.id, self.snippet.id)
+            self.assertIsNone(self.buffer.take_drag(token))
+
+    def test_unrelated_deletion_preserves_both_drag_and_pending_copy(self):
+        self.buffer.set("snippet", self.snippet.id, copy=True)
+        pending = self.buffer.value
+        with self.buffer.dragging("category", self.child.id) as token:
+            unrelated = self.model.add_category(datamodel.Category("Unrelated"))
+            self.model.delete_category(unrelated.id)
+            self.assertIsNotNone(self.buffer.take_drag(token))
+            self.assertIs(self.buffer.value, pending)
+
+    def test_failed_deletion_lookup_invalidates_drag_and_pending_copy(self):
+        self.buffer.set("snippet", self.snippet.id, copy=True)
+        with self.buffer.dragging("category", self.child.id) as token:
+            with (
+                patch.object(self.model, "snippet_exist", side_effect=datamodel.DataModelError("failed", "failed")),
+                self.assertLogs("bttext.events", level="ERROR"),
+            ):
+                self.model.delete_category(self.destination.id)
+            self.assertIsNone(self.buffer.take_drag(token))
+            self.assertIsNone(self.buffer.value)
+
+    def test_new_drag_invalidates_the_previous_drag(self):
+        with self.buffer.dragging("snippet", self.snippet.id) as previous:
+            with self.buffer.dragging("category", self.child.id) as current:
+                self.assertIsNone(self.buffer.take_drag(previous))
+                self.assertIsNotNone(self.buffer.take_drag(current))
+            self.assertIsNone(self.buffer.take_drag(previous))
+
+
 class TransferDeletionTestCase(unittest.TestCase):
     """Reject deleted sources even after SQLite reuses their numeric IDs."""
 

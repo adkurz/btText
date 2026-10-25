@@ -1,6 +1,9 @@
 """Application-local category and snippet transfer orchestration."""
 
+from collections.abc import Iterator
+from contextlib import contextmanager
 from dataclasses import dataclass
+import secrets
 from typing import Literal, assert_never
 
 from core import datamodel
@@ -8,6 +11,7 @@ from core import datamodel
 
 TransferKind = Literal["category", "snippet"]
 _TRANSFER_KINDS = frozenset(("category", "snippet"))
+DRAG_TOKEN_BYTES = 32
 
 
 def _normalize_entity_ids(
@@ -47,6 +51,8 @@ class TransferBuffer:
     def __init__(self, model: datamodel.DataModel):
         """Create a buffer whose sources are invalidated by model deletions."""
         self.value: Transfer | None = None
+        self._drag_token: bytes | None = None
+        self._drag_transfer: Transfer | None = None
         self._model = model
         model.ee.on("category.deleted", self._on_category_deleted)
         model.ee.on("snippet.deleted", self._on_snippet_deleted)
@@ -64,36 +70,72 @@ class TransferBuffer:
         """Discard the pending transfer."""
         self.value = None
 
+    @property
+    def has_drag(self) -> bool:
+        """Return whether an internal drag can still be consumed."""
+        return self._drag_transfer is not None
+
+    @contextmanager
+    def dragging(self, kind: TransferKind, entity_id: int) -> Iterator[bytes]:
+        """Authorize one move only for the lifetime of its native drag loop."""
+        transfer = Transfer(kind, (entity_id,), copy=False)
+        token = secrets.token_bytes(DRAG_TOKEN_BYTES)
+        self._drag_token = token
+        self._drag_transfer = transfer
+        try:
+            yield token
+        finally:
+            if self._drag_token == token:
+                self._clear_drag()
+
+    def take_drag(self, token: bytes) -> Transfer | None:
+        """Consume an active drag without accepting serialized entity IDs."""
+        if self._drag_token is None or token != self._drag_token:
+            return None
+        transfer = self._drag_transfer
+        self._clear_drag()
+        return transfer
+
+    def _clear_drag(self) -> None:
+        """Invalidate the current drag without touching copied or cut items."""
+        self._drag_token = None
+        self._drag_transfer = None
+
     def _on_category_deleted(self, category_id: int) -> None:
         """Discard sources removed anywhere in a deleted category subtree."""
-        transfer = self.value
-        if transfer is None:
-            return
-        exists = (
-            self._model.category_exist
-            if transfer.kind == "category"
-            else self._model.snippet_exist
-        )
         try:
-            # Deletion events run synchronously after commit, before a later
-            # insertion can reuse an ID. A missing member invalidates the
-            # entire transfer instead of silently transferring a partial batch.
-            if any(exists(entity_id) is None for entity_id in transfer.entity_ids):
-                self.clear()
+            for transfer in (self.value, self._drag_transfer):
+                if transfer is None:
+                    continue
+                exists = (
+                    self._model.category_exist
+                    if transfer.kind == "category"
+                    else self._model.snippet_exist
+                )
+                # Check synchronously after deletion, before an ID can be reused.
+                if any(exists(entity_id) is None for entity_id in transfer.entity_ids):
+                    if transfer is self.value:
+                        self.clear()
+                    if transfer is self._drag_transfer:
+                        self._clear_drag()
         except datamodel.DataModelError:
             # A failed lookup cannot establish that the sources survived.
             self.clear()
+            self._clear_drag()
             raise
 
     def _on_snippet_deleted(self, snippet: datamodel.Snippet) -> None:
         """Discard the whole transfer when one staged snippet was deleted."""
-        transfer = self.value
-        if (
-            transfer is not None
-            and transfer.kind == "snippet"
-            and snippet.id in transfer.entity_ids
-        ):
-            self.clear()
+        for transfer in (self.value, self._drag_transfer):
+            if (
+                transfer is not None
+                and transfer.kind == "snippet"
+                and snippet.id in transfer.entity_ids
+            ):
+                if transfer is self.value:
+                    self.clear()
+                if transfer is self._drag_transfer:
+                    self._clear_drag()
 
 
 @dataclass(frozen=True)

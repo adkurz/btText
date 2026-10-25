@@ -16,6 +16,8 @@
 
 - Behoben: Datenbanken mit fehlenden Pflichtspalten werden jetzt beim Öffnen mit einer Fehlermeldung abgewiesen, die die fehlenden Spalten nennt. Dadurch scheitert btText nicht mehr beim Aufbau des Hauptfensters. Anschließend kann eine andere Datenbank ausgewählt werden.
 
+- Behoben: Drag-and-drop akzeptiert jetzt nur aktive interne Verschiebevorgänge für Kategorien und Textbausteine. Aus anderen Anwendungen gezogener Text kann keine unbeabsichtigten Verschiebungen oder Fehler mehr auslösen.
+
 ## [v1.3.0] 25.10.2026
 
 - Hinzugefügt: Textbausteine können nun optional mit einfachem Markdown formatiert werden. Beim Einfügen werden sie nicht nur als Reintext, sondern auch als HTML und RTF ausgegeben, sodass die Formatierung beibehalten wird, sofern sie vom Zielprogramm unterstützt wird. Dies ermöglicht einfache Formatierungen (Fettdruck, Kursivschrift usw.), Links und Zitate.
