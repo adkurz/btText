@@ -101,7 +101,7 @@ class HotstringController:
     def _queue_expansion(
         self,
         snippet: datamodel.Snippet,
-        boundary_key: int,
+        boundary_key: keyboard_input.BoundaryInput,
         checkpoint: hotstrings.InputCheckpoint,
     ) -> bool:
         """Queue expansion only when the foreground window is external."""
@@ -134,7 +134,7 @@ class HotstringController:
         self,
         target: windows.WindowIdentity,
         snippet: datamodel.Snippet,
-        boundary_key: int,
+        boundary_key: keyboard_input.BoundaryInput,
         checkpoint: hotstrings.InputCheckpoint,
     ) -> None:
         """Release the queue reservation even after rendering or native errors."""
@@ -147,7 +147,7 @@ class HotstringController:
         self,
         target: windows.WindowIdentity,
         snippet: datamodel.Snippet,
-        boundary_key: int,
+        boundary_key: keyboard_input.BoundaryInput,
         checkpoint: hotstrings.InputCheckpoint,
     ) -> None:
         """Replace a recognized hotstring through the clipboard paste path."""
@@ -207,7 +207,7 @@ class HotstringController:
     def _replay_suppressed_boundary(
         self,
         target: windows.WindowIdentity,
-        boundary_key: int,
+        boundary_key: keyboard_input.BoundaryInput,
         is_current: Callable[[], bool],
     ) -> None:
         """Restore a boundary consumed before variable rendering completed."""

@@ -36,7 +36,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
                 self.subTest(checks=checks),
                 patch.object(hotstring_expansion.windows, "matches_window_identity", return_value=True),
                 patch.object(hotstring_expansion.windows, "activate_window_identity", return_value=True),
-                patch.object(hotstring_expansion.keyboard_input, "send_virtual_key") as send,
+                patch.object(hotstring_expansion.keyboard_input, "send_boundary") as send,
             ):
                 with self.assertRaises(HotstringExpansionCancelled):
                     hotstring_expansion.replay_suppressed_boundary(TARGET, 32, is_current=Mock(side_effect=checks))
@@ -56,13 +56,13 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ) as activate_window,
             patch.object(
                 hotstring_expansion.keyboard_input,
-                "send_virtual_key",
-            ) as send_virtual_key,
+                "send_boundary",
+            ) as send_boundary,
         ):
             hotstring_expansion.replay_suppressed_boundary(TARGET, 0x20)
 
         activate_window.assert_called_once_with(TARGET)
-        send_virtual_key.assert_called_once_with(0x20)
+        send_boundary.assert_called_once_with(0x20)
 
     def test_suppressed_boundary_rejects_invalid_target(self):
         with (
@@ -73,14 +73,14 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ),
             patch.object(
                 hotstring_expansion.keyboard_input,
-                "send_virtual_key",
-            ) as send_virtual_key,
+                "send_boundary",
+            ) as send_boundary,
         ):
             with self.assertRaises(HotstringExpansionError) as raised:
                 hotstring_expansion.replay_suppressed_boundary(TARGET, 0x20)
 
         self.assertEqual(raised.exception.code, "hotstring_target_window_missing")
-        send_virtual_key.assert_not_called()
+        send_boundary.assert_not_called()
 
     def test_suppressed_boundary_reports_activation_failure(self):
         with (
@@ -96,8 +96,8 @@ class HotstringExpansionTestCase(unittest.TestCase):
             ),
             patch.object(
                 hotstring_expansion.keyboard_input,
-                "send_virtual_key",
-            ) as send_virtual_key,
+                "send_boundary",
+            ) as send_boundary,
         ):
             with self.assertRaises(HotstringExpansionError) as raised:
                 hotstring_expansion.replay_suppressed_boundary(TARGET, 0x20)
@@ -106,7 +106,7 @@ class HotstringExpansionTestCase(unittest.TestCase):
             raised.exception.code,
             "hotstring_target_window_activation_failed",
         )
-        send_virtual_key.assert_not_called()
+        send_boundary.assert_not_called()
 
     def _expand(self, boundary_key):
         pending = Mock(spec=PendingPaste)

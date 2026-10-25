@@ -209,7 +209,7 @@ class QueuedControllerTestCase(unittest.TestCase):
         controller._hook.is_current.side_effect = [True, False]
         with (
             patch("platform_support.hotstring_expansion.windows.activate_window_identity") as activate,
-            patch("platform_support.hotstring_expansion.keyboard_input.send_virtual_key") as send,
+            patch("platform_support.hotstring_expansion.keyboard_input.send_boundary") as send,
         ):
             controller._expand(
                 TARGET, Snippet("Name", "Text", 1, hotstring=";sig"),

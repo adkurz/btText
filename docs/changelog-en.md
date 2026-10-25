@@ -8,6 +8,10 @@
 
 - Fixed: The Copy path, Open folder, and Close buttons in the database location dialog are now arranged without overlapping.
 
+- Fixed: Hotstrings now retain the originally typed punctuation mark even when modifier keys are released during a variable prompt. Cancelling the prompt also restores the correct character.
+
+- Fixed: Holding Shift while ending a hotstring with punctuation such as ? no longer changes the paste shortcut or inserts a control character instead of the snippet.
+
 ## [v1.3.0] 2026-10-25
 
 - Added: Text snippets can now optionally be formatted using simple Markdown. When inserted, they are output not only as plain text but also as HTML and RTF, so that the formatting is preserved if supported by the target program. This allows for simple formatting (bold, italics, etc.), links, and citations.

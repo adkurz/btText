@@ -6,6 +6,11 @@ from platform_support import clipboard, keyboard_input
 
 
 class KeyboardInputTestCase(unittest.TestCase):
+    def setUp(self):
+        state = patch.object(keyboard_input.user32, "GetAsyncKeyState", return_value=0)
+        state.start()
+        self.addCleanup(state.stop)
+
     def test_hotstring_replacement_is_one_tagged_balanced_batch(self):
         for boundary in (None, 0x20):
             with self.subTest(boundary=boundary):

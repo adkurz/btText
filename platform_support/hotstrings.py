@@ -206,7 +206,7 @@ class KeyboardHook:
 
     def __init__(
         self,
-        on_match: Callable[[object, int, InputCheckpoint], bool],
+        on_match: Callable[[object, keyboard_input.BoundaryInput, InputCheckpoint], bool],
         should_monitor: Callable[[], bool] = lambda: True,
     ):
         self._on_match = on_match
@@ -555,7 +555,14 @@ class KeyboardHook:
         if snippet is not None:
             checkpoint = InputCheckpoint(input_context)
             self._pending_checkpoint = checkpoint
-            if self._on_match(snippet, event.vkCode, checkpoint):
+            # Replaying punctuation by virtual key would translate it again
+            # using modifiers that may have changed during a variable prompt.
+            boundary = (
+                event.vkCode
+                if event.vkCode in (VK_SPACE, VK_RETURN, VK_TAB)
+                else character
+            )
+            if self._on_match(snippet, boundary, checkpoint):
                 return 1
         return user32.CallNextHookEx(self._handle, HC_ACTION, message, data)
 

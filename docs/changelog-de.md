@@ -8,6 +8,10 @@
 
 - Behoben: Die Schaltflächen zum Kopieren des Pfads, Öffnen des Ordners und Schließen des Datenbankpfad-Dialogs werden jetzt ohne Überlappungen angeordnet.
 
+- Behoben: Hotstrings behalten jetzt das ursprünglich eingegebene Satzzeichen bei, auch wenn Modifikatortasten während einer Variablenabfrage losgelassen werden. Beim Abbrechen der Abfrage wird ebenfalls das richtige Zeichen wiederhergestellt.
+
+- Behoben: Eine beim Beenden eines Hotstrings mit Satzzeichen wie ? noch gedrückte Umschalttaste verändert die Einfügetastenkombination nicht mehr. Dadurch wird kein Steuerzeichen mehr anstelle des Textbausteins eingefügt.
+
 ## [v1.3.0] 25.10.2026
 
 - Hinzugefügt: Textbausteine können nun optional mit einfachem Markdown formatiert werden. Beim Einfügen werden sie nicht nur als Reintext, sondern auch als HTML und RTF ausgegeben, sodass die Formatierung beibehalten wird, sofern sie vom Zielprogramm unterstützt wird. Dies ermöglicht einfache Formatierungen (Fettdruck, Kursivschrift usw.), Links und Zitate.

@@ -15,11 +15,11 @@ from platform_support.clipboard_paste import (
 
 def replay_suppressed_boundary(
     target: windows.WindowIdentity,
-    boundary_key: int,
+    boundary_key: keyboard_input.BoundaryInput,
     *,
     is_current: Callable[[], bool] | None = None,
 ) -> None:
-    """Return a hook-suppressed boundary key to its original target window."""
+    """Return a hook-suppressed boundary to its original target window."""
     _require_current(is_current)
     if not windows.matches_window_identity(target):
         raise HotstringExpansionError(
@@ -32,7 +32,7 @@ def replay_suppressed_boundary(
             "The active window could not be activated.",
         )
     _require_current(is_current)
-    keyboard_input.send_virtual_key(boundary_key)
+    keyboard_input.send_boundary(boundary_key)
 
 
 def _require_current(is_current: Callable[[], bool] | None) -> None:
@@ -45,12 +45,12 @@ def expand_hotstring(
     target: windows.WindowIdentity,
     content: ClipboardContent | str,
     hotstring_length: int,
-    boundary_key: int | None,
+    boundary_key: keyboard_input.BoundaryInput | None,
     *,
     session: ClipboardPasteSession | None = None,
     is_current: Callable[[], bool] | None = None,
 ) -> PendingPaste:
-    """Replace a typed hotstring and optionally replay its boundary key."""
+    """Replace a typed hotstring and optionally replay its original boundary."""
     _require_current(is_current)
     if not windows.matches_window_identity(target):
         raise HotstringExpansionError(
