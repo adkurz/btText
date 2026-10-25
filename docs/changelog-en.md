@@ -1,6 +1,6 @@
 # Changelog for btText
 
-## [v1.3.0] 25.10.2026
+## [v1.3.0] 2026-10-25
 
 - Added: Text snippets can now optionally be formatted using simple Markdown. When inserted, they are output not only as plain text but also as HTML and RTF, so that the formatting is preserved if supported by the target program. This allows for simple formatting (bold, italics, etc.), links, and citations.
 
