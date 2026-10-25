@@ -83,7 +83,9 @@ class SnippetList(wx.ListView):
         ee.on("category.deleted", self.category_deleted)
         ee.on("snippet.added", self.add_snippet_in_list)
         ee.on("snippet.edited", self.edit_snippet_in_list)
-        ee.on("snippet.deleted", self.delete_snippet_from_list)
+        ee.on("snippets.added", self._update_snippets_in_list)
+        ee.on("snippets.edited", self._update_snippets_in_list)
+        ee.on("snippets.deleted", self.delete_snippets_from_list)
 
     def get_selected_id(self):
         """Return the model ID of the first selected row, if any."""
@@ -579,47 +581,46 @@ class SnippetList(wx.ListView):
 
     def add_snippet_in_list(self, snippet: datamodel.Snippet):
         """Insert and focus a model-created snippet in the active list."""
-        if snippet.category_id != self.selected_category_id:
-            return
-        if snippet.id is not None and self.FindItem(-1, snippet.id) != wx.NOT_FOUND:
-            self.focus_id(snippet.id)
-            return
-        with utils.frozen(self):
-            snippet_index = self.Append(
-                (
-                    snippet.name,
-                    utils.get_weight_string(snippet.weight),
-                    snippet.weight,
-                    utils.reduce_string(snippet.content, CONTENT_PREVIEW_LENGTH),
-                )
-            )
-            self.SetItemData(snippet_index, snippet.id or 0)
-            self.Focus(snippet_index)
-            self.Select(snippet_index)
-            self.sort()
+        self._update_snippets_in_list((snippet,))
 
     def edit_snippet_in_list(self, snippet: datamodel.Snippet):
         """Update, add, or remove a row after a snippet edit."""
-        if snippet.category_id != self.selected_category_id:
-            self.delete_snippet_from_list(snippet)
-            return
-        if snippet.id is None:
-            return
-        index = self.FindItem(-1, snippet.id)
-        if index == wx.NOT_FOUND:
-            self.add_snippet_in_list(snippet)
-            return
+        self._update_snippets_in_list((snippet,))
+
+    def _update_snippets_in_list(self, snippets: tuple[datamodel.Snippet, ...]):
+        """Apply committed rows together, sorting and restoring focus once."""
+        focus_id = None
         with utils.frozen(self):
-            self.SetItem(index, 0, snippet.name)
-            self.SetItem(index, 1, utils.get_weight_string(snippet.weight))
-            self.SetItem(index, 2, str(snippet.weight))
-            self.SetItem(
-                index,
-                3,
-                utils.reduce_string(snippet.content, CONTENT_PREVIEW_LENGTH),
-            )
-            self.sort()
-            self.focus_id(snippet.id)
+            for snippet in snippets:
+                if snippet.category_id != self.selected_category_id:
+                    self.delete_snippet_from_list(snippet)
+                    continue
+                if snippet.id is None:
+                    continue
+                values = (
+                    snippet.name,
+                    utils.get_weight_string(snippet.weight),
+                    str(snippet.weight),
+                    utils.reduce_string(snippet.content, CONTENT_PREVIEW_LENGTH),
+                )
+                index = self.FindItem(-1, snippet.id)
+                if index == wx.NOT_FOUND:
+                    index = self.Append(values)
+                    self.SetItemData(index, snippet.id)
+                else:
+                    for column, value in enumerate(values):
+                        self.SetItem(index, column, value)
+                self.Select(index)
+                focus_id = snippet.id
+            if focus_id is not None:
+                self.sort()
+                self.focus_id(focus_id)
+
+    def delete_snippets_from_list(self, snippets: tuple[datamodel.Snippet, ...]):
+        """Remove a committed batch without rebuilding the remaining rows."""
+        with utils.frozen(self):
+            for snippet in snippets:
+                self.delete_snippet_from_list(snippet)
 
     def _sort_compare(self, item1, item2):
         """Sort by descending weight and then by name."""

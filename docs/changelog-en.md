@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Fixed: Copying, moving, or deleting multiple snippets now refreshes the category tree and hotstrings once per operation, avoiding repeated full reloads for every snippet.
+
 - Fixed: Invalid or unreadable settings no longer reset the database selection or privacy options. btText now reports the error and stops without overwriting the settings file.
 
 - Fixed: Delayed hotstring expansions are now cancelled if you continue typing or change the target input field, preventing text entered in the meantime or text in another field from being replaced.

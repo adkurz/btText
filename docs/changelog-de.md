@@ -2,6 +2,8 @@
 
 ## [Unveröffentlicht]
 
+- Behoben: Beim Kopieren, Verschieben oder Löschen mehrerer Textbausteine werden der Kategorienbaum und die Hotstrings jetzt nur einmal pro Vorgang aktualisiert. Wiederholte vollständige Neuladungen für jeden einzelnen Textbaustein entfallen.
+
 - Behoben: Fehlerhafte oder nicht lesbare Einstellungen setzen die Datenbankauswahl und Datenschutzeinstellungen nicht mehr zurück. btText meldet den Fehler und beendet sich, ohne die Einstellungsdatei zu überschreiben.
 
 - Behoben: Verzögerte Hotstring-Erweiterungen werden jetzt abgebrochen, wenn Sie weitertippen oder das Zieleingabefeld wechseln. Dadurch werden zwischenzeitlich eingegebener Text und Inhalte anderer Eingabefelder nicht mehr ersetzt.

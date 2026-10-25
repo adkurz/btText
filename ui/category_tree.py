@@ -39,6 +39,7 @@ class CategoryTree(wx.TreeCtrl):
         self._transfer_service = TransferService(model, transfer_buffer)
         self._items = {}
         self._empty_item = None
+        self._rebuilding = False
         self._images = wx.ImageList(16, 16)
         self._images.Add(
             wx.ArtProvider.GetBitmap(wx.ART_FOLDER, wx.ART_OTHER, (16, 16))
@@ -57,7 +58,9 @@ class CategoryTree(wx.TreeCtrl):
             "category.deleted",
             "snippet.added",
             "snippet.edited",
-            "snippet.deleted",
+            "snippets.added",
+            "snippets.edited",
+            "snippets.deleted",
         ):
             ee.on(event_name, self._on_model_changed)
         self.update()
@@ -80,39 +83,44 @@ class CategoryTree(wx.TreeCtrl):
             for category_id, item in self._items.items()
             if self.IsExpanded(item)
         }
-        with utils.frozen(self):
-            self.DeleteChildren(self._root)
-            self._items.clear()
-            self._empty_item = None
-            summaries_by_parent = {}
-            for summary in self._model.get_all_category_summaries():
-                summaries_by_parent.setdefault(
-                    summary.category.parent_id,
-                    [],
-                ).append(summary)
-            for summaries in summaries_by_parent.values():
-                summaries.sort(
-                    key=lambda summary: (
-                        summary.category.name.casefold(),
-                        summary.category.id,
+        self._rebuilding = True
+        try:
+            with utils.frozen(self):
+                self.DeleteChildren(self._root)
+                self._items.clear()
+                self._empty_item = None
+                summaries_by_parent = {}
+                for summary in self._model.get_all_category_summaries():
+                    summaries_by_parent.setdefault(
+                        summary.category.parent_id,
+                        [],
+                    ).append(summary)
+                for summaries in summaries_by_parent.values():
+                    summaries.sort(
+                        key=lambda summary: (
+                            summary.category.name.casefold(),
+                            summary.category.id,
+                        )
                     )
-                )
-            self._append_children(self._root, None, summaries_by_parent)
-            if not self._items:
-                self._empty_item = self.AppendItem(
-                    self._root,
-                    # Translators: Category-tree placeholder shown when no
-                    # category has been created yet.
-                    _("No categories"),
-                )
-                self.SetItemData(self._empty_item, None)
-                self.SelectItem(self._empty_item)
-            for category_id in expanded_ids:
-                item = self._items.get(category_id)
-                if item is not None:
-                    self.Expand(item)
-            if selected_id is not None:
-                self.focus_id(selected_id)
+                self._append_children(self._root, None, summaries_by_parent)
+                if not self._items:
+                    self._empty_item = self.AppendItem(
+                        self._root,
+                        # Translators: Category-tree placeholder shown when no
+                        # category has been created yet.
+                        _("No categories"),
+                    )
+                    self.SetItemData(self._empty_item, None)
+                    self.SelectItem(self._empty_item)
+                for category_id in expanded_ids:
+                    item = self._items.get(category_id)
+                    if item is not None:
+                        self.Expand(item)
+                if selected_id is not None:
+                    self.focus_id(selected_id)
+        finally:
+            self._rebuilding = False
+        self._ee.emit("category_tree.changed", self.get_selected_id())
 
     def _append_children(self, parent_item, parent_id, summaries_by_parent):
         """Recursively append the model children below a tree item."""
@@ -150,7 +158,8 @@ class CategoryTree(wx.TreeCtrl):
 
     def selection_changed(self, event):
         """Publish the selected category for dependent views."""
-        self._ee.emit("category_tree.changed", self.get_selected_id())
+        if not self._rebuilding:
+            self._ee.emit("category_tree.changed", self.get_selected_id())
         event.Skip()
 
     def context_menu(self, event):

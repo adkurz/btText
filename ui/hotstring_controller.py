@@ -71,7 +71,9 @@ class HotstringController:
         )
         ee.on("snippet.added", self.refresh)
         ee.on("snippet.edited", self.refresh)
-        ee.on("snippet.deleted", self.refresh)
+        ee.on("snippets.added", self.refresh)
+        ee.on("snippets.edited", self.refresh)
+        ee.on("snippets.deleted", self.refresh)
         # Category deletion cascades to snippets without emitting snippet events.
         ee.on("category.deleted", self.refresh)
 

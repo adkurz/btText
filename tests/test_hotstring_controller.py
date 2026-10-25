@@ -53,8 +53,10 @@ class HotstringControllerTestCase(unittest.TestCase):
         controller.refresh()
 
         keyboard_hook.return_value.update.assert_called_once_with({"hello": snippet})
-        self.assertEqual(ee.on.call_count, 4)
-        ee.on.assert_any_call("category.deleted", controller.refresh)
+        self.assertEqual(ee.on.call_count, 6)
+        for event in ("snippet.added", "snippet.edited", "snippets.added",
+                      "snippets.edited", "snippets.deleted", "category.deleted"):
+            ee.on.assert_any_call(event, controller.refresh)
 
     @patch("ui.hotstring_controller.hotstrings.KeyboardHook")
     def test_category_deletion_removes_subtree_hotstrings(self, keyboard_hook):

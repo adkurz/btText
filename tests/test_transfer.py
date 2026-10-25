@@ -165,6 +165,38 @@ class DragTransferTestCase(unittest.TestCase):
             self.assertEqual(replacement.id, self.snippet.id)
             self.assertIsNone(self.buffer.take_drag(token))
 
+    def test_bulk_deletion_invalidates_drag_and_entire_mixed_pending_transfer(self):
+        survivor = self.model.add_snippet(
+            datamodel.Snippet("Survivor", "Keep", self.destination.id)
+        )
+        other = self.model.add_snippet(
+            datamodel.Snippet("Other", "Delete", self.child.id)
+        )
+        self.buffer.set("snippet", (survivor.id, self.snippet.id), copy=True)
+
+        with self.buffer.dragging("snippet", other.id) as token:
+            self.model.delete_snippets([self.snippet.id, other.id])
+            replacement = self.model.add_snippet(
+                datamodel.Snippet("Replacement", "New", self.child.id)
+            )
+            self.assertEqual(replacement.id, other.id)
+            self.assertIsNone(self.buffer.value)
+            self.assertIsNone(self.buffer.take_drag(token))
+            self.assertEqual(self.model.get_snippet(survivor.id), survivor)
+
+    def test_failed_snippet_batch_preserves_drag_and_pending_transfer(self):
+        self.buffer.set("snippet", self.snippet.id, copy=False)
+        pending = self.buffer.value
+        with self.model._connection as connection:
+            connection.execute("CREATE TRIGGER reject_delete BEFORE DELETE ON snippet "
+                               "BEGIN SELECT RAISE(ABORT, 'blocked'); END")
+
+        with self.buffer.dragging("snippet", self.snippet.id) as token:
+            with self.assertRaises(datamodel.DataModelError):
+                self.model.delete_snippets([self.snippet.id])
+            self.assertIs(self.buffer.value, pending)
+            self.assertIsNotNone(self.buffer.take_drag(token))
+
     def test_unrelated_deletion_preserves_both_drag_and_pending_copy(self):
         self.buffer.set("snippet", self.snippet.id, copy=True)
         pending = self.buffer.value

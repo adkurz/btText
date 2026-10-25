@@ -92,6 +92,9 @@ class DataModel:
 
     Mutations commit before publishing model events, allowing listeners to
     reload entities without observing a partially applied transaction.
+    Bulk snippet operations publish one ``snippets.added``, ``snippets.edited``
+    or ``snippets.deleted`` event carrying a tuple in input order, including
+    batches of one. Empty or failed operations publish no snippet event.
     """
 
     WEIGHTS = (1, 2, 3)
@@ -628,8 +631,8 @@ class DataModel:
                 )
         except sqlite3.IntegrityError as error:
             self._raise_snippet_integrity_error(error)
-        for snippet in snippets:
-            self.ee.emit("snippet.edited", snippet)
+        if snippets:
+            self.ee.emit("snippets.edited", tuple(snippets))
         return snippets
 
     @_translate_sqlite_errors
@@ -669,8 +672,8 @@ class DataModel:
                     ).lastrowid
         except sqlite3.IntegrityError as error:
             self._raise_snippet_integrity_error(error)
-        for snippet in snippets:
-            self.ee.emit("snippet.added", snippet)
+        if snippets:
+            self.ee.emit("snippets.added", tuple(snippets))
         return snippets
 
     @_translate_sqlite_errors
@@ -831,8 +834,7 @@ class DataModel:
                 "DELETE FROM snippet WHERE id IN ({})".format(placeholders),
                 tuple(snippet.id for snippet in snippets),
             )
-        for snippet in snippets:
-            self.ee.emit("snippet.deleted", snippet)
+        self.ee.emit("snippets.deleted", tuple(snippets))
         return snippets
 
     @staticmethod

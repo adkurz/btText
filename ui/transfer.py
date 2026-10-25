@@ -55,7 +55,7 @@ class TransferBuffer:
         self._drag_transfer: Transfer | None = None
         self._model = model
         model.ee.on("category.deleted", self._on_category_deleted)
-        model.ee.on("snippet.deleted", self._on_snippet_deleted)
+        model.ee.on("snippets.deleted", self._on_snippets_deleted)
 
     def set(
         self,
@@ -124,13 +124,14 @@ class TransferBuffer:
             self._clear_drag()
             raise
 
-    def _on_snippet_deleted(self, snippet: datamodel.Snippet) -> None:
-        """Discard the whole transfer when one staged snippet was deleted."""
+    def _on_snippets_deleted(self, snippets: tuple[datamodel.Snippet, ...]) -> None:
+        """Discard a whole transfer when any source in the batch was deleted."""
+        deleted_ids = {snippet.id for snippet in snippets}
         for transfer in (self.value, self._drag_transfer):
             if (
                 transfer is not None
                 and transfer.kind == "snippet"
-                and snippet.id in transfer.entity_ids
+                and deleted_ids.intersection(transfer.entity_ids)
             ):
                 if transfer is self.value:
                     self.clear()

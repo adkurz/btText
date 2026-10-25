@@ -562,6 +562,84 @@ class DataModelTestCase(unittest.TestCase):
             ["Second"],
         )
 
+    def test_snippet_batches_emit_once_after_commit_in_input_order(self):
+        for operation, event in (
+            ("move_snippets", "snippets.edited"),
+            ("copy_snippets", "snippets.added"),
+            ("delete_snippets", "snippets.deleted"),
+        ):
+            for count in (1, 3):
+                with self.subTest(operation=operation, count=count):
+                    source = self.model.add_category(Category(f"Source {operation} {count}"))
+                    target = self.model.add_category(Category(f"Target {operation} {count}"))
+                    snippets = [self.model.add_snippet(
+                        Snippet(str(index), "Text", source.id)
+                    ) for index in range(count)]
+                    ids = [snippet.id for snippet in reversed(snippets)]
+                    observed = []
+                    events = EventEmitter()
+
+                    def observe(batch):
+                        with closing(sqlite3.connect(self.database_file)) as connection:
+                            rows = dict(connection.execute("SELECT id, category_id FROM snippet"))
+                        observed.append((batch, rows))
+
+                    events.on(event, observe)
+                    events.emit = Mock(wraps=events.emit)
+                    self.model.ee = events
+                    arguments = (ids,) if operation == "delete_snippets" else (ids, target.id)
+                    with self.assertNoLogs("bttext.events", level="ERROR"):
+                        changed = getattr(self.model, operation)(*arguments)
+
+                    events.emit.assert_called_once_with(event, tuple(changed))
+                    self.assertEqual(len(observed), 1)
+                    batch, persisted = observed[0]
+                    self.assertIsInstance(batch, tuple)
+                    self.assertEqual([snippet.name for snippet in batch],
+                                     [snippet.name for snippet in reversed(snippets)])
+                    for snippet in batch:
+                        if operation == "delete_snippets":
+                            self.assertNotIn(snippet.id, persisted)
+                        else:
+                            self.assertEqual(persisted[snippet.id], target.id)
+
+    def test_empty_snippet_batches_publish_no_events(self):
+        category = self.model.add_category(Category("Category"))
+        self.events.events.clear()
+
+        self.assertEqual(self.model.move_snippets([], category.id), [])
+        self.assertEqual(self.model.copy_snippets([], category.id), [])
+        self.assertEqual(self.model.delete_snippets([]), [])
+
+        self.assertEqual(self.events.events, [])
+
+    def test_failed_snippet_batches_roll_back_without_publishing_events(self):
+        for operation, trigger in (
+            ("move_snippets", "BEFORE UPDATE ON snippet WHEN NEW.name = 'Second'"),
+            ("copy_snippets", "BEFORE INSERT ON snippet WHEN NEW.name = 'Second'"),
+            ("delete_snippets", "BEFORE DELETE ON snippet WHEN OLD.name = 'Second'"),
+        ):
+            with self.subTest(operation=operation):
+                source = self.model.add_category(Category(f"Source {operation}"))
+                target = self.model.add_category(Category(f"Target {operation}"))
+                snippets = [self.model.add_snippet(Snippet(name, "Text", source.id))
+                            for name in ("First", "Second")]
+                with self.model._connection as connection:
+                    connection.execute(f"CREATE TRIGGER reject_batch {trigger} "
+                                       "BEGIN SELECT RAISE(ABORT, 'blocked'); END")
+                self.events.events.clear()
+                ids = [snippet.id for snippet in snippets]
+                arguments = (ids,) if operation == "delete_snippets" else (ids, target.id)
+                try:
+                    with self.assertRaises(DataModelError):
+                        getattr(self.model, operation)(*arguments)
+                    self.assertEqual(self.events.events, [])
+                    self.assertEqual(list(self.model.get_snippets(source.id)), snippets)
+                    self.assertEqual(list(self.model.get_snippets(target.id)), [])
+                finally:
+                    with self.model._connection as connection:
+                        connection.execute("DROP TRIGGER reject_batch")
+
     def test_multiple_snippets_can_be_deleted_atomically(self):
         category = self.model.add_category(Category("Category"))
         snippets = [
@@ -580,12 +658,8 @@ class DataModelTestCase(unittest.TestCase):
         )
         self.assertEqual(list(self.model.get_snippets(category.id)), [])
         self.assertEqual(
-            [
-                snippet.id
-                for event_name, snippet in self.events.events
-                if event_name == "snippet.deleted"
-            ],
-            [snippet.id for snippet in snippets],
+            self.events.events,
+            [("snippets.deleted", tuple(deleted))],
         )
 
     def test_multiple_snippet_delete_does_nothing_if_one_id_is_missing(self):
