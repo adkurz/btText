@@ -6,6 +6,8 @@
 
 - Fixed: Delayed hotstring expansions are now cancelled if you continue typing or change the target input field, preventing text entered in the meantime or text in another field from being replaced.
 
+- Fixed: The Copy path, Open folder, and Close buttons in the database location dialog are now arranged without overlapping.
+
 ## [v1.3.0] 2026-10-25
 
 - Added: Text snippets can now optionally be formatted using simple Markdown. When inserted, they are output not only as plain text but also as HTML and RTF, so that the formatting is preserved if supported by the target program. This allows for simple formatting (bold, italics, etc.), links, and citations.

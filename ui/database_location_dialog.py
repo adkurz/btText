@@ -39,16 +39,16 @@ class DatabaseLocationDialog(wx.Dialog):
         panel_sizer.Add(self.path_field, 0, wx.EXPAND)
         panel.SetSizer(panel_sizer)
 
-        actions = wx.StdDialogButtonSizer()
+        actions = wx.BoxSizer(wx.HORIZONTAL)
         # Translators: Button that copies the displayed database path.
         self.copy_button = wx.Button(self, label=_("&Copy path"))
         # Translators: Button that opens the database's containing directory.
         self.open_folder_button = wx.Button(self, label=_("Open &folder"))
         close_button = wx.Button(self, wx.ID_CANCEL, _("&Close"))
-        actions.AddButton(self.copy_button)
-        actions.AddButton(self.open_folder_button)
-        actions.AddButton(close_button)
-        actions.Realize()
+        actions.Add(self.copy_button, 0, wx.RIGHT, self.FromDIP(8))
+        actions.Add(self.open_folder_button, 0, wx.RIGHT, self.FromDIP(8))
+        actions.AddStretchSpacer()
+        actions.Add(close_button)
 
         root_sizer = wx.BoxSizer(wx.VERTICAL)
         root_sizer.Add(panel, 1, wx.EXPAND | wx.ALL, self.FromDIP(12))

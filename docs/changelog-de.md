@@ -6,6 +6,8 @@
 
 - Behoben: Verzögerte Hotstring-Erweiterungen werden jetzt abgebrochen, wenn Sie weitertippen oder das Zieleingabefeld wechseln. Dadurch werden zwischenzeitlich eingegebener Text und Inhalte anderer Eingabefelder nicht mehr ersetzt.
 
+- Behoben: Die Schaltflächen zum Kopieren des Pfads, Öffnen des Ordners und Schließen des Datenbankpfad-Dialogs werden jetzt ohne Überlappungen angeordnet.
+
 ## [v1.3.0] 25.10.2026
 
 - Hinzugefügt: Textbausteine können nun optional mit einfachem Markdown formatiert werden. Beim Einfügen werden sie nicht nur als Reintext, sondern auch als HTML und RTF ausgegeben, sodass die Formatierung beibehalten wird, sofern sie vom Zielprogramm unterstützt wird. Dies ermöglicht einfache Formatierungen (Fettdruck, Kursivschrift usw.), Links und Zitate.
