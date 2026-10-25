@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-10-25 20:42+0100\n"
+"POT-Creation-Date: 2026-10-25 21:02+0100\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -29,7 +29,7 @@ msgstr "Datenbankfehler"
 #. database path in the application settings.
 #. Translators: Title of a startup error concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:80 btText.py:166 ui/settings_controller.py:206
+#: btText.py:80 btText.py:166 ui/settings_controller.py:213
 msgid "Settings error"
 msgstr "Einstellungsfehler"
 
@@ -48,7 +48,7 @@ msgstr ""
 
 #. Translators: Title of the startup warning for log setup.
 #. Translators: Title of an error opening the log directory.
-#: btText.py:141 ui/main_frame.py:673
+#: btText.py:141 ui/main_frame.py:677
 msgid "Logging error"
 msgstr "Protokollierungsfehler"
 
@@ -936,13 +936,13 @@ msgstr "Datenbank ausgewählt"
 
 #. Translators: Main-window status-bar hint. F3 opens search; Enter
 #. inserts the selected snippet. Keep both key names recognizable.
-#: ui/main_frame.py:610
+#: ui/main_frame.py:614
 msgid "F3: Search snippets    Enter: Insert selected snippet"
 msgstr "F3: Textbausteine suchen    Eingabetaste: Ausgewählten Textbaustein einfügen"
 
 #. Translators: Error shown when the HTML user manual cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:635
+#: ui/main_frame.py:639
 #, python-brace-format
 msgid ""
 "The user manual could not be opened.\n"
@@ -954,13 +954,13 @@ msgstr ""
 "{reason}"
 
 #. Translators: Title of the user-manual opening error.
-#: ui/main_frame.py:639
+#: ui/main_frame.py:643
 msgid "User manual error"
 msgstr "Fehler beim Benutzerhandbuch"
 
 #. Translators: Error shown when the HTML changelog cannot be
 #. found or opened by the system.
-#: ui/main_frame.py:652
+#: ui/main_frame.py:656
 #, python-brace-format
 msgid ""
 "The changelog could not be opened.\n"
@@ -972,13 +972,13 @@ msgstr ""
 "{reason}"
 
 #. Translators: Title of the changelog opening error.
-#: ui/main_frame.py:656
+#: ui/main_frame.py:660
 msgid "Changelog error"
 msgstr "Fehler beim Änderungsprotokoll"
 
 #. Translators: Error shown when the local log directory cannot
 #. be created or opened. {reason} is a technical system message.
-#: ui/main_frame.py:669
+#: ui/main_frame.py:673
 #, python-brace-format
 msgid ""
 "The log folder could not be opened.\n"
@@ -1079,7 +1079,7 @@ msgstr "Suchfehler"
 
 #. Translators: Startup error shown when btText cannot claim its
 #. global shortcut. {} is a shortcut such as Ctrl+Alt+T.
-#: ui/settings_controller.py:72
+#: ui/settings_controller.py:74
 #, python-brace-format
 msgid "The global hotkey {} is already in use and could not be registered."
 msgstr "Die globale Tastenkombination {} wird bereits verwendet und konnte nicht registriert werden."
@@ -1087,35 +1087,35 @@ msgstr "Die globale Tastenkombination {} wird bereits verwendet und konnte nicht
 #. Translators: Title of an error registering a global shortcut.
 #. Translators: Title of an error changing the global shortcut.
 #. Translators: Title of an error restoring a global shortcut.
-#: ui/settings_controller.py:76 ui/settings_controller.py:134
-#: ui/settings_controller.py:164
+#: ui/settings_controller.py:78 ui/settings_controller.py:139
+#: ui/settings_controller.py:169
 msgid "Hotkey error"
 msgstr "Fehler bei der Tastenkombination"
 
 #. Translators: Settings error: the requested global shortcut is
 #. occupied, so btText kept the old one. {} is such as Ctrl+Alt+T.
-#: ui/settings_controller.py:114
+#: ui/settings_controller.py:119
 #, python-brace-format
 msgid "The selected hotkey {} is already in use. The previous hotkey has been restored."
 msgstr "Die ausgewählte Tastenkombination {} wird bereits verwendet. Die vorherige Tastenkombination wurde wiederhergestellt."
 
 #. Translators: Settings error: the requested shortcut is occupied
 #. and restoring the old one also failed. {} is such as Ctrl+Alt+T.
-#: ui/settings_controller.py:121
+#: ui/settings_controller.py:126
 #, python-brace-format
 msgid "The selected hotkey {} is already in use and the previous hotkey could not be restored. No global hotkey is active."
 msgstr "Die ausgewählte Tastenkombination {} wird bereits verwendet, und die vorherige Tastenkombination konnte nicht wiederhergestellt werden. Es ist keine globale Tastenkombination aktiv."
 
 #. Translators: Settings error: the configured shortcut is still
 #. occupied when the user explicitly tries to activate it again.
-#: ui/settings_controller.py:128
+#: ui/settings_controller.py:133
 #, python-brace-format
 msgid "The selected hotkey {} is already in use. No global hotkey is active."
 msgstr "Die ausgewählte Tastenkombination {} wird bereits verwendet. Es ist keine globale Tastenkombination aktiv."
 
 #. Translators: Error after cancelling settings when btText
 #. could not restore the previously active global shortcut.
-#: ui/settings_controller.py:160
+#: ui/settings_controller.py:165
 msgid "The previous hotkey could not be restored. No global hotkey is active."
 msgstr "Die vorherige Tastenkombination konnte nicht wiederhergestellt werden. Es ist keine globale Tastenkombination aktiv."
 

@@ -26,6 +26,8 @@
 
 - Behoben: Hotstrings mit mehr als 256 Zeichen werden beim Speichern jetzt mit einer verständlichen Fehlermeldung abgewiesen. Dadurch lassen sich keine Kürzel mehr speichern, die nicht erweitert werden können. Die Eingaben im Editor bleiben zur Korrektur erhalten.
 
+- Behoben: Mit Strg+Alt eingegebene Zeichen wie der umgekehrte Schrägstrich (`\`) auf einer deutschen Tastatur funktionieren jetzt ebenso wie mit AltGr eingegebene Zeichen als Hotstring-Endezeichen.
+
 ## [v1.3.0] 25.10.2026
 
 - Hinzugefügt: Textbausteine können nun optional mit einfachem Markdown formatiert werden. Beim Einfügen werden sie nicht nur als Reintext, sondern auch als HTML und RTF ausgegeben, sodass die Formatierung beibehalten wird, sofern sie vom Zielprogramm unterstützt wird. Dies ermöglicht einfache Formatierungen (Fettdruck, Kursivschrift usw.), Links und Zitate.

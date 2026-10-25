@@ -534,7 +534,7 @@ class KeyboardHook:
             return user32.CallNextHookEx(
                 self._handle, HC_ACTION, message, data
             )
-        if event.vkCode == VK_BACK:
+        if event.vkCode == VK_BACK and not altgr_down:
             self._matcher.backspace()
             return user32.CallNextHookEx(
                 self._handle, HC_ACTION, message, data
@@ -546,7 +546,9 @@ class KeyboardHook:
             altgr_down=altgr_down,
             keyboard_layout=input_context[2],
         )
-        if not character:
+        if not character or (
+            altgr_down and (not character.isprintable() or character.isspace())
+        ):
             self._matcher.reset()
             return user32.CallNextHookEx(
                 self._handle, HC_ACTION, message, data
@@ -573,11 +575,13 @@ class KeyboardHook:
 
     @classmethod
     def _is_altgr_down(cls, event_flags: int) -> bool:
-        """Return whether the current key is typed through Windows AltGr."""
+        """Recognize AltGr and its Ctrl+Alt equivalent for layout translation."""
         return bool(
-            event_flags & LLKHF_ALTDOWN
-            and cls._is_key_down(CONTROL_KEYS)
-            and cls._is_key_down(frozenset((VK_RMENU,)))
+            cls._is_key_down(CONTROL_KEYS)
+            and (
+                event_flags & LLKHF_ALTDOWN
+                or cls._is_key_down(ALT_KEYS)
+            )
         )
 
     @classmethod

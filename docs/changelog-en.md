@@ -26,6 +26,8 @@
 
 - Fixed: Hotstrings longer than 256 characters are now rejected when saving with a clear error message. This prevents saving triggers that cannot be expanded; your editor input remains available for correction.
 
+- Fixed: Characters entered with Ctrl+Alt, such as backslash (`\`) on a German keyboard, now work as hotstring ending characters, just like characters entered with AltGr.
+
 ## [v1.3.0] 2026-10-25
 
 - Added: Text snippets can now optionally be formatted using simple Markdown. When inserted, they are output not only as plain text but also as HTML and RTF, so that the formatting is preserved if supported by the target program. This allows for simple formatting (bold, italics, etc.), links, and citations.
