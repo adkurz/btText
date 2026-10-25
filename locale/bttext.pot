@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.3.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-25 00:56+0200\n"
+"POT-Creation-Date: 2026-10-25 17:26+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -26,15 +26,15 @@ msgstr ""
 
 #. Translators: Title for an error saving the selected
 #. database path in the application settings.
-#. Translators: Title of a startup warning concerning settings.
+#. Translators: Title of a startup error concerning settings.
 #. Translators: Title of an error saving or applying settings.
-#: btText.py:80 btText.py:159 ui/settings_controller.py:225
+#: btText.py:80 btText.py:166 ui/settings_controller.py:225
 msgid "Settings error"
 msgstr ""
 
 #. Translators: Startup warning when the application could not
 #. create its local diagnostic log file. {reason} is technical.
-#: btText.py:135
+#: btText.py:137
 #, python-brace-format
 msgid ""
 "The application log could not be initialized. btText will continue without file logging.\n"
@@ -44,19 +44,32 @@ msgstr ""
 
 #. Translators: Title of the startup warning for log setup.
 #. Translators: Title of an error opening the log directory.
-#: btText.py:139 ui/main_frame.py:681
+#: btText.py:141 ui/main_frame.py:681
 msgid "Logging error"
 msgstr ""
 
 #. Translators: Information shown when the user tries to start
 #. the application while it is already running.
-#: btText.py:146
+#: btText.py:148
 msgid "btText is already running."
+msgstr ""
+
+#. Translators: Guidance after settings loading fails. btText
+#. exits before opening a database or changing settings. {reason}
+#. is the localized error; {path} is the full settings file path.
+#: btText.py:159
+#, python-brace-format
+msgid ""
+"{reason}\n"
+"\n"
+"btText will close without changing the settings file. Correct the file and start btText again.\n"
+"\n"
+"{path}"
 msgstr ""
 
 #. Translators: Title of a startup warning after a translation
 #. catalog could not be loaded.
-#: btText.py:168
+#: btText.py:179
 msgid "Language error"
 msgstr ""
 

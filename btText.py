@@ -115,6 +115,8 @@ def main():
         try:
             settings = settings_store.load()
         except SettingsError as error:
+            # Defaults configure only the startup error dialog. A failed load
+            # must never authorize opening a fallback database or saving defaults.
             settings = AppSettings()
             settings_error = error
         theme.apply_to_app(app, settings.appearance)
@@ -148,18 +150,27 @@ def main():
                 wx.OK | wx.ICON_INFORMATION,
             )
             return
+        if settings_error is not None:
+            wx.MessageBox(
+                # Translators: Guidance after settings loading fails. btText
+                # exits before opening a database or changing settings. {reason}
+                # is the localized error; {path} is the full settings file path.
+                _(
+                    "{reason}\n\nbtText will close without changing the settings file. "
+                    "Correct the file and start btText again.\n\n{path}"
+                ).format(
+                    reason=format_user_error(settings_error),
+                    path=settings_store.settings_file,
+                ),
+                # Translators: Title of a startup error concerning settings.
+                _("Settings error"),
+                wx.OK | wx.ICON_ERROR,
+            )
+            return
         model, settings = _open_database(ee, settings_store, settings)
         if model is None:
             return
         frame = ui.MainFrame(ee, model, settings_store, settings)
-        if settings_error is not None:
-            wx.MessageBox(
-                format_user_error(settings_error),
-                # Translators: Title of a startup warning concerning settings.
-                _("Settings error"),
-                wx.OK | wx.ICON_ERROR,
-                frame,
-            )
         if language_error is not None:
             wx.MessageBox(
                 format_user_error(language_error),

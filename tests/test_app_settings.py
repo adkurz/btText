@@ -315,6 +315,27 @@ class SettingsStoreTestCase(unittest.TestCase):
 
             self.assertEqual(context.exception.code, "settings_read_failed")
 
+    def test_directory_in_place_of_file_raises_settings_error(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            store = SettingsStore(Path(temporary_directory))
+
+            with self.assertRaises(SettingsError) as context:
+                store.load()
+
+            self.assertEqual(context.exception.code, "settings_read_failed")
+            self.assertIsInstance(context.exception.__cause__, OSError)
+
+    def test_read_access_error_is_reported_as_settings_error(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            store = SettingsStore(Path(temporary_directory) / "settings.ini")
+
+            with patch.object(Path, "open", side_effect=PermissionError("access denied")):
+                with self.assertRaises(SettingsError) as context:
+                    store.load()
+
+            self.assertEqual(context.exception.code, "settings_read_failed")
+            self.assertIsInstance(context.exception.__cause__, PermissionError)
+
     def test_open_error_is_reported_as_settings_error(self):
         with tempfile.TemporaryDirectory() as temporary_directory:
             store = SettingsStore(Path(temporary_directory) / "settings.ini")

@@ -59,6 +59,151 @@ class SingleInstanceTestCase(unittest.TestCase):
         app_class.return_value.MainLoop.assert_not_called()
 
 
+class SettingsStartupTestCase(unittest.TestCase):
+    def _run_startup(self, store, default_database):
+        with (
+            patch("btText.app_paths.get_log_file"),
+            patch("btText.configure_logging"),
+            patch("btText.app_paths.get_database_file", return_value=default_database),
+            patch("btText.SettingsStore", return_value=store),
+            patch.object(store, "save", wraps=store.save) as save,
+            patch("btText.wx.App") as app,
+            patch("btText.wx.SingleInstanceChecker") as checker,
+            patch("btText.wx.MessageBox") as message_box,
+            patch("btText.theme.apply_to_app"),
+            patch("btText.i18n.initialize") as initialize_i18n,
+            patch("btText.DataModel") as model,
+            patch("btText.select_database", return_value=None) as select_database,
+            patch("btText.ui.MainFrame") as frame,
+        ):
+            checker.return_value.IsAnotherRunning.return_value = False
+
+            btText.main()
+
+        return {
+            "app": app.return_value,
+            "model": model,
+            "frame": frame,
+            "select_database": select_database,
+            "save": save,
+            "message_box": message_box,
+            "initialize_i18n": initialize_i18n,
+        }
+
+    def _assert_failed_startup(self, calls, settings_file):
+        calls["model"].assert_not_called()
+        calls["frame"].assert_not_called()
+        calls["select_database"].assert_not_called()
+        calls["save"].assert_not_called()
+        calls["app"].MainLoop.assert_not_called()
+        calls["initialize_i18n"].assert_called_once()
+        calls["message_box"].assert_called_once()
+        message, title, flags = calls["message_box"].call_args.args
+        self.assertEqual(title, "Settings error")
+        self.assertEqual(flags, btText.wx.OK | btText.wx.ICON_ERROR)
+        self.assertIn(str(settings_file), message)
+
+    def test_invalid_settings_abort_before_opening_or_selecting_a_database(self):
+        valid_settings = (
+            b"[general]\ndatabase_file = external.db\n"
+            b"allow_copied_text_cloud_upload = False\nlanguage = en\n"
+            b"[hotstrings]\nenabled = False\n"
+            b"[hotkeys]\ntoggle_window = CTRL+ALT+T\n"
+        )
+        invalid_values = {
+            "hotkey": valid_settings.replace(b"CTRL+ALT+T", b"INVALID"),
+            "boolean": valid_settings.replace(b"enabled = False", b"enabled = invalid"),
+            "language": valid_settings.replace(b"language = en", b"language = not a language"),
+            "syntax": b"not an INI section\n" + valid_settings,
+            "encoding": b"\xff\xfe\x00" + valid_settings,
+        }
+        for failure, invalid in invalid_values.items():
+            for default_exists in (False, True):
+                with (
+                    self.subTest(failure=failure, default_exists=default_exists),
+                    tempfile.TemporaryDirectory() as temporary_directory,
+                ):
+                    directory = Path(temporary_directory)
+                    settings_file = directory / "settings.ini"
+                    original = invalid
+                    settings_file.write_bytes(original)
+                    default_database = directory / "data.db"
+                    if default_exists:
+                        default_database.write_bytes(b"default database unchanged")
+                    external_database = directory / "external.db"
+                    external_database.write_bytes(b"external database unchanged")
+                    store = SettingsStore(settings_file)
+
+                    calls = self._run_startup(store, default_database)
+
+                    self._assert_failed_startup(calls, settings_file)
+                    self.assertEqual(settings_file.read_bytes(), original)
+                    self.assertFalse(settings_file.with_suffix(".ini.tmp").exists())
+                    self.assertEqual(
+                        external_database.read_bytes(), b"external database unchanged"
+                    )
+                    if default_exists:
+                        self.assertEqual(
+                            default_database.read_bytes(), b"default database unchanged"
+                        )
+                    else:
+                        self.assertFalse(default_database.exists())
+
+    def test_unreadable_settings_abort_without_using_defaults(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            store = SettingsStore(directory / "settings.ini")
+            with patch.object(Path, "open", side_effect=PermissionError("access denied")):
+                calls = self._run_startup(store, directory / "data.db")
+
+            self._assert_failed_startup(calls, store.settings_file)
+            self.assertIn("access denied", calls["message_box"].call_args.args[0])
+
+    def test_valid_settings_keep_the_configured_database_and_privacy_options(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            settings_file = directory / "settings.ini"
+            original = (
+                b"[general]\ndatabase_file = external.db\nlanguage = en\n"
+                b"allow_copied_text_cloud_upload = False\n"
+                b"[hotstrings]\nenabled = False\n"
+            )
+            settings_file.write_bytes(original)
+            default_database = directory / "data.db"
+            default_database.touch()
+            store = SettingsStore(settings_file)
+
+            calls = self._run_startup(store, default_database)
+
+            calls["model"].assert_called_once_with(
+                unittest.mock.ANY,
+                str((directory / "external.db").resolve()),
+                allow_create=False,
+            )
+            calls["frame"].assert_called_once()
+            settings = calls["frame"].call_args.args[3]
+            self.assertFalse(settings.allow_copied_text_cloud_upload)
+            self.assertFalse(settings.hotstrings_enabled)
+            calls["app"].MainLoop.assert_called_once()
+            calls["model"].return_value.close.assert_called_once()
+            calls["message_box"].assert_not_called()
+            calls["save"].assert_not_called()
+            self.assertEqual(settings_file.read_bytes(), original)
+
+    def test_missing_settings_allow_first_start_and_database_selection(self):
+        with tempfile.TemporaryDirectory() as temporary_directory:
+            directory = Path(temporary_directory)
+            store = SettingsStore(directory / "settings.ini")
+
+            calls = self._run_startup(store, directory / "data.db")
+
+            calls["select_database"].assert_called_once_with(None, first_start=True)
+            calls["message_box"].assert_not_called()
+            calls["save"].assert_not_called()
+            calls["frame"].assert_not_called()
+            self.assertFalse(store.settings_file.exists())
+
+
 class DatabaseStartupTestCase(unittest.TestCase):
     @patch("btText.DataModel")
     @patch("btText.app_paths.get_database_file")

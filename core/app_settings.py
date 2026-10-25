@@ -62,7 +62,13 @@ class SettingsStore:
         defaults = AppSettings()
         parser = ConfigParser(interpolation=None)
         try:
-            parser.read(self.settings_file, encoding="utf-8")
+            try:
+                with self.settings_file.open("r", encoding="utf-8") as file:
+                    parser.read_file(file)
+            except FileNotFoundError:
+                # Only an absent file permits first-start defaults. ConfigParser
+                # read() would also silently ignore access and other I/O errors.
+                pass
             value = parser.get(
                 "hotkeys",
                 "toggle_window",
