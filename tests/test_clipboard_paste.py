@@ -542,6 +542,7 @@ class PasteTextTestCase(unittest.TestCase):
             raised.exception.operation_error,
         )
         self.assertIs(raised.exception.restore_error, restore_error)
+        self.assertIsInstance(raised.exception.pending_paste, PendingPaste)
 
     def test_replacement_failure_restores_original_snapshot(self):
         snapshot = RecordingClipboardSnapshot()
@@ -610,6 +611,7 @@ class PasteTextTestCase(unittest.TestCase):
         self.assertIs(raised.exception.operation_error, operation_error)
         self.assertIs(raised.exception.restore_error, restore_error)
         self.assertIs(raised.exception.__cause__, operation_error)
+        self.assertIsNone(raised.exception.pending_paste)
 
 
 class ClipboardReplacementCaptureTestCase(unittest.TestCase):

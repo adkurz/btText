@@ -1,14 +1,19 @@
 """Regression coverage for overlapping manual and hotstring paste operations."""
 
 import unittest
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
+from core.app_settings import AppSettings
+from core.datamodel import Snippet
 from core.rich_text import ClipboardContent
+from core.variables import RenderedSnippet
 from platform_support import clipboard, clipboard_paste, clipboard_snapshot
-from platform_support import hotstring_expansion
+from platform_support import hotstring_expansion, hotstrings
 from platform_support.clipboard_paste import ClipboardPasteSession
 from platform_support.clipboard_snapshot import ClipboardSnapshot, _ClipboardFormatCopy
 from platform_support.windows import WindowIdentity
+from ui.hotstring_controller import HotstringController
+from ui.paste_controller import PasteController
 
 
 TARGET = WindowIdentity(handle=123, thread_id=7, process_id=9)
@@ -25,6 +30,8 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
         self.locked = False
         self.sequence = 100
         self.fail_next_write = False
+        self.fail_next_open = False
+        self.fail_open = False
         self.session = ClipboardPasteSession()
         self.enterContext(patch.object(clipboard.user32, "CreateWindowExW", return_value=123))
         self.enterContext(patch.object(clipboard.user32, "DestroyWindow", return_value=True))
@@ -41,10 +48,13 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
         self.enterContext(patch.object(clipboard_paste.windows, "matches_window_identity", return_value=True))
         self.enterContext(patch.object(clipboard_paste.windows, "activate_window_identity", return_value=True))
         self.enterContext(patch.object(clipboard_paste.keyboard_input, "send_ctrl_v"))
-        self.enterContext(patch.object(hotstring_expansion.keyboard_input, "send_virtual_key"))
+        self.enterContext(patch.object(hotstring_expansion.keyboard_input, "send_hotstring_replacement"))
 
     def _open(self, *, owner=None):
         self.assertFalse(self.locked)
+        if self.fail_open or self.fail_next_open:
+            self.fail_next_open = False
+            raise clipboard.ClipboardError("clipboard busy")
         self.locked = True
 
     def _close(self):
@@ -180,6 +190,128 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
         first.restore_clipboard()
 
         self.assertEqual(self.formats, self.original)
+
+    def _failed_controller_paste(self, kind, *, operation="activation", recovery="open"):
+        """Inject failure after preparation and retain actual scheduled callbacks."""
+        timers = []
+        errors = Mock()
+        paste_controller = PasteController.__new__(PasteController)
+        paste_controller._clipboard_session = self.session
+        paste_controller._reveal_after_error = errors
+
+        def fail_operation(*_arguments):
+            self.fail_next_open = recovery == "open"
+            self.fail_open = recovery == "permanent_open"
+            self.fail_next_write = recovery == "write"
+            if operation == "activation":
+                return False
+            raise clipboard.ClipboardError("keyboard input failed")
+
+        with (
+            patch("ui.paste_controller.wx.CallLater", side_effect=lambda delay, callback, *args:
+                  timers.append((delay, callback, args))),
+            patch.object(clipboard_paste.windows, "activate_window_identity",
+                         side_effect=fail_operation if operation == "activation" else None,
+                         return_value=True),
+            patch.object(clipboard_paste.keyboard_input, "send_ctrl_v",
+                         side_effect=fail_operation if operation == "input" else None),
+            patch.object(hotstring_expansion.keyboard_input, "send_hotstring_replacement",
+                         side_effect=fail_operation if operation == "input" else None),
+            patch("ui.hotstring_controller.hotstrings.KeyboardHook"),
+        ):
+            if kind == "manual":
+                paste_controller._paste_after_hide(TARGET, ClipboardContent("snippet"))
+            else:
+                controller = HotstringController(
+                    Mock(), Mock(), Mock(), lambda: AppSettings(),
+                    paste_controller.schedule_restore, Mock(),
+                    lambda *args: RenderedSnippet("snippet"),
+                    clipboard_session=self.session,
+                )
+                controller._show_hotstring_error = errors
+                controller._expand(
+                    TARGET, Snippet("Test", "snippet", 1, hotstring="test"),
+                    32, hotstrings.InputCheckpoint((123, 124, 125)),
+                )
+        errors.assert_called_once()
+        return timers, errors
+
+    def test_failed_recovery_automatically_restores_original_formats(self):
+        for kind in ("manual", "hotstring"):
+            for operation in ("activation", "input"):
+                for recovery in ("open", "write"):
+                    with self.subTest(kind=kind, operation=operation, recovery=recovery):
+                        timers, _errors = self._failed_controller_paste(
+                            kind, operation=operation, recovery=recovery,
+                        )
+                        self.assertEqual(len(timers), 1)
+                        delay, callback, arguments = timers.pop()
+                        self.assertEqual(delay, 500)
+                        pending, attempts = arguments
+                        self.assertEqual(attempts, 3)
+                        self.assertFalse(pending._snapshot._closed)
+                        callback(*arguments)
+                        self.assertEqual(self.formats, self.original)
+                        self.assertTrue(pending._snapshot._closed)
+
+    def test_failed_recovery_preserves_new_external_copy_on_retry(self):
+        for kind in ("manual", "hotstring"):
+            with self.subTest(kind=kind):
+                timers, _errors = self._failed_controller_paste(kind)
+                self.assertEqual(len(timers), 1)
+                external = {
+                    clipboard.CF_UNICODETEXT: "snippet\0".encode("utf-16-le"),
+                    clipboard._HTML_FORMAT: b"new user HTML\0",
+                }
+                self.formats = dict(external)
+                self.sequence += 1
+                _delay, callback, arguments = timers.pop()
+                callback(*arguments)
+                self.assertEqual(self.formats, external)
+                self.assertTrue(arguments[0]._snapshot._closed)
+                self.formats = dict(self.original)
+
+    def test_failed_recovery_stops_after_bounded_retries(self):
+        for kind in ("manual", "hotstring"):
+            with self.subTest(kind=kind):
+                timers, errors = self._failed_controller_paste(kind, recovery="permanent_open")
+                self.assertEqual(len(timers), 1)
+                pending = timers[0][2][0]
+                attempts = []
+                delays = []
+                with patch("ui.paste_controller.wx.CallLater", side_effect=lambda delay, callback, *args:
+                           timers.append((delay, callback, args))):
+                    while timers:
+                        delay, callback, arguments = timers.pop(0)
+                        attempts.append(arguments[1])
+                        delays.append(delay)
+                        callback(*arguments)
+                self.assertEqual(attempts, [3, 2, 1])
+                self.assertEqual(delays, [500, 100, 100])
+                self.assertTrue(pending._snapshot._closed)
+                self.assertEqual(errors.call_count, 2)
+                self.fail_open = False
+                self.formats = dict(self.original)
+
+    def test_failed_recovery_timer_cannot_overwrite_a_new_paste(self):
+        for kind in ("manual", "hotstring"):
+            with self.subTest(kind=kind):
+                timers, _errors = self._failed_controller_paste(kind)
+                self.assertEqual(len(timers), 1)
+                latest = self._paste("hotstring" if kind == "manual" else "manual", "next snippet")
+                expected = dict(self.formats)
+                _delay, callback, arguments = timers.pop()
+                callback(*arguments)
+                self.assertEqual(self.formats, expected)
+                latest.restore_clipboard()
+                self.assertEqual(self.formats, self.original)
+
+    def test_successful_immediate_recovery_does_not_schedule_retry(self):
+        for kind in ("manual", "hotstring"):
+            with self.subTest(kind=kind):
+                timers, _errors = self._failed_controller_paste(kind, recovery=None)
+                self.assertEqual(timers, [])
+                self.assertEqual(self.formats, self.original)
 
 
 if __name__ == "__main__":

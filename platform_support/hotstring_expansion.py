@@ -72,6 +72,8 @@ def expand_hotstring(
         _require_current(is_current)
         keyboard_input.send_hotstring_replacement(hotstring_length, boundary_key)
     except Exception as operation_error:
-        restore_after_failure(pending.restore_clipboard, operation_error)
+        restore_after_failure(
+            pending.restore_clipboard, operation_error, pending_paste=pending,
+        )
         raise
     return pending

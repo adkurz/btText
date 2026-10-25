@@ -12,6 +12,8 @@
 
 - Behoben: Eine beim Beenden eines Hotstrings mit Satzzeichen wie ? noch gedrückte Umschalttaste verändert die Einfügetastenkombination nicht mehr. Dadurch wird kein Steuerzeichen mehr anstelle des Textbausteins eingefügt.
 
+- Behoben: Wenn das Einfügen eines Textbausteins oder eine Hotstring-Erweiterung fehlschlägt und sich der vorherige Zwischenablageinhalt nicht sofort wiederherstellen lässt, versucht btText die Wiederherstellung jetzt automatisch erneut. Neue Zwischenablageinhalte anderer Anwendungen bleiben dabei erhalten.
+
 ## [v1.3.0] 25.10.2026
 
 - Hinzugefügt: Textbausteine können nun optional mit einfachem Markdown formatiert werden. Beim Einfügen werden sie nicht nur als Reintext, sondern auch als HTML und RTF ausgegeben, sodass die Formatierung beibehalten wird, sofern sie vom Zielprogramm unterstützt wird. Dies ermöglicht einfache Formatierungen (Fettdruck, Kursivschrift usw.), Links und Zitate.

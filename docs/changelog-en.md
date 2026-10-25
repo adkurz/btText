@@ -12,6 +12,8 @@
 
 - Fixed: Holding Shift while ending a hotstring with punctuation such as ? no longer changes the paste shortcut or inserts a control character instead of the snippet.
 
+- Fixed: If pasting a snippet or expanding a hotstring fails and the previous clipboard contents cannot be restored immediately, btText now retries restoration automatically. New clipboard contents copied by other applications are preserved.
+
 ## [v1.3.0] 2026-10-25
 
 - Added: Text snippets can now optionally be formatted using simple Markdown. When inserted, they are output not only as plain text but also as HTML and RTF, so that the formatting is preserved if supported by the target program. This allows for simple formatting (bold, italics, etc.), links, and citations.

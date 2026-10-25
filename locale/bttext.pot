@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.3.0\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-25 18:33+0100\n"
+"POT-Creation-Date: 2026-10-25 19:34+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -776,7 +776,7 @@ msgstr ""
 
 #. Translators: Title for a failure to monitor or expand a
 #. globally typed snippet hotstring.
-#: ui/hotstring_controller.py:83 ui/hotstring_controller.py:231
+#: ui/hotstring_controller.py:87 ui/hotstring_controller.py:237
 msgid "Hotstring error"
 msgstr ""
 
@@ -956,18 +956,18 @@ msgstr ""
 
 #. Translators: Title of an error inserting a snippet externally.
 #. Translators: Title of an error while pasting copied or cut items.
-#: ui/paste_controller.py:71 ui/paste_controller.py:126 ui/snippet_list.py:412
+#: ui/paste_controller.py:71 ui/paste_controller.py:131 ui/snippet_list.py:412
 msgid "Paste error"
 msgstr ""
 
 #. Translators: Title for a failed cursor instruction after paste.
-#: ui/paste_controller.py:137
+#: ui/paste_controller.py:142
 msgid "Cursor movement error"
 msgstr ""
 
 #. Translators: Error after inserting a snippet when restoring the
 #. user's old clipboard repeatedly failed. {} is a technical error.
-#: ui/paste_controller.py:176
+#: ui/paste_controller.py:181
 #, python-brace-format
 msgid ""
 "The previous clipboard contents could not be restored after multiple attempts. The clipboard may still contain the inserted snippet.\n"
@@ -977,7 +977,7 @@ msgstr ""
 
 #. Translators: Title of an error restoring the user's clipboard
 #. after a snippet was inserted.
-#: ui/paste_controller.py:182
+#: ui/paste_controller.py:187
 msgid "Clipboard restore error"
 msgstr ""
 

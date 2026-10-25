@@ -120,6 +120,11 @@ class PasteController:
                 session=self._clipboard_session,
             )
         except clipboard.ClipboardError as error:
+            if (
+                isinstance(error, clipboard_paste.ClipboardRestoreError)
+                and error.pending_paste is not None
+            ):
+                self.schedule_restore(error.pending_paste)
             self._reveal_after_error(
                 format_user_error(error),
                 # Translators: Title of an error inserting a snippet externally.

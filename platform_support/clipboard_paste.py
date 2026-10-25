@@ -33,10 +33,13 @@ class ClipboardRestoreError(ClipboardError):
         self,
         operation_error: Exception,
         restore_error: Exception,
+        *,
+        pending_paste: PendingPaste | None = None,
     ):
-        """Retain both failures while presenting one clipboard error."""
+        """Retain both failures and an optional paste for delayed recovery."""
         self.operation_error = operation_error
         self.restore_error = restore_error
+        self.pending_paste = pending_paste
         super().__init__(
             "{operation_error} The previous clipboard contents could not be "
             "restored: {restore_error}".format(
@@ -49,6 +52,8 @@ class ClipboardRestoreError(ClipboardError):
 def restore_after_failure(
     restore: Callable[[], None],
     operation_error: Exception,
+    *,
+    pending_paste: PendingPaste | None = None,
 ) -> None:
     """Attempt recovery and preserve both errors when recovery also fails."""
     try:
@@ -57,6 +62,7 @@ def restore_after_failure(
         raise ClipboardRestoreError(
             operation_error,
             restore_error,
+            pending_paste=pending_paste,
         ) from operation_error
 
 
@@ -217,11 +223,15 @@ def paste_text(
             "paste_target_window_activation_failed",
             "The previously active window could not be activated.",
         )
-        restore_after_failure(pending.restore_clipboard, operation_error)
+        restore_after_failure(
+            pending.restore_clipboard, operation_error, pending_paste=pending,
+        )
         raise operation_error
     try:
         keyboard_input.send_ctrl_v()
     except Exception as operation_error:
-        restore_after_failure(pending.restore_clipboard, operation_error)
+        restore_after_failure(
+            pending.restore_clipboard, operation_error, pending_paste=pending,
+        )
         raise
     return pending

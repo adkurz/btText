@@ -253,3 +253,4 @@ class HotstringExpansionTestCase(unittest.TestCase):
         self.assertIs(raised.exception.operation_error, operation_error)
         self.assertIs(raised.exception.restore_error, restore_error)
         self.assertIs(raised.exception.__cause__, operation_error)
+        self.assertIs(raised.exception.pending_paste, pending)

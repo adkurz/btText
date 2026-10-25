@@ -26,7 +26,11 @@ from platform_support import (
     sounds,
     windows,
 )
-from platform_support.clipboard_paste import ClipboardPasteSession, PendingPaste
+from platform_support.clipboard_paste import (
+    ClipboardPasteSession,
+    ClipboardRestoreError,
+    PendingPaste,
+)
 from ui.variable_resolver import show_variable_error
 
 
@@ -194,6 +198,8 @@ class HotstringController:
         except HotstringExpansionCancelled:
             return
         except (clipboard.ClipboardError, HotstringExpansionError) as error:
+            if pending is None and isinstance(error, ClipboardRestoreError):
+                pending = error.pending_paste
             if pending is not None:
                 self._schedule_clipboard_restore(pending)
             self._show_hotstring_error(error)
