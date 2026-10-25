@@ -1,6 +1,7 @@
 """Settings dialog with keyboard-accessible global-hotkey recording."""
 
 from collections.abc import Callable
+import dataclasses
 
 import wx
 
@@ -8,9 +9,10 @@ from core.app_settings import (
     APPEARANCE_DARK,
     APPEARANCE_LIGHT,
     APPEARANCE_SYSTEM,
+    AppSettings,
 )
 from core.error_messages import format_user_error
-from core.shortcuts import DEFAULT_TOGGLE_HOTKEY, Hotkey
+from core.shortcuts import DEFAULT_TOGGLE_HOTKEY
 from i18n import SYSTEM_LANGUAGE, _, get_language_display_name
 from ui.hotkey_recorder import hotkey_from_event, is_modifier_event
 from ui.shortcut_display import format_hotkey
@@ -18,24 +20,14 @@ from ui.controls import FocusableReadOnlyTextCtrl
 
 
 class SettingsDialog(wx.Dialog):
-    """Edit general settings and the global window-toggle hotkey."""
+    """Edit and apply an immutable draft of the application settings."""
 
     def __init__(
         self,
         parent,
-        current_hotkey: Hotkey,
-        current_language: str,
-        current_appearance: str,
-        include_copied_text_in_clipboard_history: bool,
-        allow_copied_text_cloud_upload: bool,
-        hotstrings_enabled: bool,
-        preserve_hotstring_boundary: bool,
-        notify_hotstring_expansion: bool,
-        play_hotstring_sound: bool,
+        settings: AppSettings,
         available_languages: tuple[str, ...],
-        apply_settings: Callable[
-            [Hotkey, str, str, bool, bool, bool, bool, bool, bool], bool
-        ],
+        apply_settings: Callable[[AppSettings], bool],
         begin_recording: Callable[[], None],
         end_recording: Callable[[], None],
     ):
@@ -46,29 +38,9 @@ class SettingsDialog(wx.Dialog):
             title=_("Settings"),
             style=wx.DEFAULT_DIALOG_STYLE | wx.RESIZE_BORDER,
         )
-        self._current_hotkey = current_hotkey
-        self._candidate_hotkey = current_hotkey
+        self._current_settings = settings
+        self._draft_settings = settings
         self._force_hotkey_apply = False
-        self._current_language = current_language
-        self._candidate_language = current_language
-        self._current_appearance = current_appearance
-        self._candidate_appearance = current_appearance
-        self._current_include_copied_text_in_clipboard_history = (
-            include_copied_text_in_clipboard_history
-        )
-        self._candidate_include_copied_text_in_clipboard_history = (
-            include_copied_text_in_clipboard_history
-        )
-        self._current_allow_copied_text_cloud_upload = allow_copied_text_cloud_upload
-        self._candidate_allow_copied_text_cloud_upload = allow_copied_text_cloud_upload
-        self._current_hotstrings_enabled = hotstrings_enabled
-        self._candidate_hotstrings_enabled = hotstrings_enabled
-        self._current_preserve_hotstring_boundary = preserve_hotstring_boundary
-        self._candidate_preserve_hotstring_boundary = preserve_hotstring_boundary
-        self._current_notify_hotstring_expansion = notify_hotstring_expansion
-        self._candidate_notify_hotstring_expansion = notify_hotstring_expansion
-        self._current_play_hotstring_sound = play_hotstring_sound
-        self._candidate_play_hotstring_sound = play_hotstring_sound
         self._available_languages = available_languages
         self._apply_settings = apply_settings
         self._begin_recording = begin_recording
@@ -144,7 +116,7 @@ class SettingsDialog(wx.Dialog):
         )
         self.language_choice = wx.Choice(page, choices=language_labels)
         try:
-            selection = language_values.index(self._candidate_language)
+            selection = language_values.index(self._draft_settings.language)
         except ValueError:
             selection = 0
         self.language_choice.SetSelection(selection)
@@ -167,7 +139,7 @@ class SettingsDialog(wx.Dialog):
             label=_("Include copied snippet &text in the Windows clipboard history"),
         )
         self.clipboard_history_checkbox.SetValue(
-            self._candidate_include_copied_text_in_clipboard_history
+            self._draft_settings.include_copied_text_in_clipboard_history
         )
         self.clipboard_history_checkbox.Bind(
             wx.EVT_CHECKBOX,
@@ -181,7 +153,7 @@ class SettingsDialog(wx.Dialog):
             label=_("Allow copied snippet text to be stored in the Windows &cloud"),
         )
         self.cloud_clipboard_checkbox.SetValue(
-            self._candidate_allow_copied_text_cloud_upload
+            self._draft_settings.allow_copied_text_cloud_upload
         )
         self.cloud_clipboard_checkbox.Bind(
             wx.EVT_CHECKBOX,
@@ -241,7 +213,7 @@ class SettingsDialog(wx.Dialog):
             style=wx.RA_SPECIFY_COLS,
         )
         try:
-            selection = self._appearance_values.index(self._candidate_appearance)
+            selection = self._appearance_values.index(self._draft_settings.appearance)
         except ValueError:
             selection = 0
         self.appearance_choice.SetSelection(selection)
@@ -290,7 +262,7 @@ class SettingsDialog(wx.Dialog):
             # hotstrings. "&" marks the keyboard mnemonic.
             label=_("&Enable hotstrings"),
         )
-        self.hotstrings_checkbox.SetValue(self._candidate_hotstrings_enabled)
+        self.hotstrings_checkbox.SetValue(self._draft_settings.hotstrings_enabled)
         self.hotstrings_checkbox.Bind(wx.EVT_CHECKBOX, self._on_hotstrings_changed)
         self.preserve_hotstring_boundary_checkbox = wx.CheckBox(
             page,
@@ -299,7 +271,7 @@ class SettingsDialog(wx.Dialog):
             label=_("&Keep the ending character after expansion"),
         )
         self.preserve_hotstring_boundary_checkbox.SetValue(
-            self._candidate_preserve_hotstring_boundary
+            self._draft_settings.preserve_hotstring_boundary
         )
         self.preserve_hotstring_boundary_checkbox.Bind(
             wx.EVT_CHECKBOX,
@@ -312,7 +284,7 @@ class SettingsDialog(wx.Dialog):
             label=_("Show a Windows &notification after expansion"),
         )
         self.notify_hotstring_expansion_checkbox.SetValue(
-            self._candidate_notify_hotstring_expansion
+            self._draft_settings.notify_hotstring_expansion
         )
         self.notify_hotstring_expansion_checkbox.Bind(
             wx.EVT_CHECKBOX,
@@ -325,7 +297,7 @@ class SettingsDialog(wx.Dialog):
             label=_("Play a &sound after expansion"),
         )
         self.play_hotstring_sound_checkbox.SetValue(
-            self._candidate_play_hotstring_sound
+            self._draft_settings.play_hotstring_sound
         )
         self.play_hotstring_sound_checkbox.Bind(
             wx.EVT_CHECKBOX,
@@ -364,74 +336,78 @@ class SettingsDialog(wx.Dialog):
         """Store the pending language selected in the choice control."""
         selection = self.language_choice.GetSelection()
         if selection != wx.NOT_FOUND:
-            self._candidate_language = self._language_values[selection]
+            self._draft_settings = dataclasses.replace(
+                self._draft_settings, language=self._language_values[selection]
+            )
         self._update_apply_button()
 
     def _on_appearance_changed(self, event: wx.CommandEvent):
         """Store the pending application appearance."""
         selection = self.appearance_choice.GetSelection()
         if selection != wx.NOT_FOUND:
-            self._candidate_appearance = self._appearance_values[selection]
+            self._draft_settings = dataclasses.replace(
+                self._draft_settings, appearance=self._appearance_values[selection]
+            )
         self._update_apply_button()
 
     def _on_clipboard_history_changed(self, event: wx.CommandEvent):
         """Store whether copied snippet text may enter clipboard history."""
-        self._candidate_include_copied_text_in_clipboard_history = (
-            self.clipboard_history_checkbox.GetValue()
+        self._draft_settings = dataclasses.replace(
+            self._draft_settings,
+            include_copied_text_in_clipboard_history=(
+                self.clipboard_history_checkbox.GetValue()
+            ),
         )
         self._update_apply_button()
 
     def _on_cloud_clipboard_changed(self, event: wx.CommandEvent):
         """Store whether copied snippet text may enter the cloud clipboard."""
-        self._candidate_allow_copied_text_cloud_upload = (
-            self.cloud_clipboard_checkbox.GetValue()
+        self._draft_settings = dataclasses.replace(
+            self._draft_settings,
+            allow_copied_text_cloud_upload=self.cloud_clipboard_checkbox.GetValue(),
         )
         self._update_apply_button()
 
     def _on_hotstrings_changed(self, event: wx.CommandEvent):
         """Store whether automatic hotstring expansion is enabled."""
-        self._candidate_hotstrings_enabled = self.hotstrings_checkbox.GetValue()
+        self._draft_settings = dataclasses.replace(
+            self._draft_settings, hotstrings_enabled=self.hotstrings_checkbox.GetValue()
+        )
         self._update_apply_button()
 
     def _on_preserve_hotstring_boundary_changed(self, event: wx.CommandEvent):
         """Store whether the typed expansion boundary should be replayed."""
-        self._candidate_preserve_hotstring_boundary = (
-            self.preserve_hotstring_boundary_checkbox.GetValue()
+        self._draft_settings = dataclasses.replace(
+            self._draft_settings,
+            preserve_hotstring_boundary=(
+                self.preserve_hotstring_boundary_checkbox.GetValue()
+            ),
         )
         self._update_apply_button()
 
     def _on_notify_hotstring_expansion_changed(self, event: wx.CommandEvent):
         """Store whether successful expansions should show a notification."""
-        self._candidate_notify_hotstring_expansion = (
-            self.notify_hotstring_expansion_checkbox.GetValue()
+        self._draft_settings = dataclasses.replace(
+            self._draft_settings,
+            notify_hotstring_expansion=(
+                self.notify_hotstring_expansion_checkbox.GetValue()
+            ),
         )
         self._update_apply_button()
 
     def _on_play_hotstring_sound_changed(self, event: wx.CommandEvent):
         """Store whether successful expansions should play a sound."""
-        self._candidate_play_hotstring_sound = (
-            self.play_hotstring_sound_checkbox.GetValue()
+        self._draft_settings = dataclasses.replace(
+            self._draft_settings,
+            play_hotstring_sound=self.play_hotstring_sound_checkbox.GetValue(),
         )
         self._update_apply_button()
 
     def _update_apply_button(self):
-        """Enable Apply whenever either setting differs from its saved value."""
+        """Enable Apply when the draft differs or hotkey activation is requested."""
         self.apply_button.Enable(
             self._force_hotkey_apply
-            or self._candidate_hotkey != self._current_hotkey
-            or self._candidate_language != self._current_language
-            or self._candidate_appearance != self._current_appearance
-            or self._candidate_include_copied_text_in_clipboard_history
-            != self._current_include_copied_text_in_clipboard_history
-            or self._candidate_allow_copied_text_cloud_upload
-            != self._current_allow_copied_text_cloud_upload
-            or self._candidate_hotstrings_enabled != self._current_hotstrings_enabled
-            or self._candidate_preserve_hotstring_boundary
-            != self._current_preserve_hotstring_boundary
-            or self._candidate_notify_hotstring_expansion
-            != self._current_notify_hotstring_expansion
-            or self._candidate_play_hotstring_sound
-            != self._current_play_hotstring_sound
+            or self._draft_settings != self._current_settings
         )
 
     def _create_hotkey_page(self, notebook: wx.Notebook) -> wx.Panel:
@@ -454,7 +430,7 @@ class SettingsDialog(wx.Dialog):
         hotkey_label = wx.StaticText(page, label=_("Current &hotkey"))
         self.hotkey_display = FocusableReadOnlyTextCtrl(
             page,
-            value=format_hotkey(self._candidate_hotkey),
+            value=format_hotkey(self._draft_settings.toggle_window_hotkey),
         )
         self.hotkey_display.SetName(
             # Translators: Accessible name for the read-only field displaying
@@ -608,7 +584,9 @@ class SettingsDialog(wx.Dialog):
             )
             return
 
-        self._candidate_hotkey = hotkey
+        self._draft_settings = dataclasses.replace(
+            self._draft_settings, toggle_window_hotkey=hotkey
+        )
         self.hotkey_display.SetValue(format_hotkey(hotkey))
         self._update_apply_button()
         self._finish_recording(
@@ -647,9 +625,13 @@ class SettingsDialog(wx.Dialog):
     def _use_default(self, event: wx.CommandEvent):
         """Reset the pending hotkey to the application default."""
         self._cancel_recording()
-        self._candidate_hotkey = DEFAULT_TOGGLE_HOTKEY
+        self._draft_settings = dataclasses.replace(
+            self._draft_settings, toggle_window_hotkey=DEFAULT_TOGGLE_HOTKEY
+        )
         self._force_hotkey_apply = True
-        self.hotkey_display.SetValue(format_hotkey(self._candidate_hotkey))
+        self.hotkey_display.SetValue(
+            format_hotkey(self._draft_settings.toggle_window_hotkey)
+        )
         self._update_apply_button()
         self.recording_status.SetLabel(
             # Translators: Status after selecting btText's default shortcut; it
@@ -662,52 +644,13 @@ class SettingsDialog(wx.Dialog):
         self._cancel_recording()
         if (
             not self._force_hotkey_apply
-            and self._candidate_hotkey == self._current_hotkey
-            and self._candidate_language == self._current_language
-            and self._candidate_appearance == self._current_appearance
-            and self._candidate_include_copied_text_in_clipboard_history
-            == self._current_include_copied_text_in_clipboard_history
-            and self._candidate_allow_copied_text_cloud_upload
-            == self._current_allow_copied_text_cloud_upload
-            and self._candidate_hotstrings_enabled == self._current_hotstrings_enabled
-            and self._candidate_preserve_hotstring_boundary
-            == self._current_preserve_hotstring_boundary
-            and self._candidate_notify_hotstring_expansion
-            == self._current_notify_hotstring_expansion
-            and self._candidate_play_hotstring_sound
-            == self._current_play_hotstring_sound
+            and self._draft_settings == self._current_settings
         ):
             return True
-        if not self._apply_settings(
-            self._candidate_hotkey,
-            self._candidate_language,
-            self._candidate_appearance,
-            self._candidate_include_copied_text_in_clipboard_history,
-            self._candidate_allow_copied_text_cloud_upload,
-            self._candidate_hotstrings_enabled,
-            self._candidate_preserve_hotstring_boundary,
-            self._candidate_notify_hotstring_expansion,
-            self._candidate_play_hotstring_sound,
-        ):
+        if not self._apply_settings(self._draft_settings):
             return False
-        self._current_hotkey = self._candidate_hotkey
+        self._current_settings = self._draft_settings
         self._force_hotkey_apply = False
-        self._current_language = self._candidate_language
-        self._current_appearance = self._candidate_appearance
-        self._current_include_copied_text_in_clipboard_history = (
-            self._candidate_include_copied_text_in_clipboard_history
-        )
-        self._current_allow_copied_text_cloud_upload = (
-            self._candidate_allow_copied_text_cloud_upload
-        )
-        self._current_hotstrings_enabled = self._candidate_hotstrings_enabled
-        self._current_preserve_hotstring_boundary = (
-            self._candidate_preserve_hotstring_boundary
-        )
-        self._current_notify_hotstring_expansion = (
-            self._candidate_notify_hotstring_expansion
-        )
-        self._current_play_hotstring_sound = self._candidate_play_hotstring_sound
         self.apply_button.Enable(False)
         # Translators: Status confirming that all pending application settings
         # were saved and activated where possible.

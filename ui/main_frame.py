@@ -592,15 +592,7 @@ class MainFrame(sc.SizedFrame):
         with utils.managed_dialog(
             SettingsDialog(
                 self,
-                settings.toggle_window_hotkey,
-                settings.language,
-                settings.appearance,
-                settings.include_copied_text_in_clipboard_history,
-                settings.allow_copied_text_cloud_upload,
-                settings.hotstrings_enabled,
-                settings.preserve_hotstring_boundary,
-                settings.notify_hotstring_expansion,
-                settings.play_hotstring_sound,
+                settings,
                 available_languages,
                 self._settings_controller.apply,
                 self._settings_controller.suspend_hotkey,

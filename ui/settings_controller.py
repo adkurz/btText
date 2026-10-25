@@ -78,26 +78,21 @@ class SettingsController:
             self._parent,
         )
 
-    def apply(
-        self,
-        hotkey: Hotkey,
-        language: str,
-        appearance: str,
-        include_copied_text_in_clipboard_history: bool,
-        allow_copied_text_cloud_upload: bool,
-        hotstrings_enabled: bool,
-        preserve_hotstring_boundary: bool,
-        notify_hotstring_expansion: bool,
-        play_hotstring_sound: bool,
-    ) -> bool:
+    def apply(self, settings: AppSettings) -> bool:
         """Apply and persist settings, rolling runtime state back on failure."""
+        # Database selection belongs to save_database_file(), so a dialog's
+        # older snapshot cannot replace the controller's current database path.
+        new_settings = dataclasses.replace(
+            settings, database_file=self._settings.database_file
+        )
+        hotkey = new_settings.toggle_window_hotkey
         old_hotkey = self._settings.toggle_window_hotkey
         hotkey_changed = hotkey != old_hotkey
         hotkey_registration_required = (
             hotkey_changed or self._global_hotkey.registered_hotkey != hotkey
         )
         hotstrings_started = False
-        if hotstrings_enabled and not self._hotstrings_running:
+        if new_settings.hotstrings_enabled and not self._hotstrings_running:
             if not self._hotstrings.start():
                 return False
             self._hotstrings_running = True
@@ -145,20 +140,6 @@ class SettingsController:
                 self._hotstrings_running = False
             return False
 
-        new_settings = AppSettings(
-            database_file=self._settings.database_file,
-            toggle_window_hotkey=hotkey,
-            language=language,
-            appearance=appearance,
-            include_copied_text_in_clipboard_history=(
-                include_copied_text_in_clipboard_history
-            ),
-            allow_copied_text_cloud_upload=allow_copied_text_cloud_upload,
-            hotstrings_enabled=hotstrings_enabled,
-            preserve_hotstring_boundary=preserve_hotstring_boundary,
-            notify_hotstring_expansion=notify_hotstring_expansion,
-            play_hotstring_sound=play_hotstring_sound,
-        )
         try:
             self._store.save(new_settings)
         except SettingsError as error:
@@ -187,7 +168,7 @@ class SettingsController:
             self._show_settings_error(error)
             return False
         self._settings = new_settings
-        if not hotstrings_enabled:
+        if not new_settings.hotstrings_enabled:
             self._hotstrings.stop()
             self._hotstrings_running = False
         return True

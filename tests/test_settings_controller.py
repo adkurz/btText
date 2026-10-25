@@ -1,3 +1,4 @@
+import dataclasses
 import unittest
 from pathlib import Path
 from unittest.mock import Mock, call, patch
@@ -39,15 +40,7 @@ class SettingsControllerTestCase(unittest.TestCase):
         )
 
         changed = self.controller.apply(
-            new_hotkey,
-            self.settings.language,
-            self.settings.appearance,
-            self.settings.include_copied_text_in_clipboard_history,
-            self.settings.allow_copied_text_cloud_upload,
-            self.settings.hotstrings_enabled,
-            self.settings.preserve_hotstring_boundary,
-            self.settings.notify_hotstring_expansion,
-            self.settings.play_hotstring_sound,
+            dataclasses.replace(self.settings, toggle_window_hotkey=new_hotkey)
         )
 
         self.assertFalse(changed)
@@ -74,15 +67,7 @@ class SettingsControllerTestCase(unittest.TestCase):
         self.hotstrings.start.return_value = False
 
         changed = self.controller.apply(
-            self.settings.toggle_window_hotkey,
-            self.settings.language,
-            self.settings.appearance,
-            self.settings.include_copied_text_in_clipboard_history,
-            self.settings.allow_copied_text_cloud_upload,
-            True,
-            self.settings.preserve_hotstring_boundary,
-            self.settings.notify_hotstring_expansion,
-            self.settings.play_hotstring_sound,
+            dataclasses.replace(self.settings, hotstrings_enabled=True)
         )
 
         self.assertFalse(changed)
@@ -95,17 +80,7 @@ class SettingsControllerTestCase(unittest.TestCase):
         self.hotstrings.start.side_effect = (False, True)
 
         self.assertFalse(self.controller.start_initial_hotstrings())
-        changed = self.controller.apply(
-            self.settings.toggle_window_hotkey,
-            self.settings.language,
-            self.settings.appearance,
-            self.settings.include_copied_text_in_clipboard_history,
-            self.settings.allow_copied_text_cloud_upload,
-            self.settings.hotstrings_enabled,
-            self.settings.preserve_hotstring_boundary,
-            self.settings.notify_hotstring_expansion,
-            self.settings.play_hotstring_sound,
-        )
+        changed = self.controller.apply(self.settings)
 
         self.assertTrue(changed)
         self.assertEqual(self.hotstrings.start.call_count, 2)
@@ -115,17 +90,7 @@ class SettingsControllerTestCase(unittest.TestCase):
         self.hotstrings.start.return_value = True
 
         self.assertTrue(self.controller.start_initial_hotstrings())
-        changed = self.controller.apply(
-            self.settings.toggle_window_hotkey,
-            self.settings.language,
-            self.settings.appearance,
-            self.settings.include_copied_text_in_clipboard_history,
-            self.settings.allow_copied_text_cloud_upload,
-            self.settings.hotstrings_enabled,
-            self.settings.preserve_hotstring_boundary,
-            self.settings.notify_hotstring_expansion,
-            self.settings.play_hotstring_sound,
-        )
+        changed = self.controller.apply(self.settings)
 
         self.assertTrue(changed)
         self.hotstrings.start.assert_called_once_with()
@@ -154,15 +119,7 @@ class SettingsControllerTestCase(unittest.TestCase):
         self.global_hotkey.register.side_effect = (False, True)
 
         changed = self.controller.apply(
-            new_hotkey,
-            self.settings.language,
-            self.settings.appearance,
-            self.settings.include_copied_text_in_clipboard_history,
-            self.settings.allow_copied_text_cloud_upload,
-            self.settings.hotstrings_enabled,
-            self.settings.preserve_hotstring_boundary,
-            self.settings.notify_hotstring_expansion,
-            self.settings.play_hotstring_sound,
+            dataclasses.replace(self.settings, toggle_window_hotkey=new_hotkey)
         )
 
         self.assertFalse(changed)
@@ -186,17 +143,7 @@ class SettingsControllerTestCase(unittest.TestCase):
         self.global_hotkey.registered_hotkey = None
         self.global_hotkey.register.return_value = False
 
-        changed = self.controller.apply(
-            self.settings.toggle_window_hotkey,
-            self.settings.language,
-            self.settings.appearance,
-            self.settings.include_copied_text_in_clipboard_history,
-            self.settings.allow_copied_text_cloud_upload,
-            self.settings.hotstrings_enabled,
-            self.settings.preserve_hotstring_boundary,
-            self.settings.notify_hotstring_expansion,
-            self.settings.play_hotstring_sound,
-        )
+        changed = self.controller.apply(self.settings)
 
         self.assertFalse(changed)
         self.global_hotkey.register.assert_called_once_with(
@@ -207,15 +154,7 @@ class SettingsControllerTestCase(unittest.TestCase):
 
     def test_disabling_hotstrings_stops_hook_after_settings_are_saved(self):
         changed = self.controller.apply(
-            self.settings.toggle_window_hotkey,
-            self.settings.language,
-            self.settings.appearance,
-            self.settings.include_copied_text_in_clipboard_history,
-            self.settings.allow_copied_text_cloud_upload,
-            False,
-            self.settings.preserve_hotstring_boundary,
-            self.settings.notify_hotstring_expansion,
-            self.settings.play_hotstring_sound,
+            dataclasses.replace(self.settings, hotstrings_enabled=False)
         )
 
         self.assertTrue(changed)
@@ -225,15 +164,7 @@ class SettingsControllerTestCase(unittest.TestCase):
 
     def test_changed_appearance_is_persisted_for_next_start(self):
         changed = self.controller.apply(
-            self.settings.toggle_window_hotkey,
-            self.settings.language,
-            APPEARANCE_DARK,
-            self.settings.include_copied_text_in_clipboard_history,
-            self.settings.allow_copied_text_cloud_upload,
-            self.settings.hotstrings_enabled,
-            self.settings.preserve_hotstring_boundary,
-            self.settings.notify_hotstring_expansion,
-            self.settings.play_hotstring_sound,
+            dataclasses.replace(self.settings, appearance=APPEARANCE_DARK)
         )
 
         self.assertTrue(changed)
@@ -266,6 +197,29 @@ class SettingsControllerTestCase(unittest.TestCase):
             self.settings.toggle_window_hotkey,
         )
         self.store.save.assert_called_once_with(self.controller.settings)
+
+    def test_applying_a_complete_draft_preserves_the_latest_database_selection(self):
+        draft = dataclasses.replace(
+            self.settings,
+            database_file="outdated.db",
+            toggle_window_hotkey=Hotkey.parse("CTRL+ALT+F8"),
+            language="de", appearance=APPEARANCE_DARK,
+            include_copied_text_in_clipboard_history=False,
+            allow_copied_text_cloud_upload=False, hotstrings_enabled=False,
+            preserve_hotstring_boundary=False, notify_hotstring_expansion=True,
+            play_hotstring_sound=True,
+        )
+        database_file = str(Path("newly-selected.db").resolve())
+        self.assertTrue(self.controller.save_database_file(database_file))
+        self.store.save.reset_mock()
+
+        self.assertTrue(self.controller.apply(draft))
+
+        expected = dataclasses.replace(draft, database_file=database_file)
+        self.store.save.assert_called_once_with(expected)
+        self.assertEqual(self.controller.settings, expected)
+        self.assertEqual(draft.database_file, str(Path("outdated.db").resolve()))
+        self.hotstrings.stop.assert_called_once_with()
 
     @patch("ui.settings_controller.wx.MessageBox")
     def test_database_save_failure_keeps_current_settings(self, message_box):

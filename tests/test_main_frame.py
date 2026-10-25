@@ -20,6 +20,24 @@ from ui.snippet_list import SnippetList
 
 
 class ApplicationMenuTestCase(unittest.TestCase):
+    @patch("ui.main_frame.SettingsDialog")
+    def test_settings_command_passes_the_current_settings_object(self, dialog_class):
+        settings = AppSettings(database_file="selected.db", language="de")
+        controller = Mock(settings=settings)
+        frame = SimpleNamespace(
+            _settings_store=SimpleNamespace(locale_directory=None),
+            _settings_controller=controller,
+        )
+
+        MainFrame.on_settings(frame, Mock())
+
+        dialog_class.assert_called_once_with(
+            frame, settings, ("en",), controller.apply,
+            controller.suspend_hotkey, controller.resume_hotkey,
+        )
+        dialog_class.return_value.ShowModal.assert_called_once_with()
+        dialog_class.return_value.Destroy.assert_called_once_with()
+
     @patch("ui.main_frame.DatabaseLocationDialog")
     def test_database_location_command_shows_active_database(self, dialog_class):
         database_file = Path("active.db").resolve()
