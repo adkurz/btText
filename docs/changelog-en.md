@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+- Fixed: Large Markdown snippets with many paragraphs are now rendered faster as plain text, while preserving line breaks and indentation.
+
 - Fixed: Copying, moving, or deleting multiple snippets now refreshes the category tree and hotstrings once per operation, avoiding repeated full reloads for every snippet.
 
 - Fixed: Invalid or unreadable settings no longer reset the database selection or privacy options. btText now reports the error and stops without overwriting the settings file.

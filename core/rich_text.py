@@ -199,6 +199,18 @@ def _replace_images_with_alt_text(parent: ElementTree.Element) -> None:
 def _render_plain_text(root: ElementTree.Element) -> str:
     """Render the supported Markdown element tree as readable plain text."""
     parts: list[str] = []
+    trailing_newlines = 0
+
+    def append_part(value: str) -> None:
+        """Track trailing newlines as fragments are added to the output."""
+        nonlocal trailing_newlines
+        parts.append(value)
+        if value:
+            without_newlines = value.rstrip("\n")
+            count = len(value) - len(without_newlines)
+            trailing_newlines = (
+                trailing_newlines + count if not without_newlines else count
+            )
 
     def append_text(
         value: str | None,
@@ -212,22 +224,21 @@ def _render_plain_text(root: ElementTree.Element) -> str:
             value = value.replace("\n", " ")
         for index, line in enumerate(value.split("\n")):
             if index:
-                parts.append("\n")
+                append_part("\n")
             if indent and (not parts or parts[-1].endswith("\n")):
                 # Source indentation in ordinary paragraphs is whitespace,
                 # while code indentation remains part of the content.
                 if not preserve_lines:
                     line = line.lstrip(" \t")
                 if line:
-                    parts.append(indent)
+                    append_part(indent)
             if line:
-                parts.append(line)
+                append_part(line)
 
     def end_block(lines: int = 2) -> None:
-        current = "".join(parts)
-        missing = lines - (len(current) - len(current.rstrip("\n")))
+        missing = lines - trailing_newlines
         if missing > 0:
-            parts.append("\n" * missing)
+            append_part("\n" * missing)
 
     def visit(
         element: ElementTree.Element,
@@ -236,7 +247,7 @@ def _render_plain_text(root: ElementTree.Element) -> str:
     ) -> None:
         tag = element.tag
         if tag == "br":
-            parts.append("\n")
+            append_part("\n")
         elif tag == "hr":
             append_text("---", indent=continuation_indent)
             end_block()
@@ -251,8 +262,8 @@ def _render_plain_text(root: ElementTree.Element) -> str:
                     continue
                 item_indent = "  " * list_depth
                 marker = f"{item_number}. " if ordered else "- "
-                parts.append(item_indent)
-                parts.append(marker)
+                append_part(item_indent)
+                append_part(marker)
                 visit(child, list_depth + 1, item_indent + " " * len(marker))
                 end_block(1)
                 item_number += 1

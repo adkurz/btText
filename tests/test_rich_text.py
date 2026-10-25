@@ -1,6 +1,11 @@
 import unittest
+from xml.etree import ElementTree
 
-from core.rich_text import ClipboardContent, render_clipboard_content
+from core.rich_text import (
+    ClipboardContent,
+    _render_plain_text,
+    render_clipboard_content,
+)
 from core.variables import RenderedSnippet
 
 
@@ -102,6 +107,43 @@ class RichTextRenderingTestCase(unittest.TestCase):
             result.plain_text,
             "- First\n\n  x = 1\n      y = 2\n\n  After\n\n- Next",
         )
+
+    def test_plain_text_keeps_existing_code_block_line_breaks(self):
+        for line_breaks in range(4):
+            with self.subTest(line_breaks=line_breaks):
+                root = ElementTree.Element("div")
+                ElementTree.SubElement(root, "pre").text = (
+                    "Code" + "\n" * line_breaks
+                )
+                ElementTree.SubElement(root, "p").text = "After"
+
+                self.assertEqual(
+                    _render_plain_text(root),
+                    "Code" + "\n" * max(2, line_breaks) + "After",
+                )
+
+    def test_plain_text_preserves_breaks_across_mixed_blocks(self):
+        result = render_clipboard_content(
+            RenderedSnippet(
+                "Before\n\n- First  \n    continued\n- Second\n\n"
+                "> Quote  \n> continued\n\n---\n\nAfter"
+            ),
+            True,
+        )
+
+        self.assertEqual(
+            result.plain_text,
+            "Before\n\n- First\n  continued\n- Second\n\n"
+            "Quote\ncontinued\n\n---\n\nAfter",
+        )
+
+    def test_many_markdown_paragraphs_keep_exact_separation(self):
+        paragraphs = [f"Paragraph {index}" for index in range(1000)]
+        source = "\n\n".join(paragraphs)
+
+        result = render_clipboard_content(RenderedSnippet(source), True)
+
+        self.assertEqual(result.plain_text, source)
 
     def test_plain_text_aligns_ordered_list_continuations_with_wide_markers(self):
         items = "\n".join(f"{number}. Item {number}" for number in range(1, 11))
