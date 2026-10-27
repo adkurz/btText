@@ -31,6 +31,8 @@ user32.GetWindowThreadProcessId.argtypes = (
 user32.GetWindowThreadProcessId.restype = wintypes.DWORD
 user32.IsWindow.argtypes = (wintypes.HWND,)
 user32.IsWindow.restype = wintypes.BOOL
+user32.IsIconic.argtypes = (wintypes.HWND,)
+user32.IsIconic.restype = wintypes.BOOL
 user32.SetForegroundWindow.argtypes = (wintypes.HWND,)
 user32.SetForegroundWindow.restype = wintypes.BOOL
 user32.ShowWindow.argtypes = (wintypes.HWND, ctypes.c_int)
@@ -179,10 +181,12 @@ def get_window_application_name(handle: int | None) -> str | None:
 
 
 def activate_window(handle: int | None) -> bool:
-    """Restore a valid window and make it the foreground window."""
+    """Activate a valid window, restoring it only if it is minimized."""
     if not is_valid_window(handle):
         return False
-    user32.ShowWindow(handle, SW_RESTORE)
+    # Restoring a maximized or snapped window resets its size and position.
+    if user32.IsIconic(handle):
+        user32.ShowWindow(handle, SW_RESTORE)
     user32.SetForegroundWindow(handle)
     if get_foreground_window() == handle:
         return True

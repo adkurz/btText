@@ -28,6 +28,8 @@
 
 - Fixed: Characters entered with Ctrl+Alt, such as backslash (`\`) on a German keyboard, now work as hotstring ending characters, just like characters entered with AltGr.
 
+- Fixed: Inserting snippets through the interface or a hotstring now preserves maximized windows and Windows Snap layouts. The target window is no longer reset to its previous normal size and position.
+
 ## [v1.3.0] 2026-10-25
 
 - Added: Text snippets can now optionally be formatted using simple Markdown. When inserted, they are output not only as plain text but also as HTML and RTF, so that the formatting is preserved if supported by the target program. This allows for simple formatting (bold, italics, etc.), links, and citations.

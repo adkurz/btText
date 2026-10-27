@@ -170,11 +170,12 @@ class NativeWindowTestCase(unittest.TestCase):
         ):
             self.assertTrue(windows.is_external_window(123))
 
-    def test_activation_restores_window_before_foreground_request(self):
+    def test_activation_restores_minimized_window_before_foreground_request(self):
         calls = []
 
         with (
             patch.object(windows.user32, "IsWindow", return_value=True),
+            patch.object(windows.user32, "IsIconic", return_value=True),
             patch.object(
                 windows.user32,
                 "ShowWindow",
@@ -206,12 +207,27 @@ class NativeWindowTestCase(unittest.TestCase):
             ],
         )
 
+    def test_activation_preserves_non_minimized_window_placement(self):
+        with (
+            patch.object(windows.user32, "IsWindow", return_value=True),
+            patch.object(windows.user32, "IsIconic", return_value=False) as is_iconic,
+            patch.object(windows.user32, "ShowWindow") as show_window,
+            patch.object(windows.user32, "SetForegroundWindow") as set_foreground,
+            patch.object(windows.user32, "GetForegroundWindow", return_value=123),
+        ):
+            self.assertTrue(windows.activate_window(123))
+
+        is_iconic.assert_called_once_with(123)
+        show_window.assert_not_called()
+        set_foreground.assert_called_once_with(123)
+
     def test_activation_joins_foreground_input_thread_after_direct_failure(self):
         foreground_handles = iter((456, 456, 123))
 
         with (
             patch.object(windows.user32, "IsWindow", return_value=True),
-            patch.object(windows.user32, "ShowWindow"),
+            patch.object(windows.user32, "IsIconic", return_value=False),
+            patch.object(windows.user32, "ShowWindow") as show_window,
             patch.object(windows.user32, "SetForegroundWindow") as set_foreground,
             patch.object(
                 windows.user32,
@@ -239,6 +255,7 @@ class NativeWindowTestCase(unittest.TestCase):
             self.assertTrue(windows.activate_window(123))
 
         self.assertEqual(set_foreground.call_count, 2)
+        show_window.assert_not_called()
         self.assertEqual(
             attach_thread_input.call_args_list,
             [unittest.mock.call(11, 22, True), unittest.mock.call(11, 22, False)],
@@ -249,6 +266,7 @@ class NativeWindowTestCase(unittest.TestCase):
     def test_invalid_window_is_not_activated(self):
         with (
             patch.object(windows.user32, "IsWindow", return_value=False),
+            patch.object(windows.user32, "IsIconic") as is_iconic,
             patch.object(
                 windows.user32,
                 "ShowWindow",
@@ -261,6 +279,7 @@ class NativeWindowTestCase(unittest.TestCase):
             self.assertFalse(windows.activate_window(123))
 
         show_window.assert_not_called()
+        is_iconic.assert_not_called()
         set_foreground_window.assert_not_called()
 
     def test_window_application_name_returns_executable_basename(self):

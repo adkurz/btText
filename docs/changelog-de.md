@@ -28,6 +28,8 @@
 
 - Behoben: Mit Strg+Alt eingegebene Zeichen wie der umgekehrte Schrägstrich (`\`) auf einer deutschen Tastatur funktionieren jetzt ebenso wie mit AltGr eingegebene Zeichen als Hotstring-Endezeichen.
 
+- Behoben: Beim Einfügen von Textbausteinen über die Oberfläche oder einen Hotstring bleiben maximierte Fenster und Windows-Snap-Anordnungen erhalten. Das Zielfenster wird nicht mehr auf seine vorherige normale Größe und Position zurückgesetzt.
+
 ## [v1.3.0] 25.10.2026
 
 - Hinzugefügt: Textbausteine können nun optional mit einfachem Markdown formatiert werden. Beim Einfügen werden sie nicht nur als Reintext, sondern auch als HTML und RTF ausgegeben, sodass die Formatierung beibehalten wird, sofern sie vom Zielprogramm unterstützt wird. Dies ermöglicht einfache Formatierungen (Fettdruck, Kursivschrift usw.), Links und Zitate.
