@@ -32,6 +32,8 @@ HOOK_THREAD_SHUTDOWN_TIMEOUT_SECONDS = 2
 HOOK_HEALTH_CHECK_INTERVAL_MS = 500
 HOOK_REFRESH_INTERVAL_SECONDS = 60
 HOOK_REFRESH_IDLE_SECONDS = 1
+TARGET_FOCUS_RESTORE_TIMEOUT_SECONDS = 0.2
+TARGET_FOCUS_RESTORE_POLL_SECONDS = 0.01
 LLKHF_INJECTED = 0x10
 LLKHF_ALTDOWN = 0x20
 TO_UNICODE_NO_STATE_CHANGE = 0x04
@@ -113,7 +115,7 @@ class MSLLHOOKSTRUCT(ctypes.Structure):
 
 @dataclass(frozen=True)
 class InputCheckpoint:
-    """Bind one queued expansion to its focus and subsequent user input."""
+    """Bind queued work to its window, optional child focus, and later input."""
 
     context: tuple[int | None, int | None, int | None]
     cancelled: threading.Event = field(default_factory=threading.Event)
@@ -241,23 +243,44 @@ class KeyboardHook:
         *,
         allow_own_foreground: bool = False,
     ) -> bool:
-        """Recheck the original focused child, including after variable prompts."""
-        if checkpoint.cancelled.is_set() or checkpoint.context[1] is None:
+        """Recheck the target and compare child focus when it is available."""
+        if checkpoint.cancelled.is_set() or checkpoint.context[0] is None:
             return False
-        foreground = self._get_foreground_window()
-        if foreground != checkpoint.context[0]:
-            identity = windows.get_window_identity(foreground)
-            if not (
-                allow_own_foreground
-                and identity is not None
-                and identity.process_id == os.getpid()
-            ):
-                checkpoint.cancelled.set()
-                return False
-        if self._get_input_context(checkpoint.context[0]) != checkpoint.context:
-            checkpoint.cancelled.set()
-            return False
-        return not checkpoint.cancelled.is_set()
+        deadline = time.monotonic() + TARGET_FOCUS_RESTORE_TIMEOUT_SECONDS
+        while not checkpoint.cancelled.is_set():
+            foreground = self._get_foreground_window()
+            if foreground != checkpoint.context[0]:
+                identity = windows.get_window_identity(foreground)
+                if (
+                    allow_own_foreground
+                    and identity is not None
+                    and identity.process_id == os.getpid()
+                ):
+                    # The target's focus is unavailable while our prompt is
+                    # active. Expansion/replay rechecks after activation.
+                    return not checkpoint.cancelled.is_set()
+                break
+            context = self._get_input_context(checkpoint.context[0])
+            if context[0] != checkpoint.context[0] or context[2] != checkpoint.context[2]:
+                break
+            original_focus = checkpoint.context[1]
+            current_focus = context[1]
+            if original_focus is None or current_focus == original_focus:
+                return not checkpoint.cancelled.is_set()
+            if current_focus is not None:
+                break
+            if not allow_own_foreground or time.monotonic() >= deadline:
+                # Some applications expose no child focus. Window identity
+                # (checked by expansion/replay) and observed input still guard
+                # the replacement; missing focus alone must not disable it.
+                return not checkpoint.cancelled.is_set()
+            # Closing a modal prompt can activate the target before its GUI
+            # thread restores child focus (notably in Notepad++). Wait only
+            # briefly for comparable focus; a different child/layout cancels.
+            # The native hook thread keeps observing intervening user input.
+            time.sleep(TARGET_FOCUS_RESTORE_POLL_SECONDS)
+        checkpoint.cancelled.set()
+        return False
 
     def update(self, hotstrings: Mapping[str, object]) -> None:
         """Replace active hotstrings without reinstalling the hook."""

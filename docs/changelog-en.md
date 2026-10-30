@@ -1,5 +1,11 @@
 # Changelog for btText
 
+## [v1.3.2] 2026-10-30
+
+- Fixed: Hotstrings with input variables now correctly insert the snippet and replace the hotstring in the target window after the input dialog is confirmed.
+
+- Fixed: Hotstrings now also work in applications where Windows does not expose the input field focus. Available field focus is checked as an additional safeguard, while window identity and intervening keyboard and mouse actions continue to guard expansion.
+
 ## [v1.3.1] 2026-10-27
 
 - changed: Large snippet lists now sort faster by preparing weight and name sort keys once per operation. The existing sort order, selection, and focus are preserved.

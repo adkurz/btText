@@ -1,7 +1,7 @@
 import unittest
 import tempfile
 from pathlib import Path
-from types import SimpleNamespace
+from types import MethodType, SimpleNamespace
 from unittest.mock import Mock, patch
 
 import wx
@@ -266,10 +266,18 @@ class MainFrameConstructionTestCase(unittest.TestCase):
                 )
                 tray_icon_class.assert_called_once_with(frame)
             finally:
-                if frame is not None:
-                    frame.Destroy()
-                    wx.YieldIfNeeded()
-                model.close()
+                try:
+                    if frame is not None:
+                        layout_timer = frame._hotkey_layout_timer
+                        shutdown_timer = frame._update_shutdown_timer
+                        frame.Destroy()
+                        # Keep timer wrappers alive: native owner destruction
+                        # must stop them before Python garbage collection runs.
+                        self.assertFalse(layout_timer.IsRunning())
+                        self.assertFalse(shutdown_timer.IsRunning())
+                        wx.YieldIfNeeded()
+                finally:
+                    model.close()
 
     def test_hidden_frame_is_shown_without_activation_before_being_hidden(self):
         calls = []
@@ -659,6 +667,60 @@ class HotkeyLayoutChangeTestCase(unittest.TestCase):
 
 
 class ShutdownTestCase(unittest.TestCase):
+    def test_repeated_cleanup_releases_native_resources_once(self):
+        frame = SimpleNamespace(
+            _hotkey_layout_timer=Mock(),
+            _update_shutdown_timer=Mock(),
+            _update_shutdown_signal=Mock(),
+            _settings_controller=Mock(),
+            _hotstring_controller=Mock(),
+            tray_icon=Mock(),
+        )
+
+        MainFrame._stop_process_integrations(frame)
+        MainFrame._stop_process_integrations(frame)
+
+        self.assertTrue(frame._process_integrations_stopped)
+        frame._hotkey_layout_timer.Stop.assert_called_once_with()
+        frame._update_shutdown_timer.Stop.assert_called_once_with()
+        frame._update_shutdown_signal.close.assert_called_once_with()
+        frame._settings_controller.unregister_hotkey.assert_called_once_with()
+        frame._hotstring_controller.stop.assert_called_once_with()
+        frame.tray_icon.RemoveIcon.assert_called_once_with()
+        frame.tray_icon.Destroy.assert_called_once_with()
+
+    def test_cleanup_stops_timers_after_partial_frame_creation(self):
+        frame = SimpleNamespace(_hotkey_layout_timer=Mock())
+
+        MainFrame._stop_process_integrations(frame)
+
+        frame._hotkey_layout_timer.Stop.assert_called_once_with()
+        self.assertTrue(frame._process_integrations_stopped)
+
+    def test_native_destroy_event_ignores_children_and_cleans_up_frame(self):
+        frame = SimpleNamespace(_stop_process_integrations=Mock())
+        child_event = Mock(GetEventObject=Mock(return_value=object()))
+        frame_event = Mock(GetEventObject=Mock(return_value=frame))
+
+        MainFrame._on_destroy(frame, child_event)
+        frame._stop_process_integrations.assert_not_called()
+        MainFrame._on_destroy(frame, frame_event)
+
+        frame._stop_process_integrations.assert_called_once_with()
+        child_event.Skip.assert_called_once_with()
+        frame_event.Skip.assert_called_once_with()
+
+    def test_deferred_start_does_not_restart_destroyed_frame_integrations(self):
+        frame = SimpleNamespace(
+            _process_integrations_stopped=True,
+            _settings_controller=Mock(),
+        )
+
+        MainFrame._start_process_integrations(frame)
+
+        frame._settings_controller.register_initial_hotkey.assert_not_called()
+        frame._settings_controller.start_initial_hotstrings.assert_not_called()
+
     def test_explicit_exit_releases_process_wide_resources(self):
         event = Mock()
         event.CanVeto.return_value = True
@@ -671,6 +733,7 @@ class ShutdownTestCase(unittest.TestCase):
             _hotstring_controller=Mock(),
             tray_icon=Mock(),
         )
+        frame._stop_process_integrations = MethodType(MainFrame._stop_process_integrations, frame)
 
         MainFrame.on_close(frame, event)
 
@@ -697,6 +760,7 @@ class ShutdownTestCase(unittest.TestCase):
             tray_icon=Mock(),
             Hide=Mock(),
         )
+        frame._stop_process_integrations = MethodType(MainFrame._stop_process_integrations, frame)
 
         MainFrame.on_close(frame, event)
 

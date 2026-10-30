@@ -1,5 +1,11 @@
 # Änderungsprotokoll für btText
 
+## [v1.3.2] 30.10.2026
+
+- Behoben: Hotstrings mit Input-Variablen fügen den Textbaustein nach dem Bestätigen des Eingabedialogs wieder korrekt ein und ersetzen den Hotstring im Zielfenster.
+
+- Behoben: Hotstrings funktionieren auch in Anwendungen, deren Eingabefeldfokus Windows nicht bereitstellt. Ein auslesbarer Feldfokus wird zusätzlich geprüft; Fensteridentität und zwischenzeitliche Tastatur- und Mausaktionen sichern die Erweiterung weiterhin ab.
+
 ## [v1.3.1] 27.10.2026
 
 - Geändert: Große Textbausteinlisten werden jetzt schneller sortiert, indem die Sortierschlüssel für Gewicht und Name einmal pro Vorgang vorbereitet werden. Die bisherige Sortierreihenfolge, Auswahl und der Fokus bleiben erhalten.

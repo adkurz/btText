@@ -111,7 +111,7 @@ class HotstringController:
         checkpoint: hotstrings.InputCheckpoint,
     ) -> bool:
         """Queue expansion only when the foreground window is external."""
-        if checkpoint.cancelled.is_set() or checkpoint.context[1] is None:
+        if checkpoint.cancelled.is_set():
             return False
         target_window = checkpoint.context[0]
         if not windows.is_external_window(target_window):

@@ -8,11 +8,13 @@ from unittest.mock import Mock, patch
 import wx
 
 from core.app_settings import AppSettings
+from core.builtin_variables import create_builtin_variable_engine
 from core.datamodel import Snippet
 from core.events import EventEmitter
 from core.variables import RenderedSnippet, VariableRenderingCancelled
 from platform_support import hotstrings, keyboard_input, windows
 from ui.hotstring_controller import HotstringController
+from ui.variable_resolver import SnippetVariableResolver
 
 
 CONTEXT = (42, 43, 44)
@@ -115,7 +117,7 @@ class CheckpointTestCase(unittest.TestCase):
         self.assertFalse(self.checkpoint.cancelled.is_set())
 
     def test_focus_or_layout_change_is_permanent_invalidation(self):
-        for changed in ((42, 99, 44), (42, 43, 99), (42, None, 44)):
+        for changed in ((42, 99, 44), (42, 43, 99)):
             with self.subTest(changed=changed):
                 checkpoint = hotstrings.InputCheckpoint(CONTEXT)
                 with (
@@ -133,6 +135,134 @@ class CheckpointTestCase(unittest.TestCase):
         ):
             self.assertTrue(self.hook.is_current(self.checkpoint, allow_own_foreground=True))
             self.assertFalse(self.hook.is_current(self.checkpoint))
+
+    def test_inactive_target_focus_is_rechecked_after_own_prompt(self):
+        for inactive_focus in (None, 101):
+            with self.subTest(inactive_focus=inactive_focus):
+                checkpoint = hotstrings.InputCheckpoint(CONTEXT)
+                with (
+                    patch.object(self.hook, "_get_foreground_window", side_effect=[100, 42]),
+                    patch.object(windows, "get_window_identity", return_value=windows.WindowIdentity(100, 1, os.getpid())),
+                    patch.object(self.hook, "_get_input_context", side_effect=lambda window: (
+                        (42, inactive_focus, 44) if foreground[0] == 100 else CONTEXT
+                    )),
+                ):
+                    foreground = [100]
+                    self.assertTrue(self.hook.is_current(checkpoint, allow_own_foreground=True))
+                    foreground[0] = 42
+                    self.assertTrue(self.hook.is_current(checkpoint, allow_own_foreground=True))
+
+    def test_post_prompt_focus_can_return_after_target_activation(self):
+        with (
+            patch.object(self.hook, "_get_foreground_window", return_value=42),
+            patch.object(self.hook, "_get_input_context", side_effect=[(42, None, 44), CONTEXT]),
+            patch.object(hotstrings.time, "sleep") as sleep,
+        ):
+            self.assertTrue(self.hook.is_current(self.checkpoint, allow_own_foreground=True))
+        sleep.assert_called_once()
+        self.assertFalse(self.checkpoint.cancelled.is_set())
+
+    def test_missing_focus_before_rendering_uses_input_observers_without_waiting(self):
+        with (
+            patch.object(self.hook, "_get_foreground_window", return_value=42),
+            patch.object(self.hook, "_get_input_context", return_value=(42, None, 44)),
+            patch.object(hotstrings.time, "sleep") as sleep,
+        ):
+            self.assertTrue(self.hook.is_current(self.checkpoint))
+        sleep.assert_not_called()
+        self.assertFalse(self.checkpoint.cancelled.is_set())
+
+    def test_initially_unavailable_focus_does_not_block_or_delay_expansion(self):
+        for focus in (None, 43):
+            for allow_own_foreground in (False, True):
+                with (
+                    self.subTest(focus=focus, allow_own_foreground=allow_own_foreground),
+                    patch.object(self.hook, "_get_foreground_window", return_value=42),
+                    patch.object(self.hook, "_get_input_context", return_value=(42, focus, 44)),
+                    patch.object(hotstrings.time, "sleep") as sleep,
+                ):
+                    checkpoint = hotstrings.InputCheckpoint((42, None, 44))
+                    self.assertTrue(self.hook.is_current(checkpoint, allow_own_foreground=allow_own_foreground))
+                    self.assertFalse(checkpoint.cancelled.is_set())
+                    sleep.assert_not_called()
+
+    def test_missing_focus_does_not_bypass_window_or_layout_checks(self):
+        for foreground, context in ((100, (42, None, 44)), (42, (42, None, 99))):
+            with (
+                self.subTest(foreground=foreground, context=context),
+                patch.object(self.hook, "_get_foreground_window", return_value=foreground),
+                patch.object(self.hook, "_get_input_context", return_value=context),
+                patch.object(windows, "get_window_identity", return_value=windows.WindowIdentity(100, 1, os.getpid() + 1)),
+            ):
+                checkpoint = hotstrings.InputCheckpoint((42, None, 44))
+                self.assertFalse(self.hook.is_current(checkpoint, allow_own_foreground=True))
+                self.assertTrue(checkpoint.cancelled.is_set())
+
+    def test_input_observers_cancel_without_field_focus(self):
+        for action in ("keyboard", "mouse"):
+            with self.subTest(action=action):
+                checkpoint = hotstrings.InputCheckpoint((42, None, 44))
+                self.hook._pending_checkpoint = checkpoint
+                if action == "keyboard":
+                    self.dispatch(hotstrings.WM_KEYDOWN)
+                else:
+                    event = hotstrings.MSLLHOOKSTRUCT()
+                    with (
+                        patch.object(hotstrings.user32, "WindowFromPoint", return_value=42),
+                        patch.object(windows, "get_window_identity", return_value=TARGET),
+                        patch.object(hotstrings.user32, "CallNextHookEx", return_value=0),
+                    ):
+                        self.hook._mouse_callback(0, 0x0201, ctypes.addressof(event))
+                self.assertTrue(checkpoint.cancelled.is_set())
+                self.assertFalse(self.hook.is_current(checkpoint, allow_own_foreground=True))
+
+    def test_post_prompt_focus_wait_is_bounded_and_falls_back_when_unavailable(self):
+        elapsed = [0.0]
+
+        def advance(seconds):
+            elapsed[0] += seconds
+
+        with (
+            patch.object(self.hook, "_get_foreground_window", return_value=42),
+            patch.object(self.hook, "_get_input_context", return_value=(42, None, 44)),
+            patch.object(hotstrings.time, "monotonic", side_effect=lambda: elapsed[0]),
+            patch.object(hotstrings.time, "sleep", side_effect=advance),
+        ):
+            self.assertTrue(self.hook.is_current(self.checkpoint, allow_own_foreground=True))
+        self.assertGreaterEqual(elapsed[0], hotstrings.TARGET_FOCUS_RESTORE_TIMEOUT_SECONDS)
+        self.assertLess(elapsed[0], hotstrings.TARGET_FOCUS_RESTORE_TIMEOUT_SECONDS + 0.02)
+        self.assertFalse(self.checkpoint.cancelled.is_set())
+
+    def test_external_input_during_focus_restoration_cancels(self):
+        with (
+            patch.object(self.hook, "_get_foreground_window", return_value=42),
+            patch.object(self.hook, "_get_input_context", return_value=(42, None, 44)),
+            patch.object(hotstrings.time, "sleep", side_effect=lambda seconds: self.dispatch(hotstrings.WM_KEYDOWN)),
+        ):
+            self.assertFalse(self.hook.is_current(self.checkpoint, allow_own_foreground=True))
+        self.assertTrue(self.checkpoint.cancelled.is_set())
+
+    def test_restored_focus_in_different_field_or_layout_is_rejected(self):
+        for changed in ((42, 99, 44), (42, 43, 99)):
+            with (
+                self.subTest(changed=changed),
+                patch.object(self.hook, "_get_foreground_window", return_value=42),
+                patch.object(self.hook, "_get_input_context", side_effect=[(42, None, 44), changed]),
+                patch.object(hotstrings.time, "sleep"),
+            ):
+                checkpoint = hotstrings.InputCheckpoint(CONTEXT)
+                self.assertFalse(self.hook.is_current(checkpoint, allow_own_foreground=True))
+                self.assertTrue(checkpoint.cancelled.is_set())
+
+    def test_other_foreground_window_during_focus_restoration_is_rejected(self):
+        with (
+            patch.object(self.hook, "_get_foreground_window", side_effect=[42, 100]),
+            patch.object(self.hook, "_get_input_context", return_value=(42, None, 44)),
+            patch.object(windows, "get_window_identity", return_value=windows.WindowIdentity(100, 1, os.getpid() + 1)),
+            patch.object(hotstrings.time, "sleep"),
+        ):
+            self.assertFalse(self.hook.is_current(self.checkpoint, allow_own_foreground=True))
+        self.assertTrue(self.checkpoint.cancelled.is_set())
 
     def test_external_mouse_actions_invalidate_even_from_own_prompt(self):
         for process_id, cancelled in ((os.getpid(), False), (os.getpid() + 1, True)):
@@ -178,6 +308,21 @@ class QueuedControllerTestCase(unittest.TestCase):
             )
         renderer.assert_not_called()
         expand.assert_not_called()
+
+    def test_queue_accepts_target_with_unavailable_field_focus(self):
+        controller = self.controller()
+        checkpoint = hotstrings.InputCheckpoint((42, None, 44))
+        snippet = Snippet("Name", "Text", 1, hotstring=";sig")
+        with (
+            patch.object(windows, "is_external_window", return_value=True),
+            patch.object(windows, "get_window_identity", return_value=TARGET),
+            patch("ui.hotstring_controller.wx.CallAfter") as queue,
+            patch.object(controller, "_expand") as expand,
+        ):
+            self.assertTrue(controller._queue_expansion(snippet, 32, checkpoint))
+            callback, *arguments = queue.call_args.args
+            callback(*arguments)
+        expand.assert_called_once_with(TARGET, snippet, 32, checkpoint)
 
     def test_successful_render_does_not_authorize_later_stale_input(self):
         controller = self.controller()
@@ -232,6 +377,83 @@ class QueuedControllerTestCase(unittest.TestCase):
             callback, *arguments = queue.call_args.args
             callback(*arguments)
             self.assertTrue(controller._queue_expansion(Mock(), 32, checkpoint))
+
+
+class InteractiveCheckpointTestCase(unittest.TestCase):
+    def test_input_answers_survive_inactive_focus_but_reactivation_checks_target(self):
+        cases = (
+            (43, "success"), (43, "cancel"), (43, "changed_focus"), (43, "external_input"),
+            (None, "success"), (None, "cancel"), (None, "external_input"),
+        )
+        for initial_focus, outcome in cases:
+            with self.subTest(initial_focus=initial_focus, outcome=outcome):
+                foreground = [42]
+                initial_context = (42, initial_focus, 44)
+                context = [initial_context]
+                checkpoint = hotstrings.InputCheckpoint(initial_context)
+                session = Mock()
+                schedule_restore = Mock()
+                controller = None
+
+                def request_inputs(labels):
+                    self.assertEqual(labels, ("Name",))
+                    foreground[0] = 100
+                    # An inactive application's GUI thread may have no focus.
+                    context[0] = (42, None, 44)
+                    event = hotstrings.KBDLLHOOKSTRUCT(ord("A"), 0, 0, 0, 0)
+                    controller._hook._hook_callback(
+                        0, hotstrings.WM_KEYDOWN, ctypes.addressof(event),
+                    )
+                    if outcome == "external_input":
+                        checkpoint.cancelled.set()
+                    return None if outcome == "cancel" else {"Name": "Ada"}
+
+                def activate(target):
+                    self.assertEqual(target, TARGET)
+                    foreground[0] = 42
+                    context[0] = (42, 99, 44) if outcome == "changed_focus" else initial_context
+                    return True
+
+                resolver = SnippetVariableResolver(
+                    create_builtin_variable_engine(), request_inputs=request_inputs,
+                )
+                controller = HotstringController(
+                    Mock(), EventEmitter(), Mock(), lambda: AppSettings(),
+                    schedule_restore, Mock(), resolver.render, clipboard_session=session,
+                )
+                hook = controller._hook
+                hook._pending_checkpoint = checkpoint
+                with (
+                    patch.object(hook, "_get_foreground_window", side_effect=lambda: foreground[0]),
+                    patch.object(hook, "_get_input_context", side_effect=lambda *args: context[0]),
+                    patch.object(hook, "_should_monitor", side_effect=lambda: foreground[0] == 42),
+                    patch.object(windows, "get_window_identity", return_value=windows.WindowIdentity(100, 1, os.getpid())),
+                    patch.object(windows, "matches_window_identity", return_value=True),
+                    patch.object(windows, "activate_window_identity", side_effect=activate),
+                    patch.object(hotstrings.user32, "CallNextHookEx", return_value=0),
+                    patch.object(keyboard_input, "send_hotstring_replacement") as replace,
+                    patch.object(keyboard_input, "send_boundary") as replay,
+                ):
+                    controller._expand(
+                        TARGET, Snippet("Greeting", "Hello {{input:Name}}", 1, hotstring=";hi"),
+                        32, checkpoint,
+                    )
+                if outcome == "success":
+                    self.assertEqual(session.prepare.call_args.args[0].plain_text, "Hello Ada")
+                    replace.assert_called_once_with(3, 32)
+                    schedule_restore.assert_called_once_with(session.prepare.return_value)
+                else:
+                    replace.assert_not_called()
+                    schedule_restore.assert_not_called()
+                if outcome == "cancel":
+                    replay.assert_called_once_with(32)
+                    session.prepare.assert_not_called()
+                else:
+                    replay.assert_not_called()
+                if outcome == "changed_focus":
+                    session.prepare.return_value.restore_clipboard.assert_called_once_with()
+                elif outcome == "external_input":
+                    session.prepare.assert_not_called()
 
 
 class NativeQueuedInputTestCase(unittest.TestCase):

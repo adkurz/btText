@@ -55,6 +55,8 @@ class MainFrame(sc.SizedFrame):
         self._active_database_file = Path(settings.database_file).resolve()
         database_name = self._active_database_file.name
         super().__init__(None, title=f"{app_name} – {database_name}")
+        self._process_integrations_stopped = False
+        self.Bind(wx.EVT_WINDOW_DESTROY, self._on_destroy)
         self._ee = ee
         self._model = model
         self._settings_store = settings_store
@@ -269,6 +271,8 @@ class MainFrame(sc.SizedFrame):
 
     def _start_process_integrations(self) -> None:
         """Activate configured hotkeys and hotstring monitoring."""
+        if self._process_integrations_stopped:
+            return
         self._settings_controller.register_initial_hotkey()
         self._settings_controller.start_initial_hotstrings()
 
@@ -688,14 +692,42 @@ class MainFrame(sc.SizedFrame):
     def on_close(self, event: wx.CloseEvent):
         """Hide user closes, but clean up for explicit or system shutdown."""
         if self.allow_close or not event.CanVeto():
-            self._hotkey_layout_timer.Stop()
-            self._update_shutdown_timer.Stop()
-            self._update_shutdown_signal.close()
-            self._settings_controller.unregister_hotkey()
-            self._hotstring_controller.stop()
-            self.tray_icon.RemoveIcon()
-            self.tray_icon.Destroy()
+            self._stop_process_integrations()
             event.Skip()
         else:
             self.Hide()
             event.Veto()
+
+    def _stop_process_integrations(self) -> None:
+        """Release native resources once, including after partial creation."""
+        if getattr(self, "_process_integrations_stopped", False):
+            return
+        self._process_integrations_stopped = True
+        for name in ("_hotkey_layout_timer", "_update_shutdown_timer"):
+            timer = getattr(self, name, None)
+            if timer is not None:
+                timer.Stop()
+        signal = getattr(self, "_update_shutdown_signal", None)
+        if signal is not None:
+            signal.close()
+        settings_controller = getattr(self, "_settings_controller", None)
+        if settings_controller is not None:
+            settings_controller.unregister_hotkey()
+        hotstring_controller = getattr(self, "_hotstring_controller", None)
+        if hotstring_controller is not None:
+            hotstring_controller.stop()
+        tray_icon = getattr(self, "tray_icon", None)
+        if tray_icon is not None:
+            tray_icon.RemoveIcon()
+            tray_icon.Destroy()
+
+    def _on_destroy(self, event: wx.WindowDestroyEvent) -> None:
+        """Also handle native destruction that bypasses Close and Destroy."""
+        if event.GetEventObject() is self:
+            self._stop_process_integrations()
+        event.Skip()
+
+    def Destroy(self):
+        """Stop timers before their native window owner can disappear."""
+        self._stop_process_integrations()
+        return super().Destroy()
