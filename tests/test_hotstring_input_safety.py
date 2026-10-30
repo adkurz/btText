@@ -457,6 +457,92 @@ class QueuedControllerTestCase(unittest.TestCase):
 
 
 class InteractiveCheckpointTestCase(unittest.TestCase):
+    def test_prompt_completion_requires_a_surviving_known_field_but_not_focus_reporting(self):
+        for initial_focus, child_survives in ((43, False), (43, True), (None, False), (42, False)):
+            for cancelled in (False, True):
+                with self.subTest(
+                    initial_focus=initial_focus,
+                    child_survives=child_survives,
+                    cancelled=cancelled,
+                ):
+                    foreground = [42]
+                    context = [(42, initial_focus, 44)]
+                    checkpoint = hotstrings.InputCheckpoint(context[0])
+                    session = Mock()
+                    schedule_restore = Mock()
+
+                    def request_inputs(labels):
+                        # The target stops reporting its current field while
+                        # our prompt owns focus. This alone must not block it.
+                        foreground[0] = 500
+                        context[0] = (42, None, 44)
+                        return None if cancelled else {"Name": "Ada"}
+
+                    def activate(handle):
+                        foreground[0] = handle
+                        return True
+
+                    resolver = SnippetVariableResolver(
+                        create_builtin_variable_engine(), request_inputs=request_inputs,
+                    )
+                    controller = HotstringController(
+                        Mock(), EventEmitter(), Mock(), lambda: AppSettings(),
+                        schedule_restore, Mock(), resolver.render, clipboard_session=session,
+                    )
+                    hook = controller._hook
+                    hook._pending_checkpoint = checkpoint
+                    with (
+                        patch.object(hook, "_get_foreground_window", side_effect=lambda: foreground[0]),
+                        patch.object(hook, "_get_input_context", side_effect=lambda *args: context[0]),
+                        patch.object(windows, "matches_window_identity", return_value=True),
+                        patch.object(windows, "activate_window", side_effect=activate),
+                        patch.object(windows, "get_foreground_window", side_effect=lambda: foreground[0]),
+                        patch.object(windows.user32, "IsChild", return_value=child_survives),
+                        patch.object(windows.user32, "GetWindowThreadProcessId", return_value=7),
+                        patch.object(windows.kernel32, "GetCurrentThreadId", return_value=7),
+                        patch.object(windows.user32, "SetFocus") as set_focus,
+                        patch.object(windows.user32, "GetFocus", return_value=initial_focus),
+                        patch.object(keyboard_input, "send_hotstring_replacement") as replace,
+                        patch.object(keyboard_input, "send_boundary") as replay,
+                        patch.object(controller, "_show_hotstring_error") as show_error,
+                    ):
+                        # Exercise the real activation helper, not a mocked
+                        # success that could hide its missing-field fallback.
+                        controller._expand(
+                            TARGET, Snippet("Greeting", "Hello {{input:Name}}", 1, hotstring=";hi"),
+                            32, checkpoint,
+                        )
+                    self.assertFalse(checkpoint.interactive.is_set())
+                    if initial_focus == 43 and not child_survives:
+                        replace.assert_not_called()
+                        replay.assert_not_called()
+                        set_focus.assert_not_called()
+                        show_error.assert_called_once()
+                        self.assertEqual(
+                            show_error.call_args.args[0].code,
+                            "hotstring_target_window_activation_failed",
+                        )
+                        if not cancelled:
+                            session.prepare.return_value.restore_clipboard.assert_called_once_with()
+                        schedule_restore.assert_not_called()
+                    else:
+                        show_error.assert_not_called()
+                        if initial_focus is None:
+                            set_focus.assert_not_called()
+                        else:
+                            set_focus.assert_called_once_with(initial_focus)
+                        if cancelled:
+                            replay.assert_called_once_with(32)
+                        else:
+                            replace.assert_called_once_with(3, 32)
+                            self.assertEqual(session.prepare.call_args.args[0].plain_text, "Hello Ada")
+                            schedule_restore.assert_called_once_with(session.prepare.return_value)
+                    if cancelled:
+                        session.prepare.assert_not_called()
+                        replace.assert_not_called()
+                    else:
+                        replay.assert_not_called()
+
     def test_confirmed_prompt_rejects_missing_reused_or_inactive_target(self):
         for outcome in ("closed", "reused", "activation_failed", "foreground_stolen"):
             with self.subTest(outcome=outcome):

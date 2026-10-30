@@ -144,11 +144,18 @@ def activate_window_identity(
     *,
     focus_window: int | None = None,
 ) -> bool:
-    """Activate the captured window and, if available, its original input field."""
+    """Activate the captured window, requiring any known input field to survive."""
     if not matches_window_identity(identity) or not activate_window(identity.handle):
         return False
-    if not focus_window or not user32.IsChild(identity.handle, focus_window):
+    if not focus_window:
+        # Some applications never expose a focused HWND. Keep their ordinary
+        # window-activation path without confusing absent evidence with a lost
+        # input field that was known when the hotstring was typed.
         return True
+    if focus_window != identity.handle and not user32.IsChild(
+        identity.handle, focus_window,
+    ):
+        return False
     target_thread = user32.GetWindowThreadProcessId(focus_window, None)
     current_thread = kernel32.GetCurrentThreadId()
     attach = target_thread != current_thread
@@ -161,7 +168,10 @@ def activate_window_identity(
         # and parentage before touching a child that may have been destroyed.
         if (
             not matches_window_identity(identity)
-            or not user32.IsChild(identity.handle, focus_window)
+            or (
+                focus_window != identity.handle
+                and not user32.IsChild(identity.handle, focus_window)
+            )
         ):
             return False
         user32.SetFocus(focus_window)

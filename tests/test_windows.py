@@ -149,16 +149,68 @@ class NativeWindowTestCase(unittest.TestCase):
         focus.assert_called_once_with(124)
         self.assertEqual([call.args for call in attach.call_args_list], [(999, 789, True), (999, 789, False)])
 
-    def test_activation_uses_existing_target_when_original_child_is_gone(self):
+    def test_activation_rejects_a_missing_or_reparented_original_child(self):
         identity = windows.WindowIdentity(123, 789, 456)
         with (
             patch.object(windows, "matches_window_identity", return_value=True),
             patch.object(windows, "activate_window", return_value=True),
             patch.object(windows.user32, "IsChild", return_value=False),
+            patch.object(windows.user32, "AttachThreadInput") as attach,
             patch.object(windows.user32, "SetFocus") as focus,
         ):
-            self.assertTrue(windows.activate_window_identity(identity, focus_window=124))
+            self.assertFalse(windows.activate_window_identity(identity, focus_window=124))
+        attach.assert_not_called()
         focus.assert_not_called()
+
+    def test_activation_without_a_captured_focus_handle_requires_no_child_focus(self):
+        identity = windows.WindowIdentity(123, 789, 456)
+        for focus_window in (None, 0):
+            with (
+                self.subTest(focus_window=focus_window),
+                patch.object(windows, "matches_window_identity", return_value=True),
+                patch.object(windows, "activate_window", return_value=True),
+                patch.object(windows.user32, "IsChild") as is_child,
+                patch.object(windows.user32, "GetFocus") as get_focus,
+                patch.object(windows.user32, "SetFocus") as set_focus,
+            ):
+                self.assertTrue(windows.activate_window_identity(
+                    identity, focus_window=focus_window,
+                ))
+            is_child.assert_not_called()
+            get_focus.assert_not_called()
+            set_focus.assert_not_called()
+
+    def test_original_focus_can_be_the_top_level_window_itself(self):
+        identity = windows.WindowIdentity(123, 789, 456)
+        with (
+            patch.object(windows, "matches_window_identity", return_value=True),
+            patch.object(windows, "activate_window", return_value=True),
+            patch.object(windows, "get_foreground_window", return_value=123),
+            patch.object(windows.user32, "IsChild", return_value=False) as is_child,
+            patch.object(windows.user32, "GetWindowThreadProcessId", return_value=789),
+            patch.object(windows.kernel32, "GetCurrentThreadId", return_value=999),
+            patch.object(windows.user32, "AttachThreadInput", return_value=True),
+            patch.object(windows.user32, "SetFocus") as focus,
+            patch.object(windows.user32, "GetFocus", return_value=123),
+        ):
+            self.assertTrue(windows.activate_window_identity(identity, focus_window=123))
+        is_child.assert_not_called()
+        focus.assert_called_once_with(123)
+
+    def test_child_disappearing_during_thread_attachment_is_rejected(self):
+        identity = windows.WindowIdentity(123, 789, 456)
+        with (
+            patch.object(windows, "matches_window_identity", return_value=True),
+            patch.object(windows, "activate_window", return_value=True),
+            patch.object(windows.user32, "IsChild", side_effect=[True, False]),
+            patch.object(windows.user32, "GetWindowThreadProcessId", return_value=789),
+            patch.object(windows.kernel32, "GetCurrentThreadId", return_value=999),
+            patch.object(windows.user32, "AttachThreadInput", return_value=True) as attach,
+            patch.object(windows.user32, "SetFocus") as focus,
+        ):
+            self.assertFalse(windows.activate_window_identity(identity, focus_window=124))
+        focus.assert_not_called()
+        attach.assert_called_with(999, 789, False)
 
     def test_child_focus_restoration_fails_without_thread_access(self):
         identity = windows.WindowIdentity(123, 789, 456)
