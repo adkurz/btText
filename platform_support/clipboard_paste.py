@@ -137,13 +137,12 @@ def _replace_clipboard(
                     raise ClipboardError("The clipboard could not be restored.")
                 return current_sequence == failed_sequence
 
-            try:
-                restore_after_failure(
-                    lambda: snapshot.restore(is_owner=owns_failed_replacement),
-                    operation_error,
-                )
-            finally:
-                snapshot.close()
+            # The marker may not have been written. Retain the failed write's
+            # sequence check for delayed retries as well as immediate recovery.
+            pending = PendingPaste(snapshot, marker, is_owner=owns_failed_replacement)
+            restore_after_failure(
+                pending.restore_clipboard, operation_error, pending_paste=pending,
+            )
             raise
 
 
@@ -154,10 +153,13 @@ class PendingPaste:
         self,
         snapshot: ClipboardSnapshot,
         marker: bytes,
+        *,
+        is_owner: Callable[[], bool] | None = None,
     ):
-        """Retain the snapshot and its unambiguous ownership marker."""
+        """Retain a snapshot and optional ownership check for failed writes."""
         self._snapshot = snapshot
         self._marker = marker
+        self._is_owner = is_owner
 
     @classmethod
     def prepare(cls, content: ClipboardContent | str) -> PendingPaste:
@@ -167,11 +169,14 @@ class PendingPaste:
 
     def restore_clipboard(self) -> None:
         """Restore every old format unless another app changed the clipboard."""
-        # The snapshot checks the private marker while holding the clipboard
-        # open through restoration. A missing or changed marker preserves even
-        # an identical new copy and releases the saved snapshot instead.
+        # Check the private marker (or a failed replacement's sequence) while
+        # holding the clipboard open through restoration. New external copies
+        # discard the snapshot without being overwritten.
         self._snapshot.restore(
-            is_owner=lambda: _read_clipboard_bytes(_MARKER_FORMAT) == self._marker,
+            is_owner=(
+                self._is_owner if self._is_owner is not None
+                else lambda: _read_clipboard_bytes(_MARKER_FORMAT) == self._marker
+            ),
         )
 
     def discard_snapshot(self) -> None:
@@ -193,7 +198,13 @@ class ClipboardPasteSession:
             # existing delayed restore can retry without losing the original.
             self._pending.restore_clipboard()
             self._pending = None
-        pending = PendingPaste.prepare(content)
+        try:
+            pending = PendingPaste.prepare(content)
+        except ClipboardRestoreError as error:
+            # A failed preparation can leave a partial clipboard item. Finish
+            # its recovery before any later paste captures another baseline.
+            self._pending = error.pending_paste
+            raise
         self._pending = pending
         # Old timers may still run, but their successfully restored or discarded
         # snapshots are closed and cannot change this new clipboard item.

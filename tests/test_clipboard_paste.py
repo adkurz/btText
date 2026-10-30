@@ -611,7 +611,9 @@ class PasteTextTestCase(unittest.TestCase):
         self.assertIs(raised.exception.operation_error, operation_error)
         self.assertIs(raised.exception.restore_error, restore_error)
         self.assertIs(raised.exception.__cause__, operation_error)
-        self.assertIsNone(raised.exception.pending_paste)
+        self.assertIsInstance(raised.exception.pending_paste, PendingPaste)
+        self.assertIs(raised.exception.pending_paste._snapshot, snapshot)
+        snapshot.close.assert_not_called()
 
 
 class ClipboardReplacementCaptureTestCase(unittest.TestCase):
@@ -884,6 +886,30 @@ class ClipboardReplacementFailureTestCase(unittest.TestCase):
             self.assertEqual(state["empties"], 1)
             self.assertTrue(snapshot._closed)
 
+    def test_failed_write_keeps_all_formats_for_retry_after_recovery_access_failure(self):
+        for format_id in (
+            clipboard._CLIPBOARD_HISTORY_FORMAT,
+            clipboard._CLOUD_CLIPBOARD_FORMAT,
+            clipboard.CF_UNICODETEXT,
+            clipboard._HTML_FORMAT,
+            clipboard._RTF_FORMAT,
+            clipboard_paste._MARKER_FORMAT,
+        ):
+            with self.subTest(format_id=format_id):
+                with self._replacement_scenario(format_id) as scenario:
+                    snapshot, state, original, _external = scenario
+                    with patch.object(snapshot, "restore", side_effect=clipboard.ClipboardError("clipboard busy")):
+                        with self.assertRaises(ClipboardRestoreError) as raised:
+                            self._replace()
+                    pending = raised.exception.pending_paste
+                    self.assertIsInstance(pending, PendingPaste)
+                    self.assertFalse(snapshot._closed)
+                    self.assertEqual(state["empties"], 1)
+                    pending.restore_clipboard()
+                    self.assertEqual(state["formats"], original)
+                    self.assertTrue(snapshot._closed)
+                    self.assertFalse(state["locked"])
+
     def test_failed_write_checks_version_after_reopening_for_restore(self):
         with self._replacement_scenario(clipboard._HTML_FORMAT, change_on_recovery=True) as scenario:
             snapshot, state, _original, external = scenario
@@ -904,7 +930,13 @@ class ClipboardReplacementFailureTestCase(unittest.TestCase):
             self.assertEqual(str(raised.exception.restore_error), "The clipboard could not be restored.")
             self.assertEqual(state["empties"], 1)
             self.assertIn(clipboard.CF_UNICODETEXT, state["formats"])
-            self.assertTrue(snapshot._closed)
+            self.assertFalse(snapshot._closed)
+            pending = raised.exception.pending_paste
+            self.assertIsInstance(pending, PendingPaste)
+            with self.assertRaisesRegex(clipboard.ClipboardError, "could not be restored"):
+                pending.restore_clipboard()
+            self.assertEqual(state["empties"], 1)
+            self.assertFalse(snapshot._closed)
 
 
 if __name__ == "__main__":

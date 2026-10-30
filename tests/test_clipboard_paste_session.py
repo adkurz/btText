@@ -192,7 +192,7 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
         self.assertEqual(self.formats, self.original)
 
     def _failed_controller_paste(self, kind, *, operation="activation", recovery="open"):
-        """Inject failure after preparation and retain actual scheduled callbacks."""
+        """Inject paste/recovery failures and retain actual scheduled callbacks."""
         timers = []
         errors = Mock()
         paste_controller = PasteController.__new__(PasteController)
@@ -205,11 +205,24 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
             self.fail_next_write = recovery == "write"
             if operation == "activation":
                 return False
+            if operation == "preparation":
+                raise clipboard.ClipboardError("clipboard write failed")
             raise clipboard.ClipboardError("keyboard input failed")
+
+        def fail_preparation(content):
+            # Leave actual partial content without the private ownership marker.
+            clipboard_paste._set_clipboard_data(
+                clipboard.CF_UNICODETEXT,
+                (content.plain_text + "\0").encode("utf-16-le"),
+            )
+            fail_operation()
 
         with (
             patch("ui.paste_controller.wx.CallLater", side_effect=lambda delay, callback, *args:
                   timers.append((delay, callback, args))),
+            patch.object(clipboard_paste, "_set_clipboard_content",
+                         side_effect=fail_preparation if operation == "preparation"
+                         else clipboard_paste._set_clipboard_content),
             patch.object(clipboard_paste.windows, "activate_window_identity",
                          side_effect=fail_operation if operation == "activation" else None,
                          return_value=True),
@@ -238,7 +251,7 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
 
     def test_failed_recovery_automatically_restores_original_formats(self):
         for kind in ("manual", "hotstring"):
-            for operation in ("activation", "input"):
+            for operation in ("preparation", "activation", "input"):
                 for recovery in ("open", "write"):
                     with self.subTest(kind=kind, operation=operation, recovery=recovery):
                         timers, _errors = self._failed_controller_paste(
@@ -256,42 +269,73 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
 
     def test_failed_recovery_preserves_new_external_copy_on_retry(self):
         for kind in ("manual", "hotstring"):
+            for operation in ("preparation", "activation"):
+                for recovery in ("open", "write"):
+                    with self.subTest(kind=kind, operation=operation, recovery=recovery):
+                        timers, _errors = self._failed_controller_paste(
+                            kind, operation=operation, recovery=recovery,
+                        )
+                        self.assertEqual(len(timers), 1)
+                        external = {
+                            clipboard.CF_UNICODETEXT: "snippet\0".encode("utf-16-le"),
+                            clipboard._HTML_FORMAT: b"new user HTML\0",
+                        }
+                        self.formats = dict(external)
+                        self.sequence += 1
+                        _delay, callback, arguments = timers.pop()
+                        callback(*arguments)
+                        self.assertEqual(self.formats, external)
+                        self.assertTrue(arguments[0]._snapshot._closed)
+                        self.formats = dict(self.original)
+
+    def test_failed_preparation_is_restored_before_capturing_the_next_paste(self):
+        for kind in ("manual", "hotstring"):
             with self.subTest(kind=kind):
-                timers, _errors = self._failed_controller_paste(kind)
+                timers, _errors = self._failed_controller_paste(
+                    kind, operation="preparation",
+                )
                 self.assertEqual(len(timers), 1)
-                external = {
-                    clipboard.CF_UNICODETEXT: "snippet\0".encode("utf-16-le"),
-                    clipboard._HTML_FORMAT: b"new user HTML\0",
-                }
-                self.formats = dict(external)
-                self.sequence += 1
+                first = timers[0][2][0]
+                self.addCleanup(first.discard_snapshot)
+                self.fail_next_open = True
+                with patch.object(ClipboardSnapshot, "capture", wraps=ClipboardSnapshot.capture) as capture:
+                    with self.assertRaisesRegex(clipboard.ClipboardError, "clipboard busy"):
+                        self._paste("manual", "next snippet")
+                    capture.assert_not_called()
+                self.assertFalse(first._snapshot._closed)
+
+                latest = self._paste("manual", "next snippet")
+                expected = dict(self.formats)
                 _delay, callback, arguments = timers.pop()
                 callback(*arguments)
-                self.assertEqual(self.formats, external)
-                self.assertTrue(arguments[0]._snapshot._closed)
-                self.formats = dict(self.original)
+                self.assertEqual(self.formats, expected)
+                latest.restore_clipboard()
+                self.assertEqual(self.formats, self.original)
 
     def test_failed_recovery_stops_after_bounded_retries(self):
         for kind in ("manual", "hotstring"):
-            with self.subTest(kind=kind):
-                timers, errors = self._failed_controller_paste(kind, recovery="permanent_open")
-                self.assertEqual(len(timers), 1)
-                pending = timers[0][2][0]
-                attempts = []
-                delays = []
-                with patch("ui.paste_controller.wx.CallLater", side_effect=lambda delay, callback, *args:
-                           timers.append((delay, callback, args))):
-                    while timers:
-                        delay, callback, arguments = timers.pop(0)
-                        attempts.append(arguments[1])
-                        delays.append(delay)
-                        callback(*arguments)
-                self.assertEqual(attempts, [3, 2, 1])
-                self.assertEqual(delays, [500, 100, 100])
-                self.assertTrue(pending._snapshot._closed)
-                self.assertEqual(errors.call_count, 2)
-                self.fail_open = False
-                self.formats = dict(self.original)
+            for operation in ("preparation", "activation"):
+                with self.subTest(kind=kind, operation=operation):
+                    timers, errors = self._failed_controller_paste(
+                        kind, operation=operation, recovery="permanent_open",
+                    )
+                    self.assertEqual(len(timers), 1)
+                    pending = timers[0][2][0]
+                    attempts = []
+                    delays = []
+                    with patch("ui.paste_controller.wx.CallLater", side_effect=lambda delay, callback, *args:
+                               timers.append((delay, callback, args))):
+                        while timers:
+                            delay, callback, arguments = timers.pop(0)
+                            attempts.append(arguments[1])
+                            delays.append(delay)
+                            callback(*arguments)
+                    self.assertEqual(attempts, [3, 2, 1])
+                    self.assertEqual(delays, [500, 100, 100])
+                    self.assertTrue(pending._snapshot._closed)
+                    self.assertEqual(errors.call_count, 2)
+                    self.fail_open = False
+                    self.formats = dict(self.original)
 
     def test_failed_recovery_timer_cannot_overwrite_a_new_paste(self):
         for kind in ("manual", "hotstring"):
@@ -308,10 +352,13 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
 
     def test_successful_immediate_recovery_does_not_schedule_retry(self):
         for kind in ("manual", "hotstring"):
-            with self.subTest(kind=kind):
-                timers, _errors = self._failed_controller_paste(kind, recovery=None)
-                self.assertEqual(timers, [])
-                self.assertEqual(self.formats, self.original)
+            for operation in ("preparation", "activation"):
+                with self.subTest(kind=kind, operation=operation):
+                    timers, _errors = self._failed_controller_paste(
+                        kind, operation=operation, recovery=None,
+                    )
+                    self.assertEqual(timers, [])
+                    self.assertEqual(self.formats, self.original)
 
 
 if __name__ == "__main__":
