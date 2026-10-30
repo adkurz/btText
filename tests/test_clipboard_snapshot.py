@@ -1,3 +1,4 @@
+import ctypes
 import unittest
 from unittest.mock import ANY, Mock, call, patch
 
@@ -12,6 +13,27 @@ class ClipboardSnapshotTestCase(unittest.TestCase):
     def setUp(self):
         self.enterContext(patch.object(clipboard.user32, "CreateWindowExW", return_value=123))
         self.enterContext(patch.object(clipboard.user32, "DestroyWindow", return_value=True))
+
+    def test_metafile_picture_is_written_into_allocated_memory(self):
+        # A sentinel handle checks pointer width without publishing clipboard data.
+        metafile = 0x123456789ABC if ctypes.sizeof(ctypes.c_void_p) == 8 else 0x12345678
+        expected = (8, -120, 240, metafile)
+        handle = clipboard_snapshot._set_metafile_picture(expected)
+        try:
+            pointer = clipboard_snapshot.kernel32.GlobalLock(handle)
+            self.assertTrue(pointer)
+            try:
+                picture = ctypes.cast(
+                    pointer, ctypes.POINTER(clipboard_snapshot.METAFILEPICT),
+                ).contents
+                self.assertEqual(
+                    (picture.mm, picture.xExt, picture.yExt, picture.hMF),
+                    expected,
+                )
+            finally:
+                clipboard_snapshot.kernel32.GlobalUnlock(handle)
+        finally:
+            clipboard_snapshot.kernel32.GlobalFree(handle)
 
     def test_empty_clipboard_creates_empty_snapshot(self):
         with (

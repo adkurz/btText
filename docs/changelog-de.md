@@ -2,6 +2,8 @@
 
 ## [v1.3.2] 30.10.2026
 
+- Behoben: Metafile-Grafiken im vorherigen Zwischenablageinhalt werden nach dem Einfügen eines Textbausteins oder einer Hotstring-Erweiterung korrekt wiederhergestellt.
+
 - Behoben: Hotstrings mit Input-Variablen werden nach dem Bestätigen des Eingabedialogs wieder im ursprünglichen Zielfenster ausgeführt und ersetzen dort das eingegebene Kürzel. Das funktioniert ohne Zeitlimit für die Eingabe und ohne Fokusverwerfungen beim Wechsel von Fenstern. Das ursprüngliche Eingabefeld wird wieder fokussiert, sofern es noch vorhanden ist. Geschlossene oder wiederverwendete Zielfenster werden weiterhin abgewiesen.
 
 - Behoben: Hotstrings funktionieren auch in Anwendungen, deren Eingabefeldfokus Windows nicht bereitstellt. Die Identität des Zielfensters wird vor dem Einfügen weiterhin geprüft. Bei Hotstrings ohne Eingabedialog sichern außerdem der verfügbare Feldfokus und zwischenzeitliche Tastatur- und Mausaktionen die Ersetzung ab.

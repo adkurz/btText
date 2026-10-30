@@ -409,7 +409,8 @@ def _set_metafile_picture(value: tuple[int, int, int, int]) -> wintypes.HGLOBAL:
         kernel32.GlobalFree(handle)
         raise ClipboardError("The clipboard memory could not be accessed.")
     try:
-        ctypes.cast(pointer, ctypes.POINTER(METAFILEPICT)).contents = METAFILEPICT(
+        # Write into the locked block; assigning .contents only retargets a pointer.
+        ctypes.cast(pointer, ctypes.POINTER(METAFILEPICT))[0] = METAFILEPICT(
             *value
         )
     finally:
