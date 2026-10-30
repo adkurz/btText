@@ -132,6 +132,63 @@ class NativeWindowTestCase(unittest.TestCase):
 
         activate.assert_not_called()
 
+    def test_activation_restores_original_child_focus_across_threads(self):
+        identity = windows.WindowIdentity(123, 789, 456)
+        with (
+            patch.object(windows, "matches_window_identity", return_value=True),
+            patch.object(windows, "activate_window", return_value=True),
+            patch.object(windows, "get_foreground_window", return_value=123),
+            patch.object(windows.user32, "IsChild", return_value=True),
+            patch.object(windows.user32, "GetWindowThreadProcessId", return_value=789),
+            patch.object(windows.kernel32, "GetCurrentThreadId", return_value=999),
+            patch.object(windows.user32, "AttachThreadInput", return_value=True) as attach,
+            patch.object(windows.user32, "SetFocus") as focus,
+            patch.object(windows.user32, "GetFocus", return_value=124),
+        ):
+            self.assertTrue(windows.activate_window_identity(identity, focus_window=124))
+        focus.assert_called_once_with(124)
+        self.assertEqual([call.args for call in attach.call_args_list], [(999, 789, True), (999, 789, False)])
+
+    def test_activation_uses_existing_target_when_original_child_is_gone(self):
+        identity = windows.WindowIdentity(123, 789, 456)
+        with (
+            patch.object(windows, "matches_window_identity", return_value=True),
+            patch.object(windows, "activate_window", return_value=True),
+            patch.object(windows.user32, "IsChild", return_value=False),
+            patch.object(windows.user32, "SetFocus") as focus,
+        ):
+            self.assertTrue(windows.activate_window_identity(identity, focus_window=124))
+        focus.assert_not_called()
+
+    def test_child_focus_restoration_fails_without_thread_access(self):
+        identity = windows.WindowIdentity(123, 789, 456)
+        with (
+            patch.object(windows, "matches_window_identity", return_value=True),
+            patch.object(windows, "activate_window", return_value=True),
+            patch.object(windows.user32, "IsChild", return_value=True),
+            patch.object(windows.user32, "GetWindowThreadProcessId", return_value=789),
+            patch.object(windows.kernel32, "GetCurrentThreadId", return_value=999),
+            patch.object(windows.user32, "AttachThreadInput", return_value=False),
+            patch.object(windows.user32, "SetFocus") as focus,
+        ):
+            self.assertFalse(windows.activate_window_identity(identity, focus_window=124))
+        focus.assert_not_called()
+
+    def test_child_focus_is_not_restored_to_reused_target_after_activation(self):
+        identity = windows.WindowIdentity(123, 789, 456)
+        with (
+            patch.object(windows, "matches_window_identity", side_effect=[True, False]),
+            patch.object(windows, "activate_window", return_value=True),
+            patch.object(windows.user32, "IsChild", return_value=True),
+            patch.object(windows.user32, "GetWindowThreadProcessId", return_value=789),
+            patch.object(windows.kernel32, "GetCurrentThreadId", return_value=999),
+            patch.object(windows.user32, "AttachThreadInput", return_value=True) as attach,
+            patch.object(windows.user32, "SetFocus") as focus,
+        ):
+            self.assertFalse(windows.activate_window_identity(identity, focus_window=124))
+        focus.assert_not_called()
+        attach.assert_called_with(999, 789, False)
+
     def test_own_process_window_is_not_external(self):
         def set_process_id(_handle, process_id_pointer):
             process_id = ctypes.cast(

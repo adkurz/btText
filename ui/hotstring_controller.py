@@ -13,7 +13,6 @@ from core.events import EventEmitter
 from core.hotstrings import HotstringExpansionCancelled, HotstringExpansionError
 from core.rich_text import render_clipboard_content
 from core.variables import (
-    RenderedSnippet,
     VariableError,
     VariableRenderingCancelled,
 )
@@ -31,7 +30,7 @@ from platform_support.clipboard_paste import (
     ClipboardRestoreError,
     PendingPaste,
 )
-from ui.variable_resolver import show_variable_error
+from ui.variable_resolver import SnippetRenderer, show_variable_error
 
 
 HOTSTRING_SOUND_FILENAME = "hotstring.wav"
@@ -48,7 +47,7 @@ class HotstringController:
         get_settings: Callable[[], AppSettings],
         schedule_clipboard_restore: Callable[[PendingPaste], None],
         notify_expansion: Callable[[datamodel.Snippet], None],
-        render_snippet: Callable[[str, int | None, bool], RenderedSnippet],
+        render_snippet: SnippetRenderer,
         *,
         clipboard_session: ClipboardPasteSession | None = None,
     ):
@@ -157,6 +156,17 @@ class HotstringController:
         checkpoint: hotstrings.InputCheckpoint,
     ) -> None:
         """Replace a recognized hotstring through the clipboard paste path."""
+        with self._hook.expansion(checkpoint):
+            self._expand_in_session(target, snippet, boundary_key, checkpoint)
+
+    def _expand_in_session(
+        self,
+        target: windows.WindowIdentity,
+        snippet: datamodel.Snippet,
+        boundary_key: keyboard_input.BoundaryInput,
+        checkpoint: hotstrings.InputCheckpoint,
+    ) -> None:
+        """Keep prompt ownership through rendering, activation and insertion."""
         if not self._hook.is_current(checkpoint):
             return
         settings = self._get_settings()
@@ -165,17 +175,23 @@ class HotstringController:
         is_current = partial(
             self._hook.is_current, checkpoint, allow_own_foreground=True,
         )
+        is_target_current = partial(self._hook.is_current, checkpoint)
         try:
             rendered = self._render_snippet(
                 snippet.content,
                 target.handle,
                 snippet.markdown_enabled,
+                on_input_requested=partial(self._hook.begin_input, checkpoint),
             )
         except VariableRenderingCancelled:
-            self._replay_suppressed_boundary(target, boundary_key, is_current)
+            self._replay_suppressed_boundary(
+                target, boundary_key, checkpoint, is_current, is_target_current,
+            )
             return
         except VariableError as error:
-            self._replay_suppressed_boundary(target, boundary_key, is_current)
+            self._replay_suppressed_boundary(
+                target, boundary_key, checkpoint, is_current, is_target_current,
+            )
             show_variable_error(self._parent, error)
             return
         pending = None
@@ -188,8 +204,12 @@ class HotstringController:
                 boundary_key if settings.preserve_hotstring_boundary else None,
                 session=self._clipboard_session,
                 is_current=is_current,
+                is_target_current=is_target_current,
+                target_focus=(
+                    checkpoint.context[1] if checkpoint.interactive.is_set() else None
+                ),
             )
-            if content.cursor_offset_from_end is not None and is_current():
+            if content.cursor_offset_from_end is not None and is_target_current():
                 boundary_offset = int(
                     settings.preserve_hotstring_boundary
                     and boundary_key is not None
@@ -216,7 +236,9 @@ class HotstringController:
         self,
         target: windows.WindowIdentity,
         boundary_key: keyboard_input.BoundaryInput,
+        checkpoint: hotstrings.InputCheckpoint,
         is_current: Callable[[], bool],
+        is_target_current: Callable[[], bool],
     ) -> None:
         """Restore a boundary consumed before variable rendering completed."""
         try:
@@ -224,6 +246,10 @@ class HotstringController:
                 target,
                 boundary_key,
                 is_current=is_current,
+                is_target_current=is_target_current,
+                target_focus=(
+                    checkpoint.context[1] if checkpoint.interactive.is_set() else None
+                ),
             )
         except HotstringExpansionCancelled:
             return

@@ -116,6 +116,83 @@ class CheckpointTestCase(unittest.TestCase):
             self.dispatch(hotstrings.WM_KEYDOWN)
         self.assertFalse(self.checkpoint.cancelled.is_set())
 
+    def test_interactive_session_preserves_target_across_keyboard_activity(self):
+        for foreground in (100, 42, 200):
+            with self.subTest(foreground=foreground):
+                with (
+                    self.hook.expansion(self.checkpoint),
+                    patch.object(self.hook, "_get_foreground_window", return_value=foreground),
+                ):
+                    self.hook.begin_input(self.checkpoint)
+                    self.dispatch(hotstrings.WM_KEYDOWN)
+                    self.assertFalse(self.checkpoint.cancelled.is_set())
+                self.assertFalse(self.checkpoint.interactive.is_set())
+
+    def test_interactive_session_is_cleared_after_failure(self):
+        with self.assertRaises(RuntimeError):
+            with self.hook.expansion(self.checkpoint):
+                self.hook.begin_input(self.checkpoint)
+                raise RuntimeError("render failed")
+        self.assertFalse(self.checkpoint.interactive.is_set())
+        self.dispatch(hotstrings.WM_KEYDOWN)
+        self.assertTrue(self.checkpoint.cancelled.is_set())
+
+    def test_interactive_session_does_not_recognize_nested_hotstrings(self):
+        self.hook.update({"lookup": object()})
+        self.checkpoint.cancelled.clear()
+        with (
+            self.hook.expansion(self.checkpoint),
+            patch.object(self.hook._matcher, "character") as match,
+        ):
+            self.hook.begin_input(self.checkpoint)
+            for character in "lookup ":
+                self.dispatch(hotstrings.WM_KEYDOWN, ord(character.upper()))
+        match.assert_not_called()
+        self.hook._on_match.assert_not_called()
+        self.assertIs(self.hook._pending_checkpoint, self.checkpoint)
+        self.assertFalse(self.checkpoint.cancelled.is_set())
+
+    def test_foreground_changes_only_survive_for_interactive_sessions(self):
+        for interactive in (False, True):
+            with self.subTest(interactive=interactive):
+                self.checkpoint.cancelled.clear()
+                self.checkpoint.interactive.clear()
+                if interactive:
+                    self.hook.begin_input(self.checkpoint)
+                self.hook._observed_foreground_window = 42
+                with (
+                    patch.object(self.hook, "_get_foreground_window", return_value=100),
+                    patch.object(windows, "get_window_identity", return_value=windows.WindowIdentity(100, 1, os.getpid() + 1)),
+                    patch.object(self.hook, "_install_native_hook", return_value=1),
+                    patch.object(hotstrings.time, "monotonic", return_value=1),
+                    patch.object(hotstrings.user32, "UnhookWindowsHookEx", return_value=True),
+                ):
+                    self.hook._monitor_hook()
+                self.assertEqual(self.checkpoint.cancelled.is_set(), not interactive)
+
+    def test_interactive_session_survives_mouse_activity(self):
+        for handle in (100, 42, None):
+            for message in (0x0201, 0x020A):
+                with self.subTest(handle=handle, message=message):
+                    event = hotstrings.MSLLHOOKSTRUCT()
+                    with (
+                        self.hook.expansion(self.checkpoint),
+                        patch.object(hotstrings.user32, "WindowFromPoint", return_value=handle),
+                        patch.object(windows, "get_window_identity", return_value=None),
+                        patch.object(hotstrings.user32, "CallNextHookEx", return_value=37),
+                    ):
+                        self.hook.begin_input(self.checkpoint)
+                        self.assertEqual(self.hook._mouse_callback(0, message, ctypes.addressof(event)), 37)
+                    self.assertFalse(self.checkpoint.cancelled.is_set())
+
+    def test_interactive_session_does_not_bypass_model_refresh_or_stop(self):
+        for action in (lambda: self.hook.update({}), self.hook.stop):
+            self.checkpoint.cancelled.clear()
+            with self.hook.expansion(self.checkpoint):
+                self.hook.begin_input(self.checkpoint)
+                action()
+            self.assertTrue(self.checkpoint.cancelled.is_set())
+
     def test_focus_or_layout_change_is_permanent_invalidation(self):
         for changed in ((42, 99, 44), (42, 43, 99)):
             with self.subTest(changed=changed):
@@ -380,10 +457,128 @@ class QueuedControllerTestCase(unittest.TestCase):
 
 
 class InteractiveCheckpointTestCase(unittest.TestCase):
+    def test_confirmed_prompt_rejects_missing_reused_or_inactive_target(self):
+        for outcome in ("closed", "reused", "activation_failed", "foreground_stolen"):
+            with self.subTest(outcome=outcome):
+                foreground = [42]
+                checkpoint = hotstrings.InputCheckpoint(CONTEXT)
+                session = Mock()
+
+                def request_inputs(labels):
+                    foreground[0] = 500
+                    return {"Name": "Ada"}
+
+                def identity(handle):
+                    if outcome == "closed":
+                        return None
+                    if outcome == "reused":
+                        return windows.WindowIdentity(42, 8, 10)
+                    return TARGET
+
+                resolver = SnippetVariableResolver(
+                    create_builtin_variable_engine(), request_inputs=request_inputs,
+                )
+                controller = HotstringController(
+                    Mock(), EventEmitter(), Mock(), lambda: AppSettings(),
+                    Mock(), Mock(), resolver.render, clipboard_session=session,
+                )
+                controller._hook._pending_checkpoint = checkpoint
+                with (
+                    patch.object(controller._hook, "_get_foreground_window", side_effect=lambda: foreground[0]),
+                    patch.object(controller._hook, "_get_input_context", return_value=CONTEXT),
+                    patch.object(windows, "get_window_identity", side_effect=identity),
+                    patch.object(windows, "activate_window_identity", return_value=outcome == "foreground_stolen") as activate,
+                    patch.object(keyboard_input, "send_hotstring_replacement") as replace,
+                    patch.object(controller, "_show_hotstring_error") as show_error,
+                ):
+                    controller._expand(
+                        TARGET, Snippet("Greeting", "Hello {{input:Name}}", 1, hotstring=";hi"),
+                        32, checkpoint,
+                    )
+                self.assertFalse(checkpoint.interactive.is_set())
+                replace.assert_not_called()
+                if outcome in ("closed", "reused"):
+                    session.prepare.assert_not_called()
+                    activate.assert_not_called()
+                    self.assertEqual(show_error.call_args.args[0].code, "hotstring_target_window_missing")
+                else:
+                    session.prepare.return_value.restore_clipboard.assert_called_once_with()
+                    if outcome == "activation_failed":
+                        self.assertEqual(show_error.call_args.args[0].code, "hotstring_target_window_activation_failed")
+                    else:
+                        show_error.assert_not_called()
+
+    def test_confirmed_input_restores_target_after_minutes_and_new_foreground_windows(self):
+        foreground = [42]
+        elapsed = [0.0]
+        context = [CONTEXT]
+        session = Mock()
+        restored = Mock()
+        checkpoint = hotstrings.InputCheckpoint(CONTEXT)
+
+        def request_inputs(labels):
+            self.assertEqual(labels, ("Name",))
+            for window in (100, 200, 300, 42, 400, 100):
+                foreground[0] = window
+                elapsed[0] += 120
+                context[0] = (42, None, 99)
+                hook._monitor_hook()
+                event = hotstrings.KBDLLHOOKSTRUCT(ord("A"), 0, 0, 0, 0)
+                hook._hook_callback(0, hotstrings.WM_KEYDOWN, ctypes.addressof(event))
+                mouse = hotstrings.MSLLHOOKSTRUCT()
+                hook._mouse_callback(0, 0x0201, ctypes.addressof(mouse))
+            # Destroying the modal dialog may foreground another application's
+            # newly opened window rather than btText or the original target.
+            foreground[0] = 500
+            return {"Name": "Ada"}
+
+        def activate(target, **kwargs):
+            self.assertEqual(target, TARGET)
+            foreground[0] = 42
+            context[0] = (42, 99, 99)
+            return True
+
+        resolver = SnippetVariableResolver(
+            create_builtin_variable_engine(), request_inputs=request_inputs,
+        )
+        controller = HotstringController(
+            Mock(), EventEmitter(), Mock(), lambda: AppSettings(), restored,
+            Mock(), resolver.render, clipboard_session=session,
+        )
+        hook = controller._hook
+        hook._pending_checkpoint = checkpoint
+        hook._mouse_handle = 123
+        with (
+            patch.object(hook, "_get_foreground_window", side_effect=lambda: foreground[0]),
+            patch.object(hook, "_get_input_context", side_effect=lambda *args: context[0]),
+            patch.object(hook, "_should_monitor", side_effect=lambda: foreground[0] != 100),
+            patch.object(hotstrings.time, "monotonic", side_effect=lambda: elapsed[0]),
+            patch.object(hook, "_install_native_hook", return_value=1),
+            patch.object(hook, "_install_mouse_hook", return_value=2),
+            patch.object(hook, "_is_user_input_idle", return_value=True),
+            patch.object(hotstrings.user32, "UnhookWindowsHookEx", return_value=True),
+            patch.object(hotstrings.user32, "WindowFromPoint", side_effect=lambda point: foreground[0]),
+            patch.object(windows, "get_window_identity", side_effect=lambda handle: windows.WindowIdentity(handle, 1, os.getpid() if handle == 100 else os.getpid() + 1)),
+            patch.object(windows, "matches_window_identity", return_value=True),
+            patch.object(windows, "activate_window_identity", side_effect=activate) as activation,
+            patch.object(hotstrings.user32, "CallNextHookEx", return_value=0),
+            patch.object(keyboard_input, "send_hotstring_replacement") as replace,
+        ):
+            controller._expand(
+                TARGET, Snippet("Greeting", "Hello {{input:Name}}", 1, hotstring=";hi"),
+                32, checkpoint,
+            )
+        activation.assert_called_once_with(TARGET, focus_window=43)
+        replace.assert_called_once_with(3, 32)
+        self.assertEqual(session.prepare.call_args.args[0].plain_text, "Hello Ada")
+        restored.assert_called_once_with(session.prepare.return_value)
+
     def test_input_answers_survive_inactive_focus_but_reactivation_checks_target(self):
         cases = (
             (43, "success"), (43, "cancel"), (43, "changed_focus"), (43, "external_input"),
             (None, "success"), (None, "cancel"), (None, "external_input"),
+            (43, "lookup_success"), (43, "lookup_cancel"),
+            (None, "lookup_success"), (None, "lookup_cancel"),
         )
         for initial_focus, outcome in cases:
             with self.subTest(initial_focus=initial_focus, outcome=outcome):
@@ -404,11 +599,21 @@ class InteractiveCheckpointTestCase(unittest.TestCase):
                     controller._hook._hook_callback(
                         0, hotstrings.WM_KEYDOWN, ctypes.addressof(event),
                     )
+                    if outcome.startswith("lookup_"):
+                        foreground[0] = 200
+                        mouse = hotstrings.MSLLHOOKSTRUCT()
+                        controller._hook._mouse_callback(0, 0x0201, ctypes.addressof(mouse))
+                        controller._hook._monitor_hook()
+                        controller._hook._hook_callback(
+                            0, hotstrings.WM_KEYDOWN, ctypes.addressof(event),
+                        )
+                        self.assertFalse(checkpoint.cancelled.is_set())
+                        foreground[0] = 100
                     if outcome == "external_input":
                         checkpoint.cancelled.set()
-                    return None if outcome == "cancel" else {"Name": "Ada"}
+                    return None if outcome in ("cancel", "lookup_cancel") else {"Name": "Ada"}
 
-                def activate(target):
+                def activate(target, **kwargs):
                     self.assertEqual(target, TARGET)
                     foreground[0] = 42
                     context[0] = (42, 99, 44) if outcome == "changed_focus" else initial_context
@@ -426,8 +631,11 @@ class InteractiveCheckpointTestCase(unittest.TestCase):
                 with (
                     patch.object(hook, "_get_foreground_window", side_effect=lambda: foreground[0]),
                     patch.object(hook, "_get_input_context", side_effect=lambda *args: context[0]),
-                    patch.object(hook, "_should_monitor", side_effect=lambda: foreground[0] == 42),
-                    patch.object(windows, "get_window_identity", return_value=windows.WindowIdentity(100, 1, os.getpid())),
+                    patch.object(hook, "_should_monitor", side_effect=lambda: foreground[0] != 100),
+                    patch.object(windows, "get_window_identity", side_effect=lambda handle: windows.WindowIdentity(handle, 1, os.getpid() if handle == 100 else os.getpid() + 1)),
+                    patch.object(hotstrings.user32, "WindowFromPoint", return_value=200),
+                    patch.object(hook, "_install_native_hook", return_value=1),
+                    patch.object(hotstrings.user32, "UnhookWindowsHookEx", return_value=True),
                     patch.object(windows, "matches_window_identity", return_value=True),
                     patch.object(windows, "activate_window_identity", side_effect=activate),
                     patch.object(hotstrings.user32, "CallNextHookEx", return_value=0),
@@ -438,21 +646,20 @@ class InteractiveCheckpointTestCase(unittest.TestCase):
                         TARGET, Snippet("Greeting", "Hello {{input:Name}}", 1, hotstring=";hi"),
                         32, checkpoint,
                     )
-                if outcome == "success":
+                self.assertFalse(checkpoint.interactive.is_set())
+                if outcome in ("success", "lookup_success", "changed_focus"):
                     self.assertEqual(session.prepare.call_args.args[0].plain_text, "Hello Ada")
                     replace.assert_called_once_with(3, 32)
                     schedule_restore.assert_called_once_with(session.prepare.return_value)
                 else:
                     replace.assert_not_called()
                     schedule_restore.assert_not_called()
-                if outcome == "cancel":
+                if outcome in ("cancel", "lookup_cancel"):
                     replay.assert_called_once_with(32)
                     session.prepare.assert_not_called()
                 else:
                     replay.assert_not_called()
-                if outcome == "changed_focus":
-                    session.prepare.return_value.restore_clipboard.assert_called_once_with()
-                elif outcome == "external_input":
+                if outcome == "external_input":
                     session.prepare.assert_not_called()
 
 

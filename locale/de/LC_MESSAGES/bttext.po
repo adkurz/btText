@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.0\n"
 "Report-Msgid-Bugs-To: adkurz@bltech.de\n"
-"POT-Creation-Date: 2026-10-30 13:48+0100\n"
+"POT-Creation-Date: 2026-10-30 18:12+0100\n"
 "PO-Revision-Date: 2026-07-24 15:38+0200\n"
 "Last-Translator: Adrian Kurz <adkurz@bltech.de>\n"
 "Language: de\n"
@@ -808,7 +808,7 @@ msgstr "Die ausgewählte Datei ist bereits vorhanden. Wählen Sie einen anderen 
 
 #. Translators: Title for a failure to monitor or expand a
 #. globally typed snippet hotstring.
-#: ui/hotstring_controller.py:89 ui/hotstring_controller.py:239
+#: ui/hotstring_controller.py:88 ui/hotstring_controller.py:265
 msgid "Hotstring error"
 msgstr "Hotstring-Fehler"
 
@@ -1813,7 +1813,7 @@ msgstr "Aufgelöster Textbausteintext"
 
 #. Translators: Title for a variable error that prevents a snippet from
 #. being inserted manually or expanded through a hotstring.
-#: ui/variable_resolver.py:135
+#: ui/variable_resolver.py:154
 msgid "Variable error"
 msgstr "Variablenfehler"
 

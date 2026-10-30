@@ -15,7 +15,7 @@ from platform_support import hotstrings, windows
 from ui.hotstring_controller import HotstringController
 
 
-def render_unchanged(text, target_window=None, markdown_enabled=False):
+def render_unchanged(text, target_window=None, markdown_enabled=False, *, on_input_requested=None):
     return RenderedSnippet(text)
 
 
@@ -211,7 +211,7 @@ class HotstringControllerTestCase(unittest.TestCase):
         expand_hotstring.assert_called_once_with(
             TARGET, ClipboardContent("Hello"), 5, 32,
             session=controller._clipboard_session,
-            is_current=ANY,
+            is_current=ANY, is_target_current=ANY, target_focus=None,
         )
         schedule_restore.assert_called_once_with(pending)
         notify.assert_called_once_with(snippet)
@@ -281,6 +281,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             "Today is {{date:long}}.",
             42,
             False,
+            on_input_requested=ANY,
         )
         expand_hotstring.assert_called_once_with(
             TARGET,
@@ -288,7 +289,7 @@ class HotstringControllerTestCase(unittest.TestCase):
             5,
             32,
             session=controller._clipboard_session,
-            is_current=ANY,
+            is_current=ANY, is_target_current=ANY, target_focus=None,
         )
 
     @patch("ui.hotstring_controller.keyboard_input.move_cursor_left")
@@ -359,7 +360,7 @@ class HotstringControllerTestCase(unittest.TestCase):
         controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
         expand_hotstring.assert_not_called()
-        replay_boundary.assert_called_once_with(TARGET, 32, is_current=ANY)
+        replay_boundary.assert_called_once_with(TARGET, 32, is_current=ANY, is_target_current=ANY, target_focus=None)
         show_error.assert_called_once()
 
     @patch("ui.hotstring_controller.show_variable_error")
@@ -392,7 +393,7 @@ class HotstringControllerTestCase(unittest.TestCase):
         controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
         expand_hotstring.assert_not_called()
-        replay_boundary.assert_called_once_with(TARGET, 32, is_current=ANY)
+        replay_boundary.assert_called_once_with(TARGET, 32, is_current=ANY, is_target_current=ANY, target_focus=None)
         show_error.assert_not_called()
 
     @patch("ui.hotstring_controller.wx.MessageBox")
@@ -432,7 +433,7 @@ class HotstringControllerTestCase(unittest.TestCase):
 
         controller._expand(TARGET, snippet, 32, CHECKPOINT)
 
-        replay_boundary.assert_called_once_with(TARGET, 32, is_current=ANY)
+        replay_boundary.assert_called_once_with(TARGET, 32, is_current=ANY, is_target_current=ANY, target_focus=None)
         format_user_error.assert_called_once_with(error)
         message_box.assert_called_once()
 

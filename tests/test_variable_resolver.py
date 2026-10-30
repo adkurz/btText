@@ -17,6 +17,18 @@ from ui.variable_resolver import SnippetVariableResolver, show_variable_error
 
 
 class SnippetVariableResolverTestCase(unittest.TestCase):
+    def test_input_notification_precedes_request_and_only_runs_for_input_variables(self):
+        calls = []
+        resolver = SnippetVariableResolver(
+            create_builtin_variable_engine(),
+            request_inputs=lambda labels: calls.append("request") or {"Name": "Ada"},
+        )
+        on_input = lambda: calls.append("before")
+        self.assertEqual(resolver.render("Hello", on_input_requested=on_input).text, "Hello")
+        self.assertEqual(calls, [])
+        self.assertEqual(resolver.render("{{input:Name}}", on_input_requested=on_input).text, "Ada")
+        self.assertEqual(calls, ["before", "request"])
+
     def test_empty_input_can_be_rendered_as_markdown(self):
         request_inputs = Mock(return_value={"Name": ""})
         resolver = SnippetVariableResolver(

@@ -46,6 +46,9 @@ user32.BringWindowToTop.argtypes = (wintypes.HWND,)
 user32.BringWindowToTop.restype = wintypes.BOOL
 user32.SetFocus.argtypes = (wintypes.HWND,)
 user32.SetFocus.restype = wintypes.HWND
+user32.GetFocus.restype = wintypes.HWND
+user32.IsChild.argtypes = (wintypes.HWND, wintypes.HWND)
+user32.IsChild.restype = wintypes.BOOL
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 kernel32.GetCurrentThreadId.restype = wintypes.DWORD
 kernel32.OpenProcess.argtypes = (
@@ -136,9 +139,39 @@ def matches_window_identity(identity: WindowIdentity) -> bool:
     return get_window_identity(identity.handle) == identity
 
 
-def activate_window_identity(identity: WindowIdentity) -> bool:
-    """Activate a window only while its handle still has the captured owner."""
-    return matches_window_identity(identity) and activate_window(identity.handle)
+def activate_window_identity(
+    identity: WindowIdentity,
+    *,
+    focus_window: int | None = None,
+) -> bool:
+    """Activate the captured window and, if available, its original input field."""
+    if not matches_window_identity(identity) or not activate_window(identity.handle):
+        return False
+    if not focus_window or not user32.IsChild(identity.handle, focus_window):
+        return True
+    target_thread = user32.GetWindowThreadProcessId(focus_window, None)
+    current_thread = kernel32.GetCurrentThreadId()
+    attach = target_thread != current_thread
+    if not target_thread or (
+        attach and not user32.AttachThreadInput(current_thread, target_thread, True)
+    ):
+        return False
+    try:
+        # Activation can pump the other application's events. Recheck ownership
+        # and parentage before touching a child that may have been destroyed.
+        if (
+            not matches_window_identity(identity)
+            or not user32.IsChild(identity.handle, focus_window)
+        ):
+            return False
+        user32.SetFocus(focus_window)
+        return (
+            user32.GetFocus() == focus_window
+            and get_foreground_window() == identity.handle
+        )
+    finally:
+        if attach:
+            user32.AttachThreadInput(current_thread, target_thread, False)
 
 
 def is_external_window(handle: int | None) -> bool:

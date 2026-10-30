@@ -11,6 +11,31 @@ TARGET = WindowIdentity(handle=123, thread_id=7, process_id=9)
 
 
 class HotstringExpansionTestCase(unittest.TestCase):
+    def test_confirmed_prompt_still_requires_active_target_before_sending_keys(self):
+        for operation in ("expand", "replay"):
+            with (
+                self.subTest(operation=operation),
+                patch.object(hotstring_expansion.windows, "matches_window_identity", return_value=True),
+                patch.object(hotstring_expansion.windows, "activate_window_identity", return_value=True),
+                patch.object(PendingPaste, "prepare") as prepare,
+                patch.object(hotstring_expansion.keyboard_input, "send_hotstring_replacement") as replace,
+                patch.object(hotstring_expansion.keyboard_input, "send_boundary") as replay,
+            ):
+                with self.assertRaises(HotstringExpansionCancelled):
+                    if operation == "expand":
+                        hotstring_expansion.expand_hotstring(
+                            TARGET, "Expanded", 3, 32,
+                            is_current=lambda: True, is_target_current=lambda: False,
+                        )
+                    else:
+                        hotstring_expansion.replay_suppressed_boundary(
+                            TARGET, 32, is_current=lambda: True, is_target_current=lambda: False,
+                        )
+                replace.assert_not_called()
+                replay.assert_not_called()
+                if operation == "expand":
+                    prepare.return_value.restore_clipboard.assert_called_once_with()
+
     def test_stale_context_is_checked_before_clipboard_and_after_activation(self):
         for valid_checks, prepared in (([False], False), ([True, False], True), ([True, True, False], True)):
             with self.subTest(valid_checks=valid_checks):

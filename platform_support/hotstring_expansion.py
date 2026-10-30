@@ -18,6 +18,8 @@ def replay_suppressed_boundary(
     boundary_key: keyboard_input.BoundaryInput,
     *,
     is_current: Callable[[], bool] | None = None,
+    is_target_current: Callable[[], bool] | None = None,
+    target_focus: int | None = None,
 ) -> None:
     """Return a hook-suppressed boundary to its original target window."""
     _require_current(is_current)
@@ -26,12 +28,12 @@ def replay_suppressed_boundary(
             "hotstring_target_window_missing",
             "The active window no longer exists.",
         )
-    if not windows.activate_window_identity(target):
+    if not _activate_target(target, target_focus):
         raise HotstringExpansionError(
             "hotstring_target_window_activation_failed",
             "The active window could not be activated.",
         )
-    _require_current(is_current)
+    _require_current(is_target_current or is_current)
     keyboard_input.send_boundary(boundary_key)
 
 
@@ -39,6 +41,13 @@ def _require_current(is_current: Callable[[], bool] | None) -> None:
     """Refuse stale work before activation, clipboard writes, or text deletion."""
     if is_current is not None and not is_current():
         raise HotstringExpansionCancelled
+
+
+def _activate_target(target: windows.WindowIdentity, focus: int | None) -> bool:
+    """Restore the original input field after an interactive prompt."""
+    if focus is not None:
+        return windows.activate_window_identity(target, focus_window=focus)
+    return windows.activate_window_identity(target)
 
 
 def expand_hotstring(
@@ -49,6 +58,8 @@ def expand_hotstring(
     *,
     session: ClipboardPasteSession | None = None,
     is_current: Callable[[], bool] | None = None,
+    is_target_current: Callable[[], bool] | None = None,
+    target_focus: int | None = None,
 ) -> PendingPaste:
     """Replace a typed hotstring and optionally replay its original boundary."""
     _require_current(is_current)
@@ -64,12 +75,12 @@ def expand_hotstring(
     )
     try:
         _require_current(is_current)
-        if not windows.activate_window_identity(target):
+        if not _activate_target(target, target_focus):
             raise HotstringExpansionError(
                 "hotstring_target_window_activation_failed",
                 "The active window could not be activated.",
             )
-        _require_current(is_current)
+        _require_current(is_target_current or is_current)
         keyboard_input.send_hotstring_replacement(hotstring_length, boundary_key)
     except Exception as operation_error:
         restore_after_failure(

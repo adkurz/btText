@@ -2,6 +2,7 @@
 
 from collections.abc import Callable
 from datetime import datetime
+from typing import Protocol
 
 import i18n
 import wx
@@ -19,6 +20,20 @@ from core.variables import (
 from i18n import _
 from platform_support import clipboard, windows
 from ui.variable_dialog import InteractiveVariablesDialog
+
+
+class SnippetRenderer(Protocol):
+    """Render with an optional notification before opening an input prompt."""
+
+    def __call__(
+        self,
+        template: str,
+        target_window: int | None = None,
+        markdown_enabled: bool = False,
+        *,
+        on_input_requested: Callable[[], None] | None = None,
+    ) -> RenderedSnippet:
+        ...
 
 
 class SnippetVariableResolver:
@@ -53,11 +68,15 @@ class SnippetVariableResolver:
         template: str,
         target_window: int | None = None,
         markdown_enabled: bool = False,
+        *,
+        on_input_requested: Callable[[], None] | None = None,
     ) -> RenderedSnippet:
         """Collect all interactive values, capture context, then render once."""
         plan = self._validated_plan(template, markdown_enabled)
         answers: dict[str, str] = {}
         if plan.input_labels:
+            if on_input_requested is not None:
+                on_input_requested()
             requested_answers = self._request_inputs(plan.input_labels)
             if requested_answers is None:
                 raise VariableRenderingCancelled

@@ -2,9 +2,9 @@
 
 ## [v1.3.2] 2026-10-30
 
-- Fixed: Hotstrings with input variables now correctly insert the snippet and replace the hotstring in the target window after the input dialog is confirmed.
+Fixed: Hotstrings with input variables are now executed in the original target window after the input dialog is confirmed, replacing the entered shortcut. This works without an input timeout and without focus loss when switching windows. The original input field is refocused if it is still present. Closed or reused target windows will still be rejected.
 
-- Fixed: Hotstrings now also work in applications where Windows does not expose the input field focus. Available field focus is checked as an additional safeguard, while window identity and intervening keyboard and mouse actions continue to guard expansion.
+- Fixed: Hotstrings now also work in applications where Windows does not expose the input field focus. Target window identity is still checked before insertion. For hotstrings without an input dialog, available field focus and intervening keyboard and mouse actions also guard replacement.
 
 ## [v1.3.1] 2026-10-27
 

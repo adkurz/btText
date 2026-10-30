@@ -225,7 +225,7 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
                 controller = HotstringController(
                     Mock(), Mock(), Mock(), lambda: AppSettings(),
                     paste_controller.schedule_restore, Mock(),
-                    lambda *args: RenderedSnippet("snippet"),
+                    lambda *args, **kwargs: RenderedSnippet("snippet"),
                     clipboard_session=self.session,
                 )
                 controller._show_hotstring_error = errors

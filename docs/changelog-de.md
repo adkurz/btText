@@ -2,9 +2,9 @@
 
 ## [v1.3.2] 30.10.2026
 
-- Behoben: Hotstrings mit Input-Variablen fügen den Textbaustein nach dem Bestätigen des Eingabedialogs wieder korrekt ein und ersetzen den Hotstring im Zielfenster.
+- Behoben: Hotstrings mit Input-Variablen werden nach dem Bestätigen des Eingabedialogs wieder im ursprünglichen Zielfenster ausgeführt und ersetzen dort das eingegebene Kürzel. Das funktioniert ohne Zeitlimit für die Eingabe und ohne Fokusverwerfungen beim Wechsel von Fenstern. Das ursprüngliche Eingabefeld wird wieder fokussiert, sofern es noch vorhanden ist. Geschlossene oder wiederverwendete Zielfenster werden weiterhin abgewiesen.
 
-- Behoben: Hotstrings funktionieren auch in Anwendungen, deren Eingabefeldfokus Windows nicht bereitstellt. Ein auslesbarer Feldfokus wird zusätzlich geprüft; Fensteridentität und zwischenzeitliche Tastatur- und Mausaktionen sichern die Erweiterung weiterhin ab.
+- Behoben: Hotstrings funktionieren auch in Anwendungen, deren Eingabefeldfokus Windows nicht bereitstellt. Die Identität des Zielfensters wird vor dem Einfügen weiterhin geprüft. Bei Hotstrings ohne Eingabedialog sichern außerdem der verfügbare Feldfokus und zwischenzeitliche Tastatur- und Mausaktionen die Ersetzung ab.
 
 ## [v1.3.1] 27.10.2026
 

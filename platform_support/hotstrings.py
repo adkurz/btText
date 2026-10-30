@@ -5,7 +5,8 @@ import logging
 import os
 import threading
 import time
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextlib import contextmanager
 from ctypes import wintypes
 from dataclasses import dataclass, field
 from typing import Callable
@@ -115,10 +116,11 @@ class MSLLHOOKSTRUCT(ctypes.Structure):
 
 @dataclass(frozen=True)
 class InputCheckpoint:
-    """Bind queued work to its window, optional child focus, and later input."""
+    """Bind queued work to its target and track interactive input ownership."""
 
     context: tuple[int | None, int | None, int | None]
     cancelled: threading.Event = field(default_factory=threading.Event)
+    interactive: threading.Event = field(default_factory=threading.Event)
 
 
 HOOKPROC = ctypes.WINFUNCTYPE(
@@ -231,11 +233,30 @@ class KeyboardHook:
         self._callback = HOOKPROC(self._hook_callback)
         self._mouse_callback_ref = HOOKPROC(self._mouse_callback)
 
-    def _cancel_pending(self) -> None:
-        """Invalidate without acquiring the matcher lock or consuming input."""
+    def _cancel_pending(self, *, input_changed: bool = False) -> None:
+        """Cancel lifecycle changes; observe input only outside a prompt."""
         checkpoint = self._pending_checkpoint
-        if checkpoint is not None:
+        if checkpoint is not None and not (
+            input_changed and checkpoint.interactive.is_set()
+        ):
             checkpoint.cancelled.set()
+
+    @contextmanager
+    def expansion(self, checkpoint: InputCheckpoint) -> Iterator[None]:
+        """Retain an interactive target until activation and insertion finish."""
+        try:
+            yield
+        finally:
+            checkpoint.interactive.clear()
+
+    def begin_input(self, checkpoint: InputCheckpoint) -> None:
+        """Let the input dialog own its target across arbitrary user activity.
+
+        Confirmation authorizes returning to the captured window. There is no
+        time limit or dependency on the intervening foreground, child focus,
+        or keyboard layout. Model updates and shutdown can still cancel it.
+        """
+        checkpoint.interactive.set()
 
     def is_current(
         self,
@@ -246,6 +267,12 @@ class KeyboardHook:
         """Recheck the target and compare child focus when it is available."""
         if checkpoint.cancelled.is_set() or checkpoint.context[0] is None:
             return False
+        if checkpoint.interactive.is_set():
+            # Before activation, any foreground is allowed after a dialog.
+            # Immediately before sending keys the caller uses the strict form.
+            return allow_own_foreground or (
+                self._get_foreground_window() == checkpoint.context[0]
+            )
         deadline = time.monotonic() + TARGET_FOCUS_RESTORE_TIMEOUT_SECONDS
         while not checkpoint.cancelled.is_set():
             foreground = self._get_foreground_window()
@@ -407,18 +434,18 @@ class KeyboardHook:
         return handle
 
     def _mouse_callback(self, code, message, data):
-        """Invalidate external clicks/wheels, including clicks from a prompt."""
+        """Invalidate clicks/wheels unless an input dialog owns the target."""
         try:
             if code == HC_ACTION and message in MOUSE_ACTION_MESSAGES:
                 event = ctypes.cast(data, ctypes.POINTER(MSLLHOOKSTRUCT)).contents
                 handle = user32.WindowFromPoint(event.pt)
                 identity = windows.get_window_identity(handle)
                 if identity is None or identity.process_id != os.getpid():
-                    self._cancel_pending()
+                    self._cancel_pending(input_changed=True)
                     with self._state_lock:
                         self._matcher.reset()
         except Exception:
-            self._cancel_pending()
+            self._cancel_pending(input_changed=True)
             logger.exception("Hotstring mouse observer failed")
         return user32.CallNextHookEx(self._mouse_handle, code, message, data)
 
@@ -434,7 +461,7 @@ class KeyboardHook:
         ):
             identity = windows.get_window_identity(foreground)
             if identity is None or identity.process_id != os.getpid():
-                self._cancel_pending()
+                self._cancel_pending(input_changed=True)
         age = time.monotonic() - self._hook_installed_at
         periodic_refresh_due = (
             age >= HOOK_REFRESH_INTERVAL_SECONDS
@@ -459,7 +486,7 @@ class KeyboardHook:
             try:
                 replacement_mouse = self._install_mouse_hook()
             except OSError:
-                self._cancel_pending()
+                self._cancel_pending(input_changed=True)
                 logger.exception("Could not refresh hotstring mouse observer")
             else:
                 previous_mouse = self._mouse_handle
@@ -490,7 +517,7 @@ class KeyboardHook:
         try:
             return self._process_hook_event(code, message, data)
         except Exception:
-            self._cancel_pending()
+            self._cancel_pending(input_changed=True)
             logger.exception("Hotstring keyboard hook callback failed")
             return user32.CallNextHookEx(self._handle, code, message, data)
 
@@ -519,7 +546,7 @@ class KeyboardHook:
             and not injected_modifier
             and self._should_monitor()
         ):
-            self._cancel_pending()
+            self._cancel_pending(input_changed=True)
         if event.flags & LLKHF_INJECTED:
             # Keep the original observational behavior: input helpers can
             # replay physical keys. Feeding or clearing those duplicates would
@@ -536,6 +563,16 @@ class KeyboardHook:
     def _process_hook_event_locked(self, message, event, data):
         """Process an event while matcher state is protected."""
         if message in (WM_KEYUP, WM_SYSKEYUP):
+            return user32.CallNextHookEx(
+                self._handle, HC_ACTION, message, data
+            )
+        if (
+            self._pending_checkpoint is not None
+            and self._pending_checkpoint.interactive.is_set()
+        ):
+            # A modal prompt pumps events. Do not recognize another hotstring
+            # or replace the pending checkpoint while collecting its values.
+            self._matcher.reset()
             return user32.CallNextHookEx(
                 self._handle, HC_ACTION, message, data
             )
