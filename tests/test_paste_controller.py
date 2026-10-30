@@ -20,6 +20,12 @@ def render_unchanged(text, target_window=None, markdown_enabled=False):
 TARGET = windows.WindowIdentity(handle=42, thread_id=7, process_id=9)
 
 
+def make_controller():
+    """Create a controller without querying the native foreground window."""
+    with patch.object(PasteController, "remember_foreground_window"):
+        return PasteController(Mock(), Mock(), Mock(), Mock(), render_unchanged)
+
+
 class TrayOverflowPasteRegressionTestCase(unittest.TestCase):
     def test_keyboard_tray_path_does_not_replace_notepad_with_shell_popups(self):
         from ui.main_frame import MainFrame
@@ -144,7 +150,7 @@ class PasteControllerTestCase(unittest.TestCase):
     @patch("ui.paste_controller.wx.CallLater")
     def test_foreground_changes_during_rendering_do_not_redirect_current_paste(self, call_later):
         second = windows.WindowIdentity(84, 8, 10)
-        controller = PasteController.__new__(PasteController)
+        controller = make_controller()
         controller._target_window = TARGET
         controller._parent = Mock()
         controller._model = Mock()
@@ -371,7 +377,7 @@ class PasteControllerTestCase(unittest.TestCase):
     def test_successful_paste_schedules_clipboard_restore(self, paste_text):
         pending = Mock()
         paste_text.return_value = pending
-        controller = PasteController.__new__(PasteController)
+        controller = make_controller()
         controller.schedule_restore = Mock()
         controller._clipboard_session = clipboard_paste.ClipboardPasteSession()
 
@@ -392,7 +398,7 @@ class PasteControllerTestCase(unittest.TestCase):
     ):
         pending = Mock()
         paste_text.return_value = pending
-        controller = PasteController.__new__(PasteController)
+        controller = make_controller()
         controller.schedule_restore = Mock()
         controller._clipboard_session = clipboard_paste.ClipboardPasteSession()
 
@@ -410,7 +416,7 @@ class PasteControllerTestCase(unittest.TestCase):
         paste_text,
     ):
         paste_text.side_effect = clipboard.ClipboardError("paste failed")
-        controller = PasteController.__new__(PasteController)
+        controller = make_controller()
         controller._parent = Mock()
         controller._reveal_after_error = Mock()
         controller._clipboard_session = clipboard_paste.ClipboardPasteSession()
@@ -428,7 +434,7 @@ class PasteControllerTestCase(unittest.TestCase):
         pending.restore_clipboard.side_effect = clipboard.ClipboardError(
             "clipboard busy"
         )
-        controller = PasteController.__new__(PasteController)
+        controller = make_controller()
 
         controller._restore_clipboard(pending, 3)
 
@@ -445,7 +451,7 @@ class PasteControllerTestCase(unittest.TestCase):
         pending.restore_clipboard.side_effect = clipboard.ClipboardError(
             "clipboard busy"
         )
-        controller = PasteController.__new__(PasteController)
+        controller = make_controller()
         controller._reveal_after_error = Mock()
 
         controller._restore_clipboard(pending, 1)
@@ -459,6 +465,121 @@ class PasteControllerTestCase(unittest.TestCase):
             ).format("clipboard busy"),
             _("Clipboard restore error"),
         )
+
+
+class PasteShutdownTestCase(unittest.TestCase):
+    def setUp(self):
+        self.controller = make_controller()
+        self.now = 10.0
+        self.enterContext(patch("ui.paste_controller.time.monotonic", side_effect=lambda: self.now))
+        self.sleep = self.enterContext(patch("ui.paste_controller.time.sleep"))
+        self.later = self.enterContext(patch("ui.paste_controller.wx.CallLater", side_effect=lambda *args: Mock()))
+
+    def test_shutdown_stops_restore_timer_and_keeps_remaining_paste_grace(self):
+        pending = Mock()
+        self.controller.schedule_restore(pending)
+        timer = self.controller._pending_restores[pending].timer
+        self.now += 0.125
+
+        self.controller.shutdown()
+        self.controller.shutdown()
+
+        timer.Stop.assert_called_once_with()
+        self.sleep.assert_called_once_with(0.375)
+        pending.restore_clipboard.assert_called_once_with()
+        pending.discard_snapshot.assert_not_called()
+        self.assertEqual(self.controller._pending_restores, {})
+        self.controller._reveal_after_error.assert_not_called()
+
+    def test_shutdown_retries_busy_clipboard_without_creating_more_timers(self):
+        pending = Mock()
+        pending.restore_clipboard.side_effect = [clipboard.ClipboardError("busy"), None]
+        self.controller.schedule_restore(pending)
+        self.now += 1
+
+        self.controller.shutdown()
+
+        self.assertEqual(pending.restore_clipboard.call_count, 2)
+        self.sleep.assert_called_once_with(0.1)
+        self.assertEqual(self.later.call_count, 1)
+        pending.discard_snapshot.assert_not_called()
+
+    def test_shutdown_logs_and_releases_snapshot_after_bounded_failures(self):
+        pending = Mock()
+        pending.restore_clipboard.side_effect = clipboard.ClipboardError("busy")
+        self.controller.schedule_restore(pending)
+        self.now += 1
+
+        with self.assertLogs("bttext.paste", level="ERROR"):
+            self.controller.shutdown()
+
+        self.assertEqual(pending.restore_clipboard.call_count, 3)
+        self.assertEqual(self.sleep.call_count, 2)
+        pending.discard_snapshot.assert_called_once_with()
+        self.controller._reveal_after_error.assert_not_called()
+
+    def test_shutdown_takes_over_an_already_scheduled_retry(self):
+        pending = Mock()
+        pending.restore_clipboard.side_effect = [clipboard.ClipboardError("busy"), None]
+        self.controller.schedule_restore(pending)
+        self.now += 0.5
+        self.controller._restore_clipboard(pending, 3)
+        retry = self.controller._pending_restores[pending].timer
+        self.now += 1
+
+        self.controller.shutdown()
+        # A callback already delivered to wx cannot run recovery a second time.
+        self.controller._restore_clipboard(pending, 2)
+
+        retry.Stop.assert_called_once_with()
+        self.assertEqual(pending.restore_clipboard.call_count, 2)
+        self.assertEqual(self.later.call_count, 2)
+
+    def test_completed_restores_are_not_retained_until_shutdown(self):
+        pending = Mock()
+        self.controller.schedule_restore(pending)
+        self.controller._restore_clipboard(pending, 3)
+
+        self.controller.shutdown()
+
+        pending.restore_clipboard.assert_called_once_with()
+        self.sleep.assert_not_called()
+
+    @patch("ui.paste_controller.clipboard_paste.paste_text")
+    def test_shutdown_prevents_delayed_and_new_manual_pastes(self, paste):
+        self.controller.shutdown()
+        self.controller.insert_snippet(7)
+        self.controller._paste_after_hide(TARGET, ClipboardContent("Example"))
+
+        self.controller._model.get_snippet.assert_not_called()
+        paste.assert_not_called()
+        self.later.assert_not_called()
+
+    def test_shutdown_during_variable_input_does_not_schedule_a_paste(self):
+        self.controller._target_window = TARGET
+        self.controller._model.get_snippet.return_value = SimpleNamespace(
+            content="{{input:Name}}", markdown_enabled=False,
+        )
+
+        def render(*args):
+            self.controller.shutdown()
+            return RenderedSnippet("Ada")
+
+        self.controller._render_snippet = render
+        self.controller.insert_snippet(7)
+
+        self.controller._before_paste.assert_not_called()
+        self.later.assert_not_called()
+
+    def test_paste_returning_after_shutdown_is_restored_without_a_timer(self):
+        pending = Mock()
+        self.controller.shutdown()
+
+        self.controller.schedule_restore(pending)
+
+        self.sleep.assert_called_once_with(0.5)
+        pending.restore_clipboard.assert_called_once_with()
+        self.later.assert_not_called()
 
 
 if __name__ == "__main__":

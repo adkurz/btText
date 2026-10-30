@@ -2,6 +2,8 @@
 
 ## [v1.3.2] 2026-10-30
 
+- Fixed: Exiting btText shortly after inserting a snippet or expanding a hotstring now completes pending clipboard restoration before the application closes, while preserving newer copies from other applications.
+
 - Fixed: Opening btText from the notification area now inserts snippets into the most recently active application, even after switching applications while btText was hidden. The taskbar, desktop, and their helper and menu windows are not used as paste targets.
 
 - Fixed: Metafile graphics in the previous clipboard contents are now restored correctly after inserting a snippet or expanding a hotstring.

@@ -688,11 +688,23 @@ class ShutdownTestCase(unittest.TestCase):
         frame._hotkey_layout_timer.Stop.assert_called_once_with()
         frame._update_shutdown_timer.Stop.assert_called_once_with()
         frame._update_shutdown_signal.close.assert_called_once_with()
-        frame._paste_controller.stop_tracking.assert_called_once_with()
+        frame._paste_controller.shutdown.assert_called_once_with()
         frame._settings_controller.unregister_hotkey.assert_called_once_with()
         frame._hotstring_controller.stop.assert_called_once_with()
         frame.tray_icon.RemoveIcon.assert_called_once_with()
         frame.tray_icon.Destroy.assert_called_once_with()
+
+    def test_cleanup_stops_hotstrings_before_flushing_clipboard_restores(self):
+        calls = []
+        frame = SimpleNamespace(
+            _hotstring_controller=Mock(), _paste_controller=Mock(),
+        )
+        frame._hotstring_controller.stop.side_effect = lambda: calls.append("stop hook")
+        frame._paste_controller.shutdown.side_effect = lambda: calls.append("restore clipboard")
+
+        MainFrame._stop_process_integrations(frame)
+
+        self.assertEqual(calls, ["stop hook", "restore clipboard"])
 
     def test_cleanup_stops_timers_after_partial_frame_creation(self):
         frame = SimpleNamespace(_hotkey_layout_timer=Mock())

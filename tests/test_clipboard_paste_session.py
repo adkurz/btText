@@ -1,7 +1,10 @@
 """Regression coverage for overlapping manual and hotstring paste operations."""
 
 import unittest
+from types import MethodType
 from unittest.mock import Mock, patch
+
+import wx
 
 from core.app_settings import AppSettings
 from core.datamodel import Snippet
@@ -13,6 +16,7 @@ from platform_support.clipboard_paste import ClipboardPasteSession
 from platform_support.clipboard_snapshot import ClipboardSnapshot, _ClipboardFormatCopy
 from platform_support.windows import WindowIdentity
 from ui.hotstring_controller import HotstringController
+from ui.main_frame import MainFrame
 from ui.paste_controller import PasteController
 
 
@@ -100,6 +104,126 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
             )
         self.addCleanup(pending.discard_snapshot)
         return pending
+
+    def _controller(self):
+        with patch.object(PasteController, "remember_foreground_window"):
+            return PasteController(
+                Mock(), Mock(), Mock(), Mock(), Mock(), clipboard_session=self.session,
+            )
+
+    def test_shutdown_restores_all_formats_for_overlapping_manual_and_hotstring_pastes(self):
+        for first_kind, second_kind in (("manual", "hotstring"), ("hotstring", "manual")):
+            with self.subTest(kinds=(first_kind, second_kind)):
+                controller = self._controller()
+                with (
+                    patch("ui.paste_controller.wx.CallLater", side_effect=lambda *args: Mock()),
+                    patch("ui.paste_controller.time.sleep"),
+                ):
+                    first = self._paste(first_kind, "snippet A")
+                    controller.schedule_restore(first)
+                    second = self._paste(second_kind, "snippet B")
+                    controller.schedule_restore(second)
+                    controller.shutdown()
+
+                self.assertEqual(self.formats, self.original)
+                self.assertTrue(first._snapshot._closed)
+                self.assertTrue(second._snapshot._closed)
+                controller._reveal_after_error.assert_not_called()
+
+    def test_shutdown_preserves_a_new_external_copy(self):
+        for kind in ("manual", "hotstring"):
+            with self.subTest(kind=kind):
+                controller = self._controller()
+                with (
+                    patch("ui.paste_controller.wx.CallLater", return_value=Mock()),
+                    patch("ui.paste_controller.time.sleep"),
+                ):
+                    pending = self._paste(kind, "snippet")
+                    controller.schedule_restore(pending)
+                    external = {clipboard.CF_UNICODETEXT: "new copy\0".encode("utf-16-le")}
+                    self.formats = dict(external)
+                    self.sequence += 1
+                    controller.shutdown()
+
+                self.assertEqual(self.formats, external)
+                self.assertTrue(pending._snapshot._closed)
+                self.formats = dict(self.original)
+
+    def test_shutdown_retries_partial_format_restoration(self):
+        controller = self._controller()
+        with (
+            patch("ui.paste_controller.wx.CallLater", return_value=Mock()),
+            patch("ui.paste_controller.time.sleep"),
+        ):
+            pending = self._paste("manual", "snippet")
+            controller.schedule_restore(pending)
+            self.fail_next_write = True
+            controller.shutdown()
+
+        self.assertEqual(self.formats, self.original)
+        self.assertTrue(pending._snapshot._closed)
+
+    def test_shutdown_finishes_recovery_of_a_failed_preparation(self):
+        def fail_preparation(content):
+            self._write(clipboard.CF_UNICODETEXT, b"partial snippet")
+            self.fail_next_open = True
+            raise clipboard.ClipboardError("write failed")
+
+        controller = self._controller()
+        with patch.object(clipboard_paste, "_set_clipboard_content", side_effect=fail_preparation):
+            with self.assertRaises(clipboard_paste.ClipboardRestoreError) as raised:
+                self.session.prepare("snippet")
+        pending = raised.exception.pending_paste
+        self.assertIsNotNone(pending)
+        self.addCleanup(pending.discard_snapshot)
+        with (
+            patch("ui.paste_controller.wx.CallLater", return_value=Mock()),
+            patch("ui.paste_controller.time.sleep"),
+        ):
+            controller.schedule_restore(pending)
+            controller.shutdown()
+
+        self.assertEqual(self.formats, self.original)
+        self.assertTrue(pending._snapshot._closed)
+
+    def test_real_frame_close_restores_before_the_paste_timer_fires(self):
+        app = wx.GetApp() or wx.App(False)
+        for kind in ("manual", "hotstring"):
+            with self.subTest(kind=kind):
+                frame = wx.Frame(None, title="Clipboard shutdown regression")
+                controller = self._controller()
+                frame._paste_controller = controller
+                frame.allow_close = True
+                frame._stop_process_integrations = MethodType(MainFrame._stop_process_integrations, frame)
+                frame.Bind(wx.EVT_CLOSE, lambda event: MainFrame.on_close(frame, event))
+                pending = self._paste(kind, "snippet")
+                controller.schedule_restore(pending)
+                restore_timer = controller._pending_restores[pending].timer
+                errors = []
+
+                def close_frame():
+                    try:
+                        frame.Close()
+                        self.assertEqual(self.formats, self.original)
+                        self.assertTrue(pending._snapshot._closed)
+                        self.assertFalse(restore_timer.IsRunning())
+                    except BaseException as error:
+                        errors.append(error)
+                        frame.Destroy()
+
+                frame.ShowWithoutActivating()
+                close_timer = wx.CallLater(25, close_frame)
+                timeout = wx.CallLater(3000, frame.Destroy)
+                try:
+                    app.MainLoop()
+                    if errors:
+                        raise errors[0]
+                    self.assertTrue(controller._closed)
+                finally:
+                    close_timer.Stop()
+                    timeout.Stop()
+                    if frame:
+                        frame.Destroy()
 
     def test_overlapping_pastes_restore_all_original_formats_in_either_timer_order(self):
         for first_kind, second_kind in (
@@ -195,9 +319,10 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
         """Inject paste/recovery failures and retain actual scheduled callbacks."""
         timers = []
         errors = Mock()
-        paste_controller = PasteController.__new__(PasteController)
-        paste_controller._clipboard_session = self.session
-        paste_controller._reveal_after_error = errors
+        with patch.object(PasteController, "remember_foreground_window"):
+            paste_controller = PasteController(
+                Mock(), Mock(), Mock(), errors, Mock(), clipboard_session=self.session,
+            )
 
         def fail_operation(*_arguments):
             self.fail_next_open = recovery == "open"

@@ -1,7 +1,9 @@
 """Coordinate inserting snippets into an external Windows application."""
 
 from collections.abc import Callable
+from dataclasses import dataclass
 import logging
+import time
 
 import wx
 
@@ -25,6 +27,14 @@ CLIPBOARD_RESTORE_RETRY_DELAY_MS = 100
 logger = logging.getLogger("bttext.paste")
 
 
+@dataclass(frozen=True)
+class _ScheduledRestore:
+    """Retain the timer and the earliest safe clipboard restore time."""
+
+    timer: wx.CallLater
+    deadline: float
+
+
 class PasteController:
     """Manage the external paste target and delayed clipboard restoration."""
 
@@ -44,6 +54,10 @@ class PasteController:
         self._before_paste = before_paste
         self._reveal_after_error = reveal_after_error
         self._render_snippet = render_snippet
+        self._closed = False
+        self._pending_restores: dict[
+            clipboard_paste.PendingPaste, _ScheduledRestore
+        ] = {}
         self._clipboard_session = (
             clipboard_session
             if clipboard_session is not None
@@ -71,6 +85,43 @@ class PasteController:
         if self._foreground_observer is not None:
             self._foreground_observer.close()
 
+    def shutdown(self) -> None:
+        """Finish pending restores before the wx event loop can terminate."""
+        if self._closed:
+            return
+        self._closed = True
+        self.stop_tracking()
+        pending_restores = sorted(
+            self._pending_restores.items(), key=lambda item: item[1].deadline,
+        )
+        self._pending_restores.clear()
+        for _pending, scheduled in pending_restores:
+            scheduled.timer.Stop()
+        for pending, scheduled in pending_restores:
+            self._restore_on_shutdown(pending, scheduled.deadline)
+
+    def _restore_on_shutdown(
+        self, pending: clipboard_paste.PendingPaste, deadline: float,
+    ) -> None:
+        """Allow paste processing, then restore with bounded synchronous retries."""
+        # Keep the normal paste grace period without pumping wx events that
+        # could start another insertion while the frame is being destroyed.
+        remaining = deadline - time.monotonic()
+        if remaining > 0:
+            time.sleep(remaining)
+        for attempt in range(CLIPBOARD_RESTORE_ATTEMPTS):
+            try:
+                # PendingPaste checks ownership under the clipboard lock, so
+                # shutdown preserves newer copies from other applications too.
+                pending.restore_clipboard()
+                return
+            except clipboard.ClipboardError:
+                if attempt + 1 == CLIPBOARD_RESTORE_ATTEMPTS:
+                    logger.exception("Could not restore the clipboard during shutdown")
+                    pending.discard_snapshot()
+                    return
+                time.sleep(CLIPBOARD_RESTORE_RETRY_DELAY_MS / 1_000)
+
     def remember_foreground_window(self) -> None:
         """Remember a valid external foreground window as the paste target."""
         handle = windows.get_foreground_window()
@@ -96,6 +147,8 @@ class PasteController:
 
     def insert_snippet(self, snippet_id: int) -> None:
         """Hide the frame and schedule insertion into the previous window."""
+        if self._closed:
+            return
         target = self._target_window
         if target is None:
             wx.MessageBox(
@@ -132,6 +185,9 @@ class PasteController:
             show_variable_error(self._parent, error)
             return
 
+        # A modal input dialog may have processed an application exit request.
+        if self._closed:
+            return
         self._before_paste()
         content = render_clipboard_content(rendered, snippet.markdown_enabled)
         wx.CallLater(
@@ -147,6 +203,8 @@ class PasteController:
         content: ClipboardContent,
     ) -> None:
         """Paste after native window activation has settled."""
+        if self._closed:
+            return
         try:
             pending = clipboard_paste.paste_text(
                 target,
@@ -183,12 +241,31 @@ class PasteController:
         pending: clipboard_paste.PendingPaste,
     ) -> None:
         """Schedule restoration of clipboard contents retained by a paste."""
-        wx.CallLater(
-            CLIPBOARD_RESTORE_DELAY_MS,
+        if self._closed:
+            # A native paste already in progress may return during shutdown.
+            self._restore_on_shutdown(
+                pending, time.monotonic() + CLIPBOARD_RESTORE_DELAY_MS / 1_000,
+            )
+            return
+        self._schedule_restore(
+            pending, CLIPBOARD_RESTORE_DELAY_MS, CLIPBOARD_RESTORE_ATTEMPTS,
+        )
+
+    def _schedule_restore(
+        self, pending: clipboard_paste.PendingPaste, delay_ms: int, attempts: int,
+    ) -> None:
+        """Keep every initial or retry timer available for shutdown cleanup."""
+        previous = self._pending_restores.pop(pending, None)
+        if previous is not None:
+            previous.timer.Stop()
+        deadline = time.monotonic() + delay_ms / 1_000
+        timer = wx.CallLater(
+            delay_ms,
             self._restore_clipboard,
             pending,
-            CLIPBOARD_RESTORE_ATTEMPTS,
+            attempts,
         )
+        self._pending_restores[pending] = _ScheduledRestore(timer, deadline)
 
     def _restore_clipboard(
         self,
@@ -196,15 +273,15 @@ class PasteController:
         attempts_remaining: int,
     ) -> None:
         """Restore the saved clipboard, retrying transient access failures."""
+        if self._closed:
+            return
+        self._pending_restores.pop(pending, None)
         try:
             pending.restore_clipboard()
         except clipboard.ClipboardError as error:
             if attempts_remaining > 1:
-                wx.CallLater(
-                    CLIPBOARD_RESTORE_RETRY_DELAY_MS,
-                    self._restore_clipboard,
-                    pending,
-                    attempts_remaining - 1,
+                self._schedule_restore(
+                    pending, CLIPBOARD_RESTORE_RETRY_DELAY_MS, attempts_remaining - 1,
                 )
                 return
             pending.discard_snapshot()

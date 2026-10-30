@@ -711,15 +711,15 @@ class MainFrame(sc.SizedFrame):
         signal = getattr(self, "_update_shutdown_signal", None)
         if signal is not None:
             signal.close()
-        paste_controller = getattr(self, "_paste_controller", None)
-        if paste_controller is not None:
-            paste_controller.stop_tracking()
         settings_controller = getattr(self, "_settings_controller", None)
         if settings_controller is not None:
             settings_controller.unregister_hotkey()
         hotstring_controller = getattr(self, "_hotstring_controller", None)
         if hotstring_controller is not None:
             hotstring_controller.stop()
+        paste_controller = getattr(self, "_paste_controller", None)
+        if paste_controller is not None:
+            paste_controller.shutdown()
         tray_icon = getattr(self, "tray_icon", None)
         if tray_icon is not None:
             tray_icon.RemoveIcon()
