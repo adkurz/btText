@@ -2,6 +2,8 @@
 
 ## [v1.3.2] 30.10.2026
 
+- Behoben: Nach dem Öffnen von btText über den Infobereich werden Textbausteine in die zuletzt aktive Anwendung eingefügt, auch wenn bei verborgenem btText die Anwendung gewechselt wurde. Taskleiste, Desktop und zugehörige Hilfs- und Menüfenster werden nicht als Einfügeziele verwendet.
+
 - Behoben: Metafile-Grafiken im vorherigen Zwischenablageinhalt werden nach dem Einfügen eines Textbausteins oder einer Hotstring-Erweiterung korrekt wiederhergestellt.
 
 - Behoben: Hotstrings mit Input-Variablen werden nach dem Bestätigen des Eingabedialogs wieder im ursprünglichen Zielfenster ausgeführt und ersetzen dort das eingegebene Kürzel. Das funktioniert ohne Zeitlimit für die Eingabe und ohne Fokusverwerfungen beim Wechsel von Fenstern. Das ursprüngliche Eingabefeld wird wieder fokussiert, sofern es noch vorhanden ist. Geschlossene oder wiederverwendete Zielfenster werden weiterhin abgewiesen.

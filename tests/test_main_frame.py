@@ -230,6 +230,7 @@ class MainFrameConstructionTestCase(unittest.TestCase):
                 self.assertIsNotNone(frame.GetMenuBar())
                 self.assertIsNotNone(frame.GetStatusBar())
                 self.assertFalse(frame.IsShown())
+                paste_controller_class.return_value.start_tracking.assert_called_once_with()
                 clipboard_session = paste_controller_class.call_args.kwargs[
                     "clipboard_session"
                 ]
@@ -417,6 +418,7 @@ class HotkeyLayoutChangeTestCase(unittest.TestCase):
         frame = SimpleNamespace(
             Show=Mock(),
             Iconize=Mock(),
+            _paste_controller=Mock(),
             _last_focused_control=None,
             category_tree=category_tree,
             _pending_show_focus=None,
@@ -426,6 +428,7 @@ class HotkeyLayoutChangeTestCase(unittest.TestCase):
 
         frame.Show.assert_called_once_with()
         frame.Iconize.assert_called_once_with(False)
+        frame._paste_controller.remember_foreground_window.assert_called_once_with()
         self.assertIs(frame._pending_show_focus, category_tree)
 
     @patch("ui.main_frame.wx.CallAfter")
@@ -672,6 +675,7 @@ class ShutdownTestCase(unittest.TestCase):
             _hotkey_layout_timer=Mock(),
             _update_shutdown_timer=Mock(),
             _update_shutdown_signal=Mock(),
+            _paste_controller=Mock(),
             _settings_controller=Mock(),
             _hotstring_controller=Mock(),
             tray_icon=Mock(),
@@ -684,6 +688,7 @@ class ShutdownTestCase(unittest.TestCase):
         frame._hotkey_layout_timer.Stop.assert_called_once_with()
         frame._update_shutdown_timer.Stop.assert_called_once_with()
         frame._update_shutdown_signal.close.assert_called_once_with()
+        frame._paste_controller.stop_tracking.assert_called_once_with()
         frame._settings_controller.unregister_hotkey.assert_called_once_with()
         frame._hotstring_controller.stop.assert_called_once_with()
         frame.tray_icon.RemoveIcon.assert_called_once_with()

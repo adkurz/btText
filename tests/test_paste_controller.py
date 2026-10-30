@@ -20,7 +20,149 @@ def render_unchanged(text, target_window=None, markdown_enabled=False):
 TARGET = windows.WindowIdentity(handle=42, thread_id=7, process_id=9)
 
 
+class TrayOverflowPasteRegressionTestCase(unittest.TestCase):
+    def test_keyboard_tray_path_does_not_replace_notepad_with_shell_popups(self):
+        from ui.main_frame import MainFrame
+        from ui.tray_icon import TrayIcon
+
+        classes = {
+            42: "Notepad", 100: "Shell_TrayWnd",
+            101: "TopLevelWindowForOverflowXamlIsland",
+            102: "Xaml_WindowedPopupClass", 103: "#32768",
+        }
+
+        def get_class_name(handle, buffer, size):
+            buffer.value = classes[handle]
+            return len(buffer.value)
+
+        model = Mock()
+        model.get_snippet.return_value = SimpleNamespace(content="Example", markdown_enabled=False)
+        with (
+            patch.object(windows, "get_foreground_window", return_value=42) as foreground,
+            patch.object(windows, "is_external_window", return_value=True),
+            patch.object(windows.user32, "GetClassNameW", side_effect=get_class_name),
+            patch.object(windows.user32, "GetAncestor", side_effect=lambda h, flag: 101 if h in (102, 103) else h),
+            patch.object(windows, "get_window_identity", side_effect=lambda h: windows.WindowIdentity(h, 7, 9)),
+            patch.object(windows, "ForegroundWindowObserver"),
+            patch("ui.paste_controller.wx.CallLater") as later,
+        ):
+            controller = PasteController(Mock(), model, Mock(), Mock(), render_unchanged)
+            controller.start_tracking()
+            frame = SimpleNamespace(
+                _paste_controller=controller, _last_focused_control=None,
+                category_tree=Mock(), Show=Mock(), Iconize=Mock(),
+            )
+            frame.show_and_focus = lambda: MainFrame.show_and_focus(frame)
+            # Win+B -> hidden icons -> btText icon -> context menu. These
+            # events used to leave a persistent shell popup as the paste target.
+            for handle in (100, 101, 102, 103):
+                controller.remember_window(handle)
+            foreground.return_value = 102
+            TrayIcon.on_restore(SimpleNamespace(_frame=frame), Mock())
+            controller.insert_snippet(7)
+
+        self.assertEqual(later.call_args.args[2], TARGET)
+
+
 class PasteControllerTestCase(unittest.TestCase):
+    def setUp(self):
+        self.enterContext(patch.object(windows, "is_shell_window", return_value=False))
+
+    @patch("ui.paste_controller.windows.ForegroundWindowObserver")
+    @patch("ui.paste_controller.windows.get_foreground_window", return_value=None)
+    def test_tracking_registers_once_and_can_be_stopped_repeatedly(self, foreground, observer_class):
+        controller = PasteController(Mock(), Mock(), Mock(), Mock(), render_unchanged)
+
+        controller.start_tracking()
+        controller.start_tracking()
+        controller.stop_tracking()
+        controller.stop_tracking()
+
+        observer_class.assert_called_once_with(controller.remember_window)
+        self.assertEqual(observer_class.return_value.close.call_count, 2)
+
+    @patch("ui.paste_controller.windows.ForegroundWindowObserver", side_effect=OSError("unavailable"))
+    @patch("ui.paste_controller.windows.get_foreground_window", return_value=42)
+    @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
+    @patch("ui.paste_controller.windows.is_external_window", return_value=True)
+    def test_failed_tracking_does_not_reuse_an_old_target_from_the_taskbar(
+        self, external, identity, foreground, observer_class,
+    ):
+        controller = PasteController(Mock(), Mock(), Mock(), Mock(), render_unchanged)
+        with self.assertLogs("bttext.paste", level="ERROR"):
+            controller.start_tracking()
+        self.assertIsNone(controller.target_window)
+
+        # A directly observed application remains usable via the hotkey.
+        controller.remember_foreground_window()
+        self.assertEqual(controller.target_window, TARGET.handle)
+        with patch.object(windows, "is_shell_window", return_value=True):
+            controller.remember_foreground_window()
+        self.assertIsNone(controller.target_window)
+
+    @patch("ui.paste_controller.wx.CallLater")
+    @patch("ui.paste_controller.windows.is_external_window")
+    @patch("ui.paste_controller.windows.get_window_identity")
+    @patch("ui.paste_controller.windows.get_foreground_window", return_value=42)
+    @patch("ui.paste_controller.windows.ForegroundWindowObserver")
+    def test_tray_restore_keeps_latest_app_across_taskbar_and_own_windows(
+        self, observer_class, foreground, identity, external, call_later,
+    ):
+        from ui.main_frame import MainFrame
+        from ui.tray_icon import TrayIcon
+
+        second = windows.WindowIdentity(84, 8, 10)
+        identity.side_effect = lambda handle: TARGET if handle == 42 else second
+        external.side_effect = lambda handle: handle in (42, 84, 100, 101)
+        model = Mock()
+        model.get_snippet.return_value = SimpleNamespace(
+            content="Example", markdown_enabled=False,
+        )
+        controller = PasteController(Mock(), model, Mock(), Mock(), render_unchanged)
+        controller.start_tracking()
+        observe = observer_class.call_args.args[0]
+        frame = SimpleNamespace(
+            _paste_controller=controller, _last_focused_control=None,
+            category_tree=Mock(), Show=Mock(), Iconize=Mock(),
+        )
+        frame.show_and_focus = lambda: MainFrame.show_and_focus(frame)
+
+        # B becomes active while btText remains hidden; Windows then activates
+        # the taskbar or its overflow popup before the tray command is handled.
+        observe(84)
+        with patch.object(windows, "is_shell_window", side_effect=lambda h: h in (100, 101)):
+            for handle in (100, 101):
+                observe(handle)
+                foreground.return_value = handle
+                TrayIcon.on_restore(SimpleNamespace(_frame=frame), Mock())
+                self.assertEqual(controller.target_window, 84)
+            observe(200)  # The restored btText window belongs to our process.
+            controller.insert_snippet(7)
+
+        self.assertEqual(call_later.call_args.args[2], second)
+
+    @patch("ui.paste_controller.wx.CallLater")
+    def test_foreground_changes_during_rendering_do_not_redirect_current_paste(self, call_later):
+        second = windows.WindowIdentity(84, 8, 10)
+        controller = PasteController.__new__(PasteController)
+        controller._target_window = TARGET
+        controller._parent = Mock()
+        controller._model = Mock()
+        controller._model.get_snippet.return_value = SimpleNamespace(
+            content="{{input:Name}}", markdown_enabled=False,
+        )
+        controller._before_paste = Mock()
+
+        def render(text, target, markdown):
+            self.assertEqual(target, TARGET.handle)
+            controller._target_window = second
+            return RenderedSnippet("Ada")
+
+        controller._render_snippet = render
+        controller.insert_snippet(7)
+
+        self.assertEqual(call_later.call_args.args[2], TARGET)
+
     @patch("ui.paste_controller.windows.get_window_identity", return_value=TARGET)
     @patch("ui.paste_controller.windows.is_external_window")
     @patch("ui.paste_controller.windows.get_foreground_window")

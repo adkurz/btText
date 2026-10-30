@@ -1,10 +1,176 @@
 import ctypes
 import os
+import subprocess
+import sys
 import unittest
 from ctypes import wintypes
-from unittest.mock import patch
+from unittest.mock import Mock, patch
+
+import wx
 
 from platform_support import windows
+
+
+class ForegroundWindowObserverTestCase(unittest.TestCase):
+    def test_native_observer_receives_ordered_events_from_another_process(self):
+        app = wx.GetApp() or wx.App(False)
+        frame = wx.Frame(None)
+        frame.ShowWithoutActivating()
+        frame.Hide()
+        handles = []
+        observed = []
+
+        def on_foreground(handle):
+            if handle in handles:
+                observed.append(handle)
+                if handle == handles[-1]:
+                    frame.Destroy()
+
+        observer = windows.ForegroundWindowObserver(on_foreground)
+        # Emit actual WinEvents from external, invisible windows. This checks
+        # the native callback ABI and wx dispatch without stealing desktop focus
+        # or writing to the real clipboard.
+        script = """
+import ctypes
+from ctypes import wintypes
+import sys
+from platform_support.clipboard import user32
+user32.NotifyWinEvent.argtypes = (
+    wintypes.DWORD, wintypes.HWND, wintypes.LONG, wintypes.LONG,
+)
+handles = [
+    user32.CreateWindowExW(
+        0, 'STATIC', 'btText foreground regression', 0, 0, 0, 10, 10,
+        None, None, None, None,
+    ) for _ in range(2)
+]
+print(*handles, flush=True)
+sys.stdin.readline()
+for handle in handles:
+    user32.NotifyWinEvent(3, handle, 0, 0)
+sys.stdin.readline()
+for handle in handles:
+    user32.DestroyWindow(handle)
+"""
+        child = None
+        timeout = None
+        try:
+            child = subprocess.Popen(
+                [sys.executable, "-c", script], stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, text=True,
+                creationflags=subprocess.CREATE_NO_WINDOW,
+            )
+            handles.extend(int(value) for value in child.stdout.readline().split())
+            self.assertEqual(len(handles), 2)
+            self.assertTrue(all(handles))
+
+            def emit_events():
+                child.stdin.write("\n")
+                child.stdin.flush()
+
+            wx.CallAfter(emit_events)
+            timeout = wx.CallLater(3000, frame.Destroy)
+            app.MainLoop()
+            self.assertEqual(observed, handles)
+        finally:
+            if timeout is not None:
+                timeout.Stop()
+            observer.close()
+            if frame:
+                frame.Destroy()
+            if child is not None:
+                try:
+                    child.communicate("\n", timeout=5)
+                except subprocess.TimeoutExpired:
+                    child.kill()
+                    child.communicate()
+
+    def test_observer_delivers_the_event_window_and_releases_the_hook(self):
+        listener = Mock()
+        with (
+            patch.object(windows.user32, "SetWinEventHook", return_value=123) as register,
+            patch.object(windows.user32, "UnhookWinEvent", return_value=True) as unregister,
+        ):
+            observer = windows.ForegroundWindowObserver(listener)
+            callback = register.call_args.args[3]
+            # The event can be delivered after the shell has become foreground.
+            with patch.object(windows, "get_foreground_window", return_value=999):
+                callback(123, windows.EVENT_SYSTEM_FOREGROUND, 42, 0, 0, 7, 100)
+            listener.assert_called_once_with(42)
+            observer.close()
+            observer.close()
+            callback(123, windows.EVENT_SYSTEM_FOREGROUND, 84, 0, 0, 8, 101)
+
+        register.assert_called_once_with(
+            windows.EVENT_SYSTEM_FOREGROUND, windows.EVENT_SYSTEM_FOREGROUND,
+            None, callback, 0, 0, windows.WINEVENT_SKIPOWNPROCESS,
+        )
+        unregister.assert_called_once_with(123)
+        listener.assert_called_once_with(42)
+
+    def test_observer_rejects_failed_registration(self):
+        with patch.object(windows.user32, "SetWinEventHook", return_value=None):
+            with self.assertRaises(OSError):
+                windows.ForegroundWindowObserver(Mock())
+
+    def test_callback_failure_does_not_escape_into_windows(self):
+        with (
+            patch.object(windows.user32, "SetWinEventHook", return_value=123),
+            patch.object(windows.user32, "UnhookWinEvent", return_value=True),
+            self.assertLogs("bttext.windows", level="ERROR"),
+        ):
+            observer = windows.ForegroundWindowObserver(Mock(side_effect=RuntimeError("failed")))
+            try:
+                observer._callback(123, windows.EVENT_SYSTEM_FOREGROUND, 42, 0, 0, 7, 100)
+            finally:
+                observer.close()
+
+    def test_shell_surfaces_are_excluded_but_explorer_folders_are_allowed(self):
+        for class_name in (*windows._SHELL_WINDOW_CLASSES, "CabinetWClass", "Notepad"):
+            with self.subTest(class_name=class_name):
+                def get_class_name(handle, buffer, size):
+                    buffer.value = class_name
+                    return len(class_name)
+
+                with (
+                    patch.object(windows.user32, "GetClassNameW", side_effect=get_class_name),
+                    patch.object(windows.user32, "GetAncestor", return_value=42),
+                ):
+                    self.assertEqual(
+                        windows.is_shell_window(42),
+                        class_name in windows._SHELL_WINDOW_CLASSES,
+                    )
+
+    def test_tray_overflow_popup_and_owned_context_menu_are_not_paste_targets(self):
+        classes = {
+            42: "Notepad",
+            100: "Shell_TrayWnd",
+            101: "TopLevelWindowForOverflowXamlIsland",
+            102: "Xaml_WindowedPopupClass",
+            103: "#32768",
+            104: "ThumbnailDeviceHelperWnd",
+            105: "UnrecognizedPopupClass",
+            200: "#32770",  # A normal application dialog remains usable.
+        }
+        owners = {102: 101, 103: 101, 105: 100, 200: 42}
+
+        def get_class_name(handle, buffer, size):
+            buffer.value = classes[handle]
+            return len(buffer.value)
+
+        with (
+            patch.object(windows.user32, "GetClassNameW", side_effect=get_class_name),
+            patch.object(windows.user32, "GetAncestor", side_effect=lambda h, flag: owners.get(h, h)),
+        ):
+            for handle in (100, 101, 102, 103, 104, 105):
+                with self.subTest(handle=handle):
+                    self.assertTrue(windows.is_shell_window(handle))
+            self.assertFalse(windows.is_shell_window(42))
+            self.assertFalse(windows.is_shell_window(200))
+
+    def test_unknown_window_is_not_accepted_as_an_application(self):
+        with patch.object(windows.user32, "GetClassNameW", return_value=0):
+            self.assertTrue(windows.is_shell_window(42))
 
 
 class NativeWindowTestCase(unittest.TestCase):

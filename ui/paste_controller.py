@@ -1,6 +1,7 @@
 """Coordinate inserting snippets into an external Windows application."""
 
 from collections.abc import Callable
+import logging
 
 import wx
 
@@ -20,6 +21,8 @@ CLIPBOARD_RESTORE_DELAY_MS = 500
 PASTE_AFTER_HIDE_DELAY_MS = 50
 CLIPBOARD_RESTORE_ATTEMPTS = 3
 CLIPBOARD_RESTORE_RETRY_DELAY_MS = 100
+
+logger = logging.getLogger("bttext.paste")
 
 
 class PasteController:
@@ -47,13 +50,44 @@ class PasteController:
             else clipboard_paste.ClipboardPasteSession()
         )
         self._target_window: windows.WindowIdentity | None = None
+        self._foreground_observer: windows.ForegroundWindowObserver | None = None
         self.remember_foreground_window()
+
+    def start_tracking(self) -> None:
+        """Keep the latest application target while the frame is hidden."""
+        if self._foreground_observer is None:
+            try:
+                self._foreground_observer = windows.ForegroundWindowObserver(
+                    self.remember_window,
+                )
+            except OSError:
+                self._target_window = None
+                logger.exception("Could not observe foreground window changes")
+                return
+            self.remember_foreground_window()
+
+    def stop_tracking(self) -> None:
+        """Release foreground observation before the frame is destroyed."""
+        if self._foreground_observer is not None:
+            self._foreground_observer.close()
 
     def remember_foreground_window(self) -> None:
         """Remember a valid external foreground window as the paste target."""
-        foreground_window = windows.get_foreground_window()
-        if windows.is_external_window(foreground_window):
-            self._target_window = windows.get_window_identity(foreground_window)
+        handle = windows.get_foreground_window()
+        if (
+            self._foreground_observer is None
+            and windows.is_external_window(handle)
+            and windows.is_shell_window(handle)
+        ):
+            # If observation was unavailable, a tray command cannot establish
+            # which application preceded the shell. Do not reuse an old app.
+            self._target_window = None
+        self.remember_window(handle)
+
+    def remember_window(self, handle: int | None) -> None:
+        """Retain application windows without replacing them with the taskbar."""
+        if windows.is_external_window(handle) and not windows.is_shell_window(handle):
+            self._target_window = windows.get_window_identity(handle)
 
     @property
     def target_window(self) -> int | None:
@@ -62,7 +96,8 @@ class PasteController:
 
     def insert_snippet(self, snippet_id: int) -> None:
         """Hide the frame and schedule insertion into the previous window."""
-        if self._target_window is None:
+        target = self._target_window
+        if target is None:
             wx.MessageBox(
                 # Translators: Error when no previously active external window is
                 # available as the destination for inserting a snippet.
@@ -88,7 +123,7 @@ class PasteController:
         try:
             rendered = self._render_snippet(
                 snippet.content,
-                self._target_window.handle,
+                target.handle,
                 snippet.markdown_enabled,
             )
         except VariableRenderingCancelled:
@@ -99,7 +134,6 @@ class PasteController:
 
         self._before_paste()
         content = render_clipboard_content(rendered, snippet.markdown_enabled)
-        target = self._target_window
         wx.CallLater(
             PASTE_AFTER_HIDE_DELAY_MS,
             self._paste_after_hide,

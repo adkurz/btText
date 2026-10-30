@@ -273,6 +273,7 @@ class MainFrame(sc.SizedFrame):
         """Activate configured hotkeys and hotstring monitoring."""
         if self._process_integrations_stopped:
             return
+        self._paste_controller.start_tracking()
         self._settings_controller.register_initial_hotkey()
         self._settings_controller.start_initial_hotstrings()
 
@@ -357,11 +358,11 @@ class MainFrame(sc.SizedFrame):
             self._remember_focused_control()
             self.Hide()
         else:
-            self._paste_controller.remember_foreground_window()
             self.show_and_focus()
 
     def show_and_focus(self):
         """Restore the frame and return focus to a useful child control."""
+        self._paste_controller.remember_foreground_window()
         self._pending_show_focus = self._last_focused_control or self.category_tree
         self.Show()
         self.Iconize(False)
@@ -710,6 +711,9 @@ class MainFrame(sc.SizedFrame):
         signal = getattr(self, "_update_shutdown_signal", None)
         if signal is not None:
             signal.close()
+        paste_controller = getattr(self, "_paste_controller", None)
+        if paste_controller is not None:
+            paste_controller.stop_tracking()
         settings_controller = getattr(self, "_settings_controller", None)
         if settings_controller is not None:
             settings_controller.unregister_hotkey()

@@ -1,6 +1,8 @@
 """Inspect and activate native Windows application windows."""
 
 import ctypes
+from collections.abc import Callable
+import logging
 import ntpath
 import os
 from ctypes import wintypes
@@ -11,6 +13,16 @@ SW_RESTORE = 9
 WAIT_OBJECT_0 = 0
 WAIT_TIMEOUT = 258
 UPDATE_SHUTDOWN_EVENT_NAME = r"Local\btText.UpdateShutdown"
+EVENT_SYSTEM_FOREGROUND = 0x0003
+WINEVENT_SKIPOWNPROCESS = 0x0002
+GA_ROOTOWNER = 3
+_SHELL_WINDOW_CLASSES = frozenset((
+    "Shell_TrayWnd", "Shell_SecondaryTrayWnd", "NotifyIconOverflowWindow",
+    "TopLevelWindowForOverflowXamlIsland", "Progman", "WorkerW",
+    "Xaml_WindowedPopupClass", "ThumbnailDeviceHelperWnd",
+))
+
+logger = logging.getLogger("bttext.windows")
 
 
 @dataclass(frozen=True)
@@ -49,6 +61,21 @@ user32.SetFocus.restype = wintypes.HWND
 user32.GetFocus.restype = wintypes.HWND
 user32.IsChild.argtypes = (wintypes.HWND, wintypes.HWND)
 user32.IsChild.restype = wintypes.BOOL
+user32.GetClassNameW.argtypes = (wintypes.HWND, wintypes.LPWSTR, ctypes.c_int)
+user32.GetClassNameW.restype = ctypes.c_int
+user32.GetAncestor.argtypes = (wintypes.HWND, wintypes.UINT)
+user32.GetAncestor.restype = wintypes.HWND
+WINEVENTPROC = ctypes.WINFUNCTYPE(
+    None, wintypes.HANDLE, wintypes.DWORD, wintypes.HWND,
+    wintypes.LONG, wintypes.LONG, wintypes.DWORD, wintypes.DWORD,
+)
+user32.SetWinEventHook.argtypes = (
+    wintypes.DWORD, wintypes.DWORD, wintypes.HMODULE, WINEVENTPROC,
+    wintypes.DWORD, wintypes.DWORD, wintypes.DWORD,
+)
+user32.SetWinEventHook.restype = wintypes.HANDLE
+user32.UnhookWinEvent.argtypes = (wintypes.HANDLE,)
+user32.UnhookWinEvent.restype = wintypes.BOOL
 kernel32 = ctypes.WinDLL("kernel32", use_last_error=True)
 kernel32.GetCurrentThreadId.restype = wintypes.DWORD
 kernel32.OpenProcess.argtypes = (
@@ -75,6 +102,42 @@ kernel32.CreateEventW.argtypes = (
 kernel32.CreateEventW.restype = wintypes.HANDLE
 kernel32.WaitForSingleObject.argtypes = (wintypes.HANDLE, wintypes.DWORD)
 kernel32.WaitForSingleObject.restype = wintypes.DWORD
+
+
+class ForegroundWindowObserver:
+    """Observe foreground changes on the registering thread's message loop."""
+
+    def __init__(self, on_foreground: Callable[[int], None]) -> None:
+        self._on_foreground = on_foreground
+        self._handle = None
+        self._callback = WINEVENTPROC(self._on_event)
+        # Out-of-context delivery (the default) stays on the wx UI thread and
+        # works independently of whether hotstring monitoring is enabled.
+        self._handle = user32.SetWinEventHook(
+            EVENT_SYSTEM_FOREGROUND, EVENT_SYSTEM_FOREGROUND,
+            None, self._callback, 0, 0, WINEVENT_SKIPOWNPROCESS,
+        )
+        if not self._handle:
+            raise ctypes.WinError(ctypes.get_last_error())
+
+    def _on_event(self, hook, event, window, object_id, child_id, thread, time):
+        """Contain callback failures so they cannot unwind through Windows."""
+        if not self._handle or event != EVENT_SYSTEM_FOREGROUND or not window:
+            return
+        try:
+            # Use the event's HWND, even when the taskbar has since taken the
+            # foreground. Reading GetForegroundWindow here would lose the app.
+            self._on_foreground(int(window))
+        except Exception:
+            logger.exception("Could not remember the foreground window")
+
+    def close(self) -> None:
+        """Remove the observer on its registering thread; safe to call twice."""
+        if self._handle:
+            if not user32.UnhookWinEvent(self._handle):
+                logger.warning("Could not remove the foreground window observer")
+                return
+            self._handle = None
 
 
 class UpdateShutdownSignal:
@@ -191,6 +254,23 @@ def is_external_window(handle: int | None) -> bool:
     process_id = wintypes.DWORD()
     user32.GetWindowThreadProcessId(handle, ctypes.byref(process_id))
     return process_id.value != os.getpid()
+
+
+def is_shell_window(handle: int) -> bool:
+    """Exclude the shell and its owned popup windows from paste targets."""
+    root_owner = user32.GetAncestor(handle, GA_ROOTOWNER)
+    handles = (handle, root_owner) if root_owner and root_owner != handle else (handle,)
+    class_name = ctypes.create_unicode_buffer(256)
+    for candidate in handles:
+        if not user32.GetClassNameW(candidate, class_name, len(class_name)):
+            # A destroyed or unidentifiable window cannot establish a target.
+            return True
+        if class_name.value in _SHELL_WINDOW_CLASSES:
+            return True
+    # Win+B and the hidden-icons menu can report a separate popup rather than
+    # the taskbar itself. Checking the owner also covers unnamed/new shell
+    # popup classes without excluding ordinary application-owned dialogs.
+    return False
 
 
 def get_window_application_name(handle: int | None) -> str | None:
