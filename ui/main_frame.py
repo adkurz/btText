@@ -108,11 +108,12 @@ class MainFrame(sc.SizedFrame):
             self._update_shutdown_timer,
         )
         self._update_shutdown_timer.Start(UPDATE_SHUTDOWN_CHECK_INTERVAL_MS)
+        clipboard_session = ClipboardPasteSession()
         self._variable_resolver = SnippetVariableResolver(
             create_builtin_variable_engine(),
             self,
+            get_clipboard_text=clipboard_session.read_text,
         )
-        clipboard_session = ClipboardPasteSession()
         self._paste_controller = PasteController(
             self,
             model,

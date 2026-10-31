@@ -7,6 +7,7 @@ from unittest.mock import Mock, patch
 import wx
 
 from core.app_settings import AppSettings
+from core.builtin_variables import create_builtin_variable_engine
 from core.datamodel import Snippet
 from core.rich_text import ClipboardContent
 from core.variables import RenderedSnippet
@@ -18,6 +19,7 @@ from platform_support.windows import WindowIdentity
 from ui.hotstring_controller import HotstringController
 from ui.main_frame import MainFrame
 from ui.paste_controller import PasteController
+from ui.variable_resolver import SnippetVariableResolver
 
 
 TARGET = WindowIdentity(handle=123, thread_id=7, process_id=9)
@@ -37,6 +39,9 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
         self.fail_next_open = False
         self.fail_open = False
         self.session = ClipboardPasteSession()
+        self.enterContext(patch.object(clipboard, "_open_clipboard", side_effect=self._open))
+        self.enterContext(patch.object(clipboard, "_read_open_clipboard_text", side_effect=self._read_live_text))
+        self.enterContext(patch.object(clipboard_snapshot, "_read_open_clipboard_text", side_effect=self._read_live_text))
         self.enterContext(patch.object(clipboard.user32, "CreateWindowExW", return_value=123))
         self.enterContext(patch.object(clipboard.user32, "DestroyWindow", return_value=True))
         self.enterContext(patch.object(clipboard.user32, "CloseClipboard", side_effect=self._close))
@@ -93,6 +98,161 @@ class ClipboardPasteSessionTestCase(unittest.TestCase):
             _ClipboardFormatCopy(format_id, "hglobal", data)
             for format_id, data in self.formats.items()
         ]
+
+    def _read_live_text(self):
+        self.assertTrue(self.locked)
+        data = self.formats.get(clipboard.CF_UNICODETEXT)
+        return None if data is None else data.decode("utf-16-le").split("\0", 1)[0]
+
+    def test_clipboard_variable_uses_original_for_overlapping_controller_pastes(self):
+        for first_kind in ("manual", "hotstring"):
+            for second_kind in ("manual", "hotstring"):
+                with self.subTest(first=first_kind, second=second_kind):
+                    first = self._paste(first_kind, "snippet A")
+                    temporary_formats = dict(self.formats)
+                    resolver = SnippetVariableResolver(
+                        create_builtin_variable_engine(),
+                        get_locale=lambda: "en",
+                        get_clipboard_text=self.session.read_text,
+                    )
+                    model = Mock()
+                    snippet = Snippet("Second", "{{clipboard}} / {{clipboard}}", 1, hotstring="x")
+                    model.get_snippet.return_value = snippet
+                    pending_restores = []
+
+                    def render(*args, **kwargs):
+                        result = resolver.render(*args, **kwargs)
+                        # Reading the baseline must not end the first paste's
+                        # grace period or change any native clipboard formats.
+                        self.assertEqual(self.formats, temporary_formats)
+                        self.assertFalse(first._snapshot._closed)
+                        return result
+
+                    def schedule(delay, callback, *args):
+                        if delay == 50:
+                            callback(*args)
+                        return Mock()
+
+                    with (
+                        patch.object(PasteController, "remember_foreground_window"),
+                        patch("ui.paste_controller.wx.CallLater", side_effect=schedule),
+                        patch("ui.hotstring_controller.hotstrings.KeyboardHook"),
+                    ):
+                        if second_kind == "manual":
+                            controller = PasteController(
+                                Mock(), model, Mock(), Mock(), render,
+                                clipboard_session=self.session,
+                            )
+                            controller._target_window = TARGET
+                            controller.schedule_restore = pending_restores.append
+                            controller.insert_snippet(2)
+                            controller._reveal_after_error.assert_not_called()
+                        else:
+                            controller = HotstringController(
+                                Mock(), Mock(), model, lambda: AppSettings(),
+                                pending_restores.append, Mock(), render,
+                                clipboard_session=self.session,
+                            )
+                            controller._expand(
+                                TARGET, snippet, 32,
+                                hotstrings.InputCheckpoint((123, 124, 125)),
+                            )
+                    self.assertEqual(len(pending_restores), 1)
+                    self.assertEqual(self._current_text(), "original / original")
+                    first.restore_clipboard()
+                    self.assertEqual(self._current_text(), "original / original")
+                    pending_restores[0].restore_clipboard()
+                    self.assertEqual(self.formats, self.original)
+
+    def _current_text(self):
+        return self.formats[clipboard.CF_UNICODETEXT].decode("utf-16-le").split("\0", 1)[0]
+
+    def test_session_reads_live_clipboard_without_a_pending_paste(self):
+        self.assertEqual(self.session.read_text(), "original")
+        self.assertEqual(self.formats, self.original)
+        self.assertFalse(self.locked)
+
+    def test_session_prefers_a_new_external_copy_without_restoring(self):
+        pending = self._paste("manual", "snippet A")
+        external = {clipboard.CF_UNICODETEXT: "new copy\0".encode("utf-16-le")}
+        self.formats = dict(external)
+        self.sequence += 1
+        sequence = self.sequence
+
+        self.assertEqual(self.session.read_text(), "new copy")
+        self.assertEqual(self.formats, external)
+        self.assertEqual(self.sequence, sequence)
+        pending.restore_clipboard()
+        self.assertEqual(self.formats, external)
+
+    def test_session_reads_live_clipboard_after_snapshot_was_closed(self):
+        pending = self._paste("hotstring", "snippet A")
+        pending.restore_clipboard()
+        self.formats = {clipboard.CF_UNICODETEXT: "later copy\0".encode("utf-16-le")}
+
+        self.assertEqual(self.session.read_text(), "later copy")
+
+    def test_session_reads_no_text_from_an_original_non_text_clipboard(self):
+        self.formats = {clipboard._HTML_FORMAT: b"original HTML\0"}
+        pending = self._paste("hotstring", "snippet A")
+        temporary_formats = dict(self.formats)
+
+        self.assertIsNone(self.session.read_text())
+        self.assertEqual(self.formats, temporary_formats)
+        self.assertFalse(pending._snapshot._closed)
+
+    def test_session_read_failure_keeps_original_snapshot_retryable(self):
+        pending = self._paste("manual", "snippet A")
+        self.fail_next_open = True
+        with self.assertRaisesRegex(clipboard.ClipboardError, "clipboard busy"):
+            self.session.read_text()
+        self.assertFalse(pending._snapshot._closed)
+        self.assertFalse(self.locked)
+        self.assertEqual(self.session.read_text(), "original")
+        pending.restore_clipboard()
+        self.assertEqual(self.formats, self.original)
+
+    def test_session_reads_original_during_failed_paste_recovery(self):
+        for operation in ("preparation", "activation"):
+            for recovery in ("open", "write"):
+                with self.subTest(operation=operation, recovery=recovery):
+                    timers, _errors = self._failed_controller_paste(
+                        "manual", operation=operation, recovery=recovery,
+                    )
+                    temporary_formats = dict(self.formats)
+                    sequence = self.sequence
+                    self.assertEqual(self.session.read_text(), "original")
+                    self.assertEqual(self.formats, temporary_formats)
+                    self.assertEqual(self.sequence, sequence)
+                    _delay, callback, arguments = timers.pop()
+                    callback(*arguments)
+                    self.assertEqual(self.formats, self.original)
+
+    def test_session_reads_new_external_copy_during_failed_restore_recovery(self):
+        timers, _errors = self._failed_controller_paste(
+            "hotstring", operation="activation", recovery="write",
+        )
+        external = {clipboard.CF_UNICODETEXT: "new user copy\0".encode("utf-16-le")}
+        self.formats = dict(external)
+        self.sequence += 1
+
+        self.assertEqual(self.session.read_text(), "new user copy")
+        self.assertEqual(self.formats, external)
+        _delay, callback, arguments = timers.pop()
+        callback(*arguments)
+        self.assertEqual(self.formats, external)
+
+    def test_invalid_saved_unicode_reports_an_error_without_changing_clipboard(self):
+        self.formats[clipboard.CF_UNICODETEXT] = b"\x00\xd8"
+        pending = self._paste("manual", "snippet")
+        temporary_formats = dict(self.formats)
+
+        with self.assertRaisesRegex(clipboard.ClipboardError, "not valid Unicode"):
+            self.session.read_text()
+
+        self.assertEqual(self.formats, temporary_formats)
+        self.assertFalse(pending._snapshot._closed)
+        self.assertFalse(self.locked)
 
     def _paste(self, kind, text):
         content = ClipboardContent(text, f"<p>{text}</p>", rtf=b"{\\rtf1 snippet}")

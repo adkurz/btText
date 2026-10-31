@@ -4,6 +4,8 @@
 
 - Geändert: Tab ist kein Endezeichen für Hotstrings mehr. Tab und Umschalt+Tab werden unverändert an die Zielanwendung weitergegeben und setzen die Kürzelerkennung zurück, damit im nächsten Eingabefeld keine versehentliche Erweiterung erfolgt.
 
+- Behoben: Bei schnell aufeinanderfolgenden Einfügungen und Hotstring-Erweiterungen liest `{{clipboard}}` den vorherigen Benutzerinhalt statt des temporären Textbausteins aus der Zwischenablage. Neuere Kopien aus anderen Anwendungen haben Vorrang; das Lesen der Variable verändert die Zwischenablage nicht.
+
 - Behoben: Wird btText kurz nach dem Einfügen eines Textbausteins oder einer Hotstring-Erweiterung beendet, stellt es den vorherigen Zwischenablageinhalt vor dem Schließen wieder her. Neuere Kopien aus anderen Anwendungen bleiben erhalten.
 
 - Behoben: Nach dem Öffnen von btText über den Infobereich werden Textbausteine in die zuletzt aktive Anwendung eingefügt, auch wenn bei verborgenem btText die Anwendung gewechselt wurde. Taskleiste, Desktop und zugehörige Hilfs- und Menüfenster werden nicht als Einfügeziele verwendet.

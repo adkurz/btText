@@ -56,12 +56,15 @@ class SnippetVariableResolver:
         request_inputs: (
             Callable[[tuple[str, ...]], dict[str, str] | None] | None
         ) = None,
+        *,
+        get_clipboard_text: Callable[[], str | None] | None = None,
     ) -> None:
         self._engine = engine
         self._parent = parent
         self._get_timestamp = get_timestamp or self._current_timestamp
         self._get_locale = get_locale or i18n.get_formatting_locale
         self._request_inputs = request_inputs or self._show_input_dialog
+        self._get_clipboard_text = get_clipboard_text
 
     def render(
         self,
@@ -84,7 +87,9 @@ class SnippetVariableResolver:
         context = ResolutionContext(
             timestamp=self._get_timestamp(),
             locale=self._get_locale(),
-            get_clipboard_text=self._memoize(clipboard.read_text),
+            get_clipboard_text=self._memoize(
+                self._get_clipboard_text or clipboard.read_text
+            ),
             get_application_name=self._memoize(
                 lambda: windows.get_window_application_name(target_window)
             ),

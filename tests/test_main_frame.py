@@ -235,6 +235,10 @@ class MainFrameConstructionTestCase(unittest.TestCase):
                     "clipboard_session"
                 ]
                 self.assertIsInstance(clipboard_session, ClipboardPasteSession)
+                self.assertEqual(
+                    frame._variable_resolver._get_clipboard_text,
+                    clipboard_session.read_text,
+                )
                 self.assertIs(
                     hotstring_controller_class.call_args.kwargs["clipboard_session"],
                     clipboard_session,

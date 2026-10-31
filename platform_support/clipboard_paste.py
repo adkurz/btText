@@ -8,7 +8,7 @@ import uuid
 
 from core.user_errors import UserFacingError
 from core.rich_text import ClipboardContent
-from platform_support import keyboard_input, windows
+from platform_support import clipboard, keyboard_input, windows
 from platform_support.clipboard import (
     ClipboardError,
     _clipboard_owner_window,
@@ -172,12 +172,17 @@ class PendingPaste:
         # Check the private marker (or a failed replacement's sequence) while
         # holding the clipboard open through restoration. New external copies
         # discard the snapshot without being overwritten.
-        self._snapshot.restore(
-            is_owner=(
-                self._is_owner if self._is_owner is not None
-                else lambda: _read_clipboard_bytes(_MARKER_FORMAT) == self._marker
-            ),
-        )
+        self._snapshot.restore(is_owner=self._owns_clipboard)
+
+    def _owns_clipboard(self) -> bool:
+        """Check the open clipboard's marker or failed replacement sequence."""
+        if self._is_owner is not None:
+            return self._is_owner()
+        return _read_clipboard_bytes(_MARKER_FORMAT) == self._marker
+
+    def read_text(self) -> str | None:
+        """Read user text without exposing this paste's temporary content."""
+        return self._snapshot.read_text(is_owner=self._owns_clipboard)
 
     def discard_snapshot(self) -> None:
         """Release the saved clipboard data without attempting another restore."""
@@ -189,6 +194,12 @@ class ClipboardPasteSession:
 
     def __init__(self) -> None:
         self._pending: PendingPaste | None = None
+
+    def read_text(self) -> str | None:
+        """Read the current user clipboard, including a pending paste's backup."""
+        if self._pending is not None:
+            return self._pending.read_text()
+        return clipboard.read_text()
 
     def prepare(self, content: ClipboardContent | str) -> PendingPaste:
         """Finish the previous restore before capturing another clipboard item."""

@@ -4,6 +4,8 @@
 
 - Changed: Tab no longer acts as a hotstring boundary. Tab and Shift+Tab pass through unchanged and reset abbreviation matching, preventing accidental expansion in the next input field.
 
+- Fixed: During rapid successive snippet insertions and hotstring expansions, `{{clipboard}}` now reads the previous user clipboard contents instead of temporary snippet text. Newer copies from other applications take precedence, and reading the variable does not change the clipboard.
+
 - Fixed: Exiting btText shortly after inserting a snippet or expanding a hotstring now completes pending clipboard restoration before the application closes, while preserving newer copies from other applications.
 
 - Fixed: Opening btText from the notification area now inserts snippets into the most recently active application, even after switching applications while btText was hidden. The taskbar, desktop, and their helper and menu windows are not used as paste targets.

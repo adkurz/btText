@@ -192,6 +192,11 @@ def _read_open_clipboard_text() -> str | None:
         data = ctypes.string_at(pointer, kernel32.GlobalSize(handle))
     finally:
         kernel32.GlobalUnlock(handle)
+    return _decode_clipboard_text(data)
+
+
+def _decode_clipboard_text(data: bytes) -> str:
+    """Decode a captured or live null-terminated Unicode clipboard value."""
     try:
         return data.decode("utf-16-le").split("\0", 1)[0]
     except UnicodeDecodeError as error:

@@ -12,7 +12,9 @@ from platform_support.clipboard import (
     GMEM_MOVEABLE,
     ClipboardError,
     _clipboard_owner_window,
+    _decode_clipboard_text,
     _open_clipboard,
+    _read_open_clipboard_text,
     _set_clipboard_data,
     kernel32,
     user32,
@@ -225,16 +227,6 @@ class ClipboardSnapshot:
         if self._closed:
             return
 
-        def owns_current_contents() -> bool:
-            if self._failed_restore_sequence is not None:
-                current_sequence = user32.GetClipboardSequenceNumber()
-                if not self._failed_restore_sequence or not current_sequence:
-                    # Missing sequence evidence cannot authorize another write.
-                    # Keep the snapshot until the caller retries or discards it.
-                    raise ClipboardError("The clipboard could not be restored.")
-                return current_sequence == self._failed_restore_sequence
-            return is_owner is None or is_owner()
-
         def retain_failed_sequence() -> None:
             # Called before releasing the clipboard lock, so this version
             # identifies only the contents left by our own failed write.
@@ -242,10 +234,39 @@ class ClipboardSnapshot:
 
         _restore_copied_formats(
             self._copied_formats,
-            is_owner=owns_current_contents,
+            is_owner=lambda: self._owns_current_contents(is_owner),
             on_write_failure=retain_failed_sequence,
         )
         self.close()
+
+    def _owns_current_contents(self, is_owner: Callable[[], bool] | None) -> bool:
+        """Check replacement ownership while the caller holds the clipboard open."""
+        if self._failed_restore_sequence is not None:
+            current_sequence = user32.GetClipboardSequenceNumber()
+            if not self._failed_restore_sequence or not current_sequence:
+                # Missing sequence evidence cannot authorize another write or
+                # establish that the saved text is still the user's baseline.
+                raise ClipboardError("The clipboard could not be restored.")
+            return current_sequence == self._failed_restore_sequence
+        return is_owner is None or is_owner()
+
+    def read_text(self, *, is_owner: Callable[[], bool]) -> str | None:
+        """Read saved user text while our replacement is current, else live text.
+
+        This never restores or closes the snapshot: an earlier paste may still
+        need its temporary content until the scheduled restoration runs.
+        """
+        _open_clipboard()
+        try:
+            if not self._closed and self._owns_current_contents(is_owner):
+                for copied_format in self._copied_formats:
+                    if copied_format.format_id == CF_UNICODETEXT:
+                        assert isinstance(copied_format.value, bytes)
+                        return _decode_clipboard_text(copied_format.value)
+                return None
+            return _read_open_clipboard_text()
+        finally:
+            user32.CloseClipboard()
 
     def close(self) -> None:
         """Release all retained native resources without restoring them."""

@@ -17,6 +17,32 @@ from ui.variable_resolver import SnippetVariableResolver, show_variable_error
 
 
 class SnippetVariableResolverTestCase(unittest.TestCase):
+    def test_injected_clipboard_reader_is_lazy_and_memoized_after_input(self):
+        read_text = Mock(return_value="before input")
+
+        def request_inputs(labels):
+            read_text.assert_not_called()
+            read_text.return_value = "new user copy"
+            return {"Name": "Ada"}
+
+        resolver = SnippetVariableResolver(
+            create_builtin_variable_engine(),
+            get_locale=lambda: "en",
+            request_inputs=request_inputs,
+            get_clipboard_text=read_text,
+        )
+        resolver.validate("{{clipboard}}")
+        self.assertEqual(resolver.render("plain text").text, "plain text")
+        read_text.assert_not_called()
+
+        rendered = resolver.render("{{input:Name}}: {{clipboard}} / {{clipboard}}")
+
+        self.assertEqual(rendered.text, "Ada: new user copy / new user copy")
+        read_text.assert_called_once_with()
+        read_text.return_value = "later copy"
+        self.assertEqual(resolver.render("{{clipboard}}").text, "later copy")
+        self.assertEqual(read_text.call_count, 2)
+
     def test_input_notification_precedes_request_and_only_runs_for_input_variables(self):
         calls = []
         resolver = SnippetVariableResolver(
