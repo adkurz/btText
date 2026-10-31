@@ -252,7 +252,7 @@ class SettingsDialog(wx.Dialog):
             # Translators: Explanation on the hotstring settings page.
             label=_(
                 "Hotstrings expand a snippet after its abbreviation is followed "
-                "by Space, Enter, Tab, or punctuation."
+                "by Space, Enter, or punctuation."
             ),
         )
         description.Wrap(540)
@@ -267,7 +267,7 @@ class SettingsDialog(wx.Dialog):
         self.preserve_hotstring_boundary_checkbox = wx.CheckBox(
             page,
             # Translators: Hotstring setting that keeps the typed Space, Enter,
-            # Tab, or punctuation after the expanded snippet.
+            # or punctuation after the expanded snippet.
             label=_("&Keep the ending character after expansion"),
         )
         self.preserve_hotstring_boundary_checkbox.SetValue(

@@ -105,7 +105,7 @@ class SnippetEditor(wx.Dialog):
         self.hotstring_input = wx.TextCtrl(self.pane)
         self.hotstring_input.SetHint(
             # Translators: Hint explaining when an optional hotstring expands.
-            _("Optional; expands after Space, Enter, Tab, or punctuation")
+            _("Optional; expands after Space, Enter, or punctuation")
         )
         # Translators: Label for the snippet text that will be inserted.
         # "&" marks the mnemonic for the adjacent multiline editor.

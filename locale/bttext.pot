@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: btText 1.3.2\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2026-10-30 19:23+0100\n"
+"POT-Creation-Date: 2026-10-31 01:45+0100\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -1184,7 +1184,7 @@ msgstr ""
 
 #. Translators: Explanation on the hotstring settings page.
 #: ui/settings_dialog.py:254
-msgid "Hotstrings expand a snippet after its abbreviation is followed by Space, Enter, Tab, or punctuation."
+msgid "Hotstrings expand a snippet after its abbreviation is followed by Space, Enter, or punctuation."
 msgstr ""
 
 #. Translators: Setting that enables automatic expansion of snippet
@@ -1194,7 +1194,7 @@ msgid "&Enable hotstrings"
 msgstr ""
 
 #. Translators: Hotstring setting that keeps the typed Space, Enter,
-#. Tab, or punctuation after the expanded snippet.
+#. or punctuation after the expanded snippet.
 #: ui/settings_dialog.py:271
 msgid "&Keep the ending character after expansion"
 msgstr ""
@@ -1376,7 +1376,7 @@ msgstr ""
 
 #. Translators: Hint explaining when an optional hotstring expands.
 #: ui/snippet_editor.py:108
-msgid "Optional; expands after Space, Enter, Tab, or punctuation"
+msgid "Optional; expands after Space, Enter, or punctuation"
 msgstr ""
 
 #. Translators: Label for the snippet text that will be inserted.

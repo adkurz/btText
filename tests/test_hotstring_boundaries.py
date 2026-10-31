@@ -27,7 +27,6 @@ class CapturedBoundaryTestCase(unittest.TestCase):
             (ord("Q"), "@", False, True, "@"),
             (hotstrings.VK_SPACE, " ", False, False, hotstrings.VK_SPACE),
             (hotstrings.VK_RETURN, "\r", False, False, hotstrings.VK_RETURN),
-            (hotstrings.VK_TAB, "\t", False, False, hotstrings.VK_TAB),
         )
         for key, character, shift, altgr, expected in cases:
             with self.subTest(character=character):
@@ -50,6 +49,31 @@ class CapturedBoundaryTestCase(unittest.TestCase):
                 self.assertEqual(result, 1)
                 matched.assert_called_once_with(snippet, expected, ANY)
                 self.assertEqual(matched.call_args.args[2].context, CONTEXT)
+
+    def test_tab_and_shift_tab_are_forwarded_and_clear_the_trigger(self):
+        for shift in (False, True):
+            with self.subTest(shift=shift):
+                matched = Mock(return_value=True)
+                hook = hotstrings.KeyboardHook(matched)
+                hook.update({"x": object()})
+                hook._matcher.character("x")
+                hook._input_context = CONTEXT
+                event = hotstrings.KBDLLHOOKSTRUCT(hotstrings.VK_TAB, 0, 0, 0, 0)
+                with (
+                    patch.object(hook, "_get_input_context", return_value=CONTEXT),
+                    patch.object(hook, "_translate", return_value="\t") as translate,
+                    patch.object(hook, "_is_key_down", return_value=shift),
+                    patch.object(hook, "_is_altgr_down", return_value=False),
+                    patch.object(hook, "_has_non_text_modifier_chord", return_value=False),
+                    patch.object(hotstrings.user32, "CallNextHookEx", return_value=37) as forward,
+                ):
+                    for message in (hotstrings.WM_KEYDOWN, hotstrings.WM_KEYUP):
+                        result = hook._hook_callback(0, message, ctypes.addressof(event))
+                        self.assertEqual(result, 37)
+                        forward.assert_called_with(None, 0, message, ctypes.addressof(event))
+                matched.assert_not_called()
+                translate.assert_not_called()
+                self.assertIsNone(hook._matcher.character(" "))
 
     def test_queued_callback_retains_the_character(self):
         with (

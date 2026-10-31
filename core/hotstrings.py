@@ -54,6 +54,10 @@ class HotstringMatcher(Generic[Payload]):
 
     def character(self, character: str) -> Payload | None:
         """Record a character or return its payload when it is a boundary."""
+        # Tab navigates between fields and must never trigger a replacement.
+        if character == "\t":
+            self.reset()
+            return None
         is_boundary = (
             character.isspace()
             or character in string.punctuation

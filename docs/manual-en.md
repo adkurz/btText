@@ -247,7 +247,7 @@ Hotstring: ;addr
 Content:   Musterstraße 12, 12345 Musterstadt
 ```
 
-When you type `;addr` followed by a space, `Enter`, `Tab`, or a punctuation mark in another Windows program, btText replaces the shortcut with the stored content.
+When you type `;addr` followed by a space, `Enter`, or a punctuation mark in another Windows program, btText replaces the shortcut with the stored content. `Tab` and `Shift`+`Tab` do not trigger expansion and remain available for moving between input fields.
 
 ### Setting up Hotstrings
 
@@ -271,7 +271,7 @@ btText only monitors the keyboard if "Enable hotstrings" is activated in the set
 ### Hotstrings
 
 - **Enable hotstrings** (Hotstrings aktivieren): Turns automatic monitoring on or off.
-- **Retain end character after expansion** (Endezeichen nach der Erweiterung erhalten): Re-outputs the triggering space, `Enter`, `Tab`, or punctuation mark after the inserted text. Deactivate this option if the end character should not be included.
+- **Retain end character after expansion** (Endezeichen nach der Erweiterung erhalten): Re-outputs the triggering space, `Enter`, or punctuation mark after the inserted text. Deactivate this option if the end character should not be included.
 - **Show Windows notification after expansion** (Nach der Erweiterung eine Windows-Benachrichtigung anzeigen): Displays a notification in the Windows system tray after successful expansion.
 - **Play a sound after expansion** (Nach der Erweiterung einen Sound abspielen): Plays an audible confirmation after a successful expansion. This setting is disabled by default.
 
@@ -337,7 +337,7 @@ Check:
 
 1. if **Enable hotstrings** is turned on in Settings;
 2. if the shortcut was entered exactly, including case sensitivity;
-3. if a space, `Enter`, `Tab`, or a punctuation mark follows;
+3. if a space, `Enter`, or a punctuation mark follows;
 4. if a text snippet is actually assigned to the shortcut;
 5. if the target program has an active text input field.
 

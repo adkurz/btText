@@ -248,7 +248,7 @@ Hotstring: ;addr
 Inhalt:   Musterstraße 12, 12345 Musterstadt
 ```
 
-Wenn Sie in einem anderen Windows-Programm `;addr` und anschließend ein Leerzeichen, `Eingabe`, `Tab` oder ein Satzzeichen tippen, ersetzt btText das Kürzel durch den gespeicherten Inhalt.
+Wenn Sie in einem anderen Windows-Programm `;addr` und anschließend ein Leerzeichen, `Eingabe` oder ein Satzzeichen tippen, ersetzt btText das Kürzel durch den gespeicherten Inhalt. `Tab` und `Umschalt`+`Tab` lösen keine Erweiterung aus und bleiben für den Wechsel zwischen Eingabefeldern verfügbar.
 
 ### Hotstrings einrichten
 
@@ -271,7 +271,7 @@ btText überwacht die Tastatur nur, wenn Hotstrings in den Einstellungen aktivie
 ### Hotstrings
 
 - **Hotstrings aktivieren**: Schaltet die automatische Überwachung ein oder aus.
-- **Endezeichen nach der Erweiterung erhalten**: Gibt das auslösende Leerzeichen, `Eingabe`, `Tab` oder Satzzeichen nach dem eingefügten Text wieder aus. Deaktivieren Sie die Option, wenn das Endezeichen nicht übernommen werden soll.
+- **Endezeichen nach der Erweiterung erhalten**: Gibt das auslösende Leerzeichen, `Eingabe` oder Satzzeichen nach dem eingefügten Text wieder aus. Deaktivieren Sie die Option, wenn das Endezeichen nicht übernommen werden soll.
 - **Nach der Erweiterung eine Windows-Benachrichtigung anzeigen**: Zeigt nach erfolgreicher Erweiterung eine Benachrichtigung im Windows-Infobereich an.
 - **Nach der Erweiterung einen Sound abspielen**: Spielt nach einer erfolgreichen Erweiterung eine akustische Bestätigung ab. Diese Einstellung ist standardmäßig deaktiviert.
 
@@ -337,7 +337,7 @@ Prüfen Sie:
 
 1. ob in den Einstellungen **Hotstrings aktivieren** eingeschaltet ist;
 2. ob das Kürzel exakt einschließlich Groß-/Kleinschreibung eingegeben wurde;
-3. ob danach ein Leerzeichen, `Eingabe`, `Tab` oder ein Satzzeichen folgt;
+3. ob danach ein Leerzeichen, `Eingabe` oder ein Satzzeichen folgt;
 4. ob dem Kürzel tatsächlich ein Textbaustein zugeordnet ist;
 5. ob das Zielprogramm ein aktives Texteingabefeld besitzt.
 

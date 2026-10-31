@@ -45,7 +45,23 @@ class HotstringMatcherTestCase(unittest.TestCase):
         for character in "MfGX":
             self.matcher.character(character)
         self.matcher.backspace()
-        self.assertEqual(self.matcher.character("\t"), self.payload)
+        self.assertEqual(self.matcher.character(" "), self.payload)
+
+    def test_tab_does_not_expand_and_discards_the_complete_trigger(self):
+        for character in "MfG":
+            self.matcher.character(character)
+        self.assertIsNone(self.matcher.character("\t"))
+        self.assertIsNone(self.matcher.character(" "))
+        for character in "MfG":
+            self.matcher.character(character)
+        self.assertEqual(self.matcher.character(" "), self.payload)
+
+    def test_tab_discards_a_partial_trigger(self):
+        for character in "Mf":
+            self.matcher.character(character)
+        self.assertIsNone(self.matcher.character("\t"))
+        self.assertIsNone(self.matcher.character("G"))
+        self.assertIsNone(self.matcher.character(" "))
 
     def test_update_resets_partial_input(self):
         for character in "Mf":

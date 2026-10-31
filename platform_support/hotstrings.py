@@ -594,6 +594,12 @@ class KeyboardHook:
             return user32.CallNextHookEx(
                 self._handle, HC_ACTION, message, data
             )
+        if event.vkCode == VK_TAB:
+            # Forward Tab and Shift+Tab without translating or consuming them.
+            self._matcher.reset()
+            return user32.CallNextHookEx(
+                self._handle, HC_ACTION, message, data
+            )
         if event.vkCode == VK_BACK and not altgr_down:
             self._matcher.backspace()
             return user32.CallNextHookEx(
@@ -621,7 +627,7 @@ class KeyboardHook:
             # using modifiers that may have changed during a variable prompt.
             boundary = (
                 event.vkCode
-                if event.vkCode in (VK_SPACE, VK_RETURN, VK_TAB)
+                if event.vkCode in (VK_SPACE, VK_RETURN)
                 else character
             )
             if self._on_match(snippet, boundary, checkpoint):
